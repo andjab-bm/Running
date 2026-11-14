@@ -1,0 +1,145 @@
+/*
+ * Design tokens approved on the prototype (see docs/design-direction.md).
+ * Light values live in the bare :root block; the dark palette is applied either
+ * by the system preference or by an explicit data-theme="dark" on <html>.
+ */
+:root {
+	--bg: #f4f3f9;
+	--surface: #ffffff;
+	--surface-2: #efeef7;
+	--surface-3: #e6e4f2;
+	--ink: #1e1b2e;
+	--ink-2: #54506b;
+	--ink-3: #6a6682;
+	--accent: #6252de;
+	--accent-soft: #e7e3fc;
+	--on-accent: #ffffff;
+
+	--p-lav: #e7e3fc;
+	--p-mint: #d6f3e5;
+	--p-peach: #ffe4d3;
+	--p-sky: #d8eafb;
+	--p-butter: #fbf1c9;
+	--p-rose: #fcdfe7;
+	--i-lav: #5446c9;
+	--i-mint: #1b7550;
+	--i-peach: #a94f1c;
+	--i-sky: #1d639f;
+	--i-butter: #7d6000;
+	--i-rose: #a82c5a;
+
+	--c-rose: #e46f90;
+	--c-mint: #35af80;
+	--c-sky: #4a97d8;
+	--c-peach: #ee8a4c;
+
+	--z1: #a3abc8;
+	--z2: #7db7f0;
+	--z3: #6fd0a3;
+	--z4: #ffae70;
+	--z5: #f58aa5;
+
+	--pace-fast: #6252de;
+	--pace-mid: #4fc3a8;
+	--pace-slow: #ffb26b;
+
+	--map-land: #ecebf4;
+	--map-park: #d9f0e2;
+	--map-water: #d3e6fa;
+	--map-road: #ffffff;
+	--map-label: #6a6682;
+
+	--shadow: 0 12px 32px rgba(70, 58, 140, 0.07);
+	--pop: 0 16px 48px rgba(40, 30, 90, 0.18);
+
+	--font-display: 'Bricolage Grotesque Variable', 'Trebuchet MS', system-ui, sans-serif;
+	--font-body: 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+	--r-xl: 28px;
+	--r-lg: 20px;
+	--r-md: 14px;
+
+	color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		--bg: #121118;
+		--surface: #1b1a25;
+		--surface-2: #252431;
+		--surface-3: #302f3f;
+		--ink: #f2f0fa;
+		--ink-2: #bdb9d1;
+		--ink-3: #9f9bb6;
+		--accent: #a99bff;
+		--accent-soft: #2d2a4b;
+		--on-accent: #15122b;
+		--p-lav: #2c2949;
+		--p-mint: #1c372e;
+		--p-peach: #3f2d20;
+		--p-sky: #1c2f44;
+		--p-butter: #38321a;
+		--p-rose: #40222e;
+		--i-lav: #bdb2ff;
+		--i-mint: #8fe0bb;
+		--i-peach: #ffc39c;
+		--i-sky: #9ccbf7;
+		--i-butter: #efd877;
+		--i-rose: #f7afc3;
+		--c-rose: #f58aa5;
+		--c-mint: #6fd0a3;
+		--c-sky: #7db7f0;
+		--c-peach: #ffae70;
+		--pace-fast: #a99bff;
+		--pace-mid: #5fd6bb;
+		--pace-slow: #ffc08a;
+		--map-land: #191822;
+		--map-park: #1b2e29;
+		--map-water: #1b2a40;
+		--map-road: #292836;
+		--map-label: #9f9bb6;
+		--shadow: none;
+		--pop: 0 16px 48px rgba(0, 0, 0, 0.5);
+		color-scheme: dark;
+	}
+}
+
+:root[data-theme='dark'] {
+	--bg: #121118;
+	--surface: #1b1a25;
+	--surface-2: #252431;
+	--surface-3: #302f3f;
+	--ink: #f2f0fa;
+	--ink-2: #bdb9d1;
+	--ink-3: #9f9bb6;
+	--accent: #a99bff;
+	--accent-soft: #2d2a4b;
+	--on-accent: #15122b;
+	--p-lav: #2c2949;
+	--p-mint: #1c372e;
+	--p-peach: #3f2d20;
+	--p-sky: #1c2f44;
+	--p-butter: #38321a;
+	--p-rose: #40222e;
+	--i-lav: #bdb2ff;
+	--i-mint: #8fe0bb;
+	--i-peach: #ffc39c;
+	--i-sky: #9ccbf7;
+	--i-butter: #efd877;
+	--i-rose: #f7afc3;
+	--c-rose: #f58aa5;
+	--c-mint: #6fd0a3;
+	--c-sky: #7db7f0;
+	--c-peach: #ffae70;
+	--pace-fast: #a99bff;
+	--pace-mid: #5fd6bb;
+	--pace-slow: #ffc08a;
+	--map-land: #191822;
+	--map-park: #1b2e29;
+	--map-water: #1b2a40;
+	--map-road: #292836;
+	--map-label: #9f9bb6;
+	--shadow: none;
+	--pop: 0 16px 48px rgba(0, 0, 0, 0.5);
+	color-scheme: dark;
+}

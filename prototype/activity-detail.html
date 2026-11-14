@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Running — prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a quiet side rail, borderless tonal surfaces on a tinted ground,
+   one pastel per kind of information (lavender pace, rose heart, mint cadence, sky distance, peach effort). */
+:root{
+  --bg:#F4F3F9; --surface:#FFFFFF; --surface-2:#EFEEF7; --surface-3:#E6E4F2;
+  --ink:#1E1B2E; --ink-2:#54506B; --ink-3:#6A6682;
+  --accent:#6252DE; --accent-soft:#E7E3FC; --on-accent:#FFFFFF;
+  --p-lav:#E7E3FC; --p-mint:#D6F3E5; --p-peach:#FFE4D3; --p-sky:#D8EAFB; --p-butter:#FBF1C9; --p-rose:#FCDFE7;
+  --i-lav:#5446C9; --i-mint:#1B7550; --i-peach:#A94F1C; --i-sky:#1D639F; --i-butter:#7D6000; --i-rose:#A82C5A;
+  --c-rose:#E46F90; --c-mint:#35AF80; --c-sky:#4A97D8; --c-peach:#EE8A4C;
+  --z1:#A3ABC8; --z2:#7DB7F0; --z3:#6FD0A3; --z4:#FFAE70; --z5:#F58AA5;
+  --pace-fast:#6252DE; --pace-mid:#4FC3A8; --pace-slow:#FFB26B;
+  --map-land:#ECEBF4; --map-park:#D9F0E2; --map-water:#D3E6FA; --map-road:#FFFFFF; --map-label:#6A6682;
+  --shadow:0 12px 32px rgba(70,58,140,.07);
+  --pop:0 16px 48px rgba(40,30,90,.18);
+  --font-display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --font-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r-xl:28px; --r-lg:20px; --r-md:14px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121118; --surface:#1B1A25; --surface-2:#252431; --surface-3:#302F3F;
+    --ink:#F2F0FA; --ink-2:#BDB9D1; --ink-3:#9F9BB6;
+    --accent:#A99BFF; --accent-soft:#2D2A4B; --on-accent:#15122B;
+    --p-lav:#2C2949; --p-mint:#1C372E; --p-peach:#3F2D20; --p-sky:#1C2F44; --p-butter:#38321A; --p-rose:#40222E;
+    --i-lav:#BDB2FF; --i-mint:#8FE0BB; --i-peach:#FFC39C; --i-sky:#9CCBF7; --i-butter:#EFD877; --i-rose:#F7AFC3;
+    --c-rose:#F58AA5; --c-mint:#6FD0A3; --c-sky:#7DB7F0; --c-peach:#FFAE70;
+    --pace-fast:#A99BFF; --pace-mid:#5FD6BB; --pace-slow:#FFC08A;
+    --map-land:#191822; --map-park:#1B2E29; --map-water:#1B2A40; --map-road:#292836; --map-label:#9F9BB6;
+    --shadow:none; --pop:0 16px 48px rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121118; --surface:#1B1A25; --surface-2:#252431; --surface-3:#302F3F;
+  --ink:#F2F0FA; --ink-2:#BDB9D1; --ink-3:#9F9BB6;
+  --accent:#A99BFF; --accent-soft:#2D2A4B; --on-accent:#15122B;
+  --p-lav:#2C2949; --p-mint:#1C372E; --p-peach:#3F2D20; --p-sky:#1C2F44; --p-butter:#38321A; --p-rose:#40222E;
+  --i-lav:#BDB2FF; --i-mint:#8FE0BB; --i-peach:#FFC39C; --i-sky:#9CCBF7; --i-butter:#EFD877; --i-rose:#F7AFC3;
+  --c-rose:#F58AA5; --c-mint:#6FD0A3; --c-sky:#7DB7F0; --c-peach:#FFAE70;
+  --pace-fast:#A99BFF; --pace-mid:#5FD6BB; --pace-slow:#FFC08A;
+  --map-land:#191822; --map-park:#1B2E29; --map-water:#1B2A40; --map-road:#292836; --map-label:#9F9BB6;
+  --shadow:none; --pop:0 16px 48px rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:36px;font-weight:600;line-height:1.1}
+h2{font-size:20px;font-weight:600}
+.num{font-family:var(--font-display);font-variant-numeric:tabular-nums}
+.ic{flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.muted{color:var(--ink-2)}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+
+/* tooltips */
+[data-tip]{position:relative}
+[data-tip]:hover::after,[data-tip]:focus-visible::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:5px 10px;border-radius:9px;font:600 12px/1.3 var(--font-body);white-space:nowrap;z-index:60;pointer-events:none;letter-spacing:0;text-transform:none}
+[data-tip][data-tip-pos="end"]:hover::after,[data-tip][data-tip-pos="end"]:focus-visible::after{left:auto;right:0;transform:none}
+[data-tip][data-tip-pos="start"]:hover::after,[data-tip][data-tip-pos="start"]:focus-visible::after{left:0;transform:none}
+[data-tip][data-tip-pos="below"]:hover::after{bottom:auto;top:calc(100% + 8px)}
+
+/* shell */
+.app{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}
+.rail{position:sticky;top:0;height:100vh;padding:22px 16px;display:flex;flex-direction:column;gap:6px}
+.brand{font-family:var(--font-display);font-weight:700;font-size:23px;display:flex;align-items:center;gap:10px;padding:4px 10px 20px}
+.brand-mark{width:36px;height:36px;border-radius:12px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center}
+.navlink{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:var(--r-md);color:var(--ink-2);font-weight:600;transition:background .15s,color .15s}
+.navlink:hover{background:var(--surface-2);color:var(--ink)}
+.navlink[aria-current="page"]{background:var(--surface);color:var(--accent);box-shadow:var(--shadow)}
+.rail .grow{flex:1}
+.themeseg{display:flex;background:var(--surface-2);border-radius:999px;padding:4px;gap:2px;align-self:flex-start}
+.themeseg button{width:36px;height:32px;border-radius:999px;display:grid;place-items:center;color:var(--ink-3);transition:background .15s,color .15s}
+.themeseg button:hover{color:var(--ink)}
+.themeseg button[aria-pressed="true"]{background:var(--surface);color:var(--accent);box-shadow:var(--shadow)}
+.who{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-md);width:100%;text-align:left;margin-top:8px;transition:background .15s}
+.who:hover{background:var(--surface-2)}
+.who small{display:block;color:var(--ink-3);font-size:12px;line-height:1.2}
+.who b{font-weight:600;line-height:1.2;display:block}
+.avatar{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font:600 15px var(--font-display);color:#1E1B2E;flex:none}
+.avatar.sm{width:26px;height:26px;font-size:12px}
+.topbar{display:none}
+main{padding:28px 32px 56px;min-width:0;max-width:1280px;width:100%}
+.view{display:none;flex-direction:column;gap:20px}
+.view.on{display:flex}
+@media (prefers-reduced-motion:no-preference){.view.on{animation:rise .25s ease}@keyframes rise{from{transform:translateY(6px)}to{transform:none}}}
+
+/* building blocks */
+.card{background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow)}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:20px 22px 0}
+.card-b{padding:16px 22px 22px}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:999px;padding:4px;gap:2px}
+.seg button{padding:6px 14px;border-radius:999px;color:var(--ink-2);font-size:13.5px;font-weight:600;min-height:32px;display:inline-flex;align-items:center;gap:6px;transition:background .15s,color .15s}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.card .seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);box-shadow:none}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+.iconbtn{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:var(--surface);color:var(--ink-2);box-shadow:var(--shadow);transition:background .15s,color .15s,transform .15s}
+.iconbtn:hover{background:var(--accent-soft);color:var(--accent);transform:translateY(-1px)}
+.iconbtn.flat{background:var(--surface-2);box-shadow:none}
+.iconbtn[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;font-weight:600;background:var(--surface-2);min-height:42px;transition:background .15s,transform .15s}
+.btn:hover{background:var(--surface-3)}
+.btn.primary{background:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{transform:translateY(-1px);background:var(--accent)}
+.btn.danger{background:var(--p-rose);color:var(--i-rose)}
+.tag{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--p-butter);color:var(--i-butter)}
+.tag.lav{background:var(--p-lav);color:var(--i-lav)}.tag.mint{background:var(--p-mint);color:var(--i-mint)}.tag.peach{background:var(--p-peach);color:var(--i-peach)}.tag.sky{background:var(--p-sky);color:var(--i-sky)}.tag.rose{background:var(--p-rose);color:var(--i-rose)}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.spread{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.tile{border-radius:var(--r-lg);padding:16px 18px;background:var(--surface);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;min-width:0;transition:transform .15s}
+.tile:hover{transform:translateY(-2px)}
+.tile .top{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.tile .chip{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:var(--surface-2)}
+.tile .v{font:600 32px/1.1 var(--font-display);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tile .v small{font:600 14px var(--font-body);color:var(--ink-2);margin-left:4px}
+.tile .s{font-size:12.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile.t-lav{background:var(--p-lav);box-shadow:none}.tile.t-lav .chip{background:var(--surface);color:var(--i-lav)}
+.tile.t-sky{background:var(--p-sky);box-shadow:none}.tile.t-sky .chip{background:var(--surface);color:var(--i-sky)}
+.tile.t-mint{background:var(--p-mint);box-shadow:none}.tile.t-mint .chip{background:var(--surface);color:var(--i-mint)}
+.tile.t-rose{background:var(--p-rose);box-shadow:none}.tile.t-rose .chip{background:var(--surface);color:var(--i-rose)}
+.tile.t-peach{background:var(--p-peach);box-shadow:none}.tile.t-peach .chip{background:var(--surface);color:var(--i-peach)}
+
+/* list */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.fchip{padding:7px 14px;border-radius:999px;background:var(--surface);font-weight:600;font-size:13.5px;color:var(--ink-2);box-shadow:var(--shadow);transition:background .15s,color .15s}
+.fchip:hover{color:var(--ink)}
+.fchip[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.month{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:6px}
+.month h2{font-size:17px;text-transform:capitalize}
+.acts{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.act{background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow);padding:10px;display:flex;flex-direction:column;gap:12px;transition:transform .18s,box-shadow .18s}
+.act:hover{transform:translateY(-3px);box-shadow:0 20px 44px rgba(70,58,140,.13)}
+.act .thumb{border-radius:20px;aspect-ratio:16/8;position:relative;overflow:hidden}
+.act .thumb svg{position:absolute;inset:0;width:100%;height:100%}
+.act .thumb path{fill:none;stroke-width:9;stroke-linecap:round;stroke-linejoin:round;transition:stroke-width .2s}
+.act:hover .thumb path{stroke-width:12}
+.act .thumb .km{position:absolute;left:14px;bottom:10px;font:600 26px/1 var(--font-display);font-variant-numeric:tabular-nums}
+.act .thumb .km small{font:600 13px var(--font-body);margin-left:3px}
+.act .thumb .cp{position:absolute;right:10px;top:10px;background:var(--surface);border-radius:999px;padding:3px 9px;font-size:11.5px;font-weight:600;display:flex;gap:5px;align-items:center}
+.act .body{padding:0 10px 10px;display:flex;flex-direction:column;gap:8px}
+.act h3{font-size:18px;font-weight:600;line-height:1.2}
+.act .mini{display:flex;gap:16px;flex-wrap:wrap;color:var(--ink-2);font-size:13.5px}
+.act .mini span{display:inline-flex;align-items:center;gap:5px}
+.act .mini b{font:600 15.5px var(--font-display);color:var(--ink);font-variant-numeric:tabular-nums}
+.emptybox{background:var(--surface);border-radius:var(--r-xl);padding:44px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;box-shadow:var(--shadow)}
+.emptybox .big{width:64px;height:64px;border-radius:22px;background:var(--p-lav);color:var(--i-lav);display:grid;place-items:center}
+
+/* detail */
+.back{display:inline-flex;align-items:center;gap:8px;color:var(--ink-2);font-weight:600;font-size:14px;padding:6px 12px 6px 8px;border-radius:999px;margin-left:-8px;transition:background .15s}
+.back:hover{background:var(--surface-2);color:var(--ink)}
+.meta{display:flex;gap:14px;flex-wrap:wrap;align-items:center;color:var(--ink-2);margin-top:8px}
+.meta>span{display:inline-flex;align-items:center;gap:6px}
+.pop{position:absolute;right:0;top:calc(100% + 8px);background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--pop);padding:8px;min-width:230px;display:none;z-index:40}
+.pop.open{display:block}
+.pop button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:12px;font-weight:600;text-align:left}
+.pop button:hover{background:var(--surface-2)}
+.pop button.dng{color:var(--i-rose)}
+.dgrid{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:20px;align-items:start}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+.mapcard{position:relative;overflow:hidden}
+#map{display:block;width:100%;height:auto;aspect-ratio:800/470;touch-action:pan-y;background:var(--map-land)}
+.float{position:absolute;background:var(--surface);border-radius:999px;box-shadow:var(--pop);padding:4px}
+.float.tl{left:14px;top:14px}
+.float.tr{right:14px;top:14px;padding:0;background:none;box-shadow:none}
+.legend{position:absolute;left:14px;bottom:14px;background:var(--surface);border-radius:16px;padding:10px 14px;font-size:12.5px;font-weight:600;color:var(--ink-2);box-shadow:var(--pop);max-width:calc(100% - 28px)}
+.legend .ramp{height:8px;width:170px;max-width:100%;border-radius:4px;margin:5px 0}
+.legend .ends{display:flex;justify-content:space-between;gap:12px}
+.legend .zs{display:flex;gap:12px;flex-wrap:wrap}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+.tip{position:absolute;z-index:30;pointer-events:none;background:var(--ink);color:var(--bg);border-radius:14px;padding:10px 12px;font-size:12.5px;min-width:150px;display:none;box-shadow:var(--pop)}
+.tip.on{display:block}
+.tip h4{margin:0 0 6px;font:600 15px var(--font-display)}
+.tip div{display:flex;justify-content:space-between;gap:14px;align-items:center}
+.tip div b{font:600 14px var(--font-display);font-variant-numeric:tabular-nums}
+.chartwrap{position:relative}
+#chart{display:block;width:100%;height:270px;touch-action:pan-y;cursor:crosshair}
+#chart text{font:600 11.5px var(--font-body);fill:var(--ink-3);font-variant-numeric:tabular-nums}
+.zbar{display:flex;gap:4px;height:40px}
+.zbar span{border-radius:10px;min-width:6px;transition:transform .15s,flex-grow .3s}
+.zbar span:hover{transform:scaleY(1.12)}
+.zrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:8px 8px;border-radius:12px;transition:background .15s}
+.zrow:hover{background:var(--surface-2)}
+.zrow .zn{font:600 15px var(--font-display);display:flex;align-items:center}
+.zrow .zr{font-size:12.5px;color:var(--ink-2)}
+.zrow b{font:600 16px var(--font-display);font-variant-numeric:tabular-nums}
+.zrow .pc{font-size:12.5px;color:var(--ink-2);min-width:36px;text-align:right}
+.effort{display:flex;align-items:center;gap:14px;background:var(--p-peach);border-radius:var(--r-lg);padding:14px 16px;margin-top:12px}
+.effort .ring{width:48px;height:48px;border-radius:16px;background:var(--surface);color:var(--i-peach);display:grid;place-items:center}
+.effort .v{font:600 30px/1 var(--font-display)}
+.note{display:flex;gap:10px;align-items:flex-start;background:var(--p-sky);color:var(--ink);border-radius:var(--r-lg);padding:12px 16px;font-size:14px}
+.note .ic{color:var(--i-sky);margin-top:2px}
+.journal p{margin:0 0 14px;max-width:60ch}
+.rpe{display:flex;gap:4px;margin:6px 0 4px}
+.rpe i,.rpe button{flex:1;height:26px;border-radius:8px;background:var(--surface-2);max-width:30px;transition:transform .12s,background .12s}
+.rpe .on{background:var(--accent)}
+.rpe button:hover{transform:scaleY(1.15)}
+textarea,input[type=text],input[type=number]{width:100%;background:var(--surface-2);border:0;border-radius:var(--r-md);padding:10px 14px}
+textarea{min-height:110px;resize:vertical}
+.tablebox{overflow-x:auto;margin:0 -8px}
+table{border-collapse:separate;border-spacing:0 2px;width:100%;min-width:660px}
+th,td{padding:9px 12px;text-align:right;white-space:nowrap}
+th{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+td{font:500 16px var(--font-display);font-variant-numeric:tabular-nums;transition:background .12s}
+td:first-child{border-radius:12px 0 0 12px;text-align:left}td:last-child{border-radius:0 12px 12px 0}
+th:first-child{text-align:left}
+td.name{font:600 14.5px var(--font-body)}
+tbody tr:hover td,tbody tr.on td{background:var(--surface-2)}
+td.bar{width:32%;min-width:150px}
+.pb{display:flex;align-items:center;gap:8px}
+.pb .t{flex:1;height:12px;border-radius:6px;background:var(--surface-2)}
+tbody tr:hover .pb .t,tbody tr.on .pb .t{background:var(--surface-3)}
+.pb .t span{display:block;height:100%;border-radius:6px;background:var(--pace-fast)}
+.best{font:700 11px var(--font-body);color:var(--i-lav);background:var(--p-lav);padding:2px 8px;border-radius:999px}
+
+/* import */
+.igrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+.drop{border-radius:var(--r-xl);background:var(--p-lav);padding:44px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;transition:transform .2s,background .2s}
+.drop.over{transform:scale(1.01);background:var(--p-mint)}
+.drop .big{width:76px;height:76px;border-radius:26px;background:var(--surface);color:var(--i-lav);display:grid;place-items:center}
+.drop h2{font-size:23px}
+.frow{display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--r-md);transition:background .15s}
+.frow:hover{background:var(--surface-2)}
+.frow .st{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none;background:var(--surface-2);color:var(--ink-2)}
+.frow .st.ok{background:var(--p-mint);color:var(--i-mint)}.frow .st.dup{background:var(--p-butter);color:var(--i-butter)}.frow .st.ko{background:var(--p-rose);color:var(--i-rose)}
+.frow .fn{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.frow .fs{font-size:13px;color:var(--ink-2)}
+.frow .grow{flex:1;min-width:0}
+.prog{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden;margin-top:6px}
+.prog span{display:block;height:100%;width:40%;border-radius:3px;background:var(--accent);animation:slide 1s ease-in-out infinite}
+@keyframes slide{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
+.facts{display:flex;flex-direction:column;gap:14px}
+.fact{display:flex;gap:12px;align-items:flex-start}
+.fact .chip{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;flex:none}
+
+/* settings */
+.sgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field label,.flabel{font-size:13px;font-weight:600;color:var(--ink-2)}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.swatches button{width:34px;height:34px;border-radius:50%;transition:transform .15s}
+.swatches button:hover{transform:scale(1.12)}
+.swatches button[aria-pressed="true"]{box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--ink)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.hrbig{font:600 44px/1 var(--font-display);font-variant-numeric:tabular-nums}
+.zprev{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 12px;align-items:center;margin-top:8px}
+.zprev .b{height:14px;border-radius:7px}
+.themes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.themes button{border-radius:var(--r-lg);padding:10px;background:var(--surface-2);display:flex;flex-direction:column;gap:8px;align-items:stretch;font-weight:600;transition:transform .15s}
+.themes button:hover{transform:translateY(-2px)}
+.themes button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.themes .pv{height:58px;border-radius:12px;display:flex;align-items:flex-end;gap:5px;padding:9px}
+.themes .pv i{flex:1;border-radius:4px}
+.prow{display:flex;align-items:center;gap:12px;padding:10px;border-radius:var(--r-md)}
+.prow:hover{background:var(--surface-2)}
+.prow .grow{flex:1;min-width:0}
+
+/* modal + toast */
+#modal{position:fixed;inset:0;background:rgba(20,16,40,.45);display:none;place-items:center;z-index:80;padding:16px}
+#modal.on{display:grid}
+.sheet{background:var(--surface);border-radius:var(--r-xl);padding:24px;width:min(440px,100%);box-shadow:var(--pop);display:flex;flex-direction:column;gap:16px}
+.pick{display:flex;align-items:center;gap:12px;padding:10px;border-radius:var(--r-md);width:100%;text-align:left;font-weight:600}
+.pick:hover{background:var(--surface-2)}
+.pick[aria-pressed="true"]{background:var(--accent-soft)}
+.switch{display:flex;align-items:center;gap:12px;font-weight:600;width:100%;text-align:left}
+.switch .tr{width:44px;height:26px;border-radius:13px;background:var(--surface-3);position:relative;flex:none;transition:background .15s}
+.switch .tr::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:var(--surface);transition:transform .15s}
+.switch[aria-pressed="true"] .tr{background:var(--accent)}
+.switch[aria-pressed="true"] .tr::after{transform:translateX(18px)}
+#toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:999px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:90;max-width:calc(100% - 32px);text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+footer{color:var(--ink-3);font-size:13px;max-width:72ch;margin-top:8px}
+
+@media (max-width:1180px){.dgrid,.igrid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .rail{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;flex-direction:row;justify-content:space-around;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:var(--surface);box-shadow:0 -8px 30px rgba(40,30,90,.10);z-index:50;border-radius:22px 22px 0 0}
+  .rail .brand,.rail .grow,.rail .themeseg,.rail .who{display:none}
+  .navlink{flex-direction:column;gap:3px;font-size:11.5px;padding:8px 16px}
+  .navlink[aria-current="page"]{box-shadow:none;background:var(--accent-soft)}
+  .topbar{display:flex;align-items:center;gap:10px;padding:12px 16px 0}
+  .topbar .brand{padding:0;flex:1;font-size:20px}
+  .topbar .who{width:auto;margin:0;padding:4px}
+  .topbar .who span{display:none}
+  main{padding:16px 16px 110px}
+  h1{font-size:28px}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .tile .v{font-size:26px}
+  .sgrid{grid-template-columns:minmax(0,1fr)}
+  #map{aspect-ratio:4/3.4}
+  #chart{height:230px}
+  .card-h{padding:16px 16px 0}.card-b{padding:14px 16px 18px}
+  #toast{bottom:96px}
+}
+@media (max-width:560px){.seg.compact button .lb{display:none}.seg.compact button[aria-pressed="true"] .lb{display:inline}.seg.compact button{padding:6px 12px}}
+@media (max-width:420px){.acts{grid-template-columns:minmax(0,1fr)}.themes{gap:8px}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-logo" viewBox="0 0 24 24"><path d="M3 17c4 0 4-10 9-10s4 10 9 10"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+<symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+<symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+<symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+<symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/></symbol>
+<symbol id="i-gauge" viewBox="0 0 24 24"><path d="M12 14l4-4M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></symbol>
+<symbol id="i-steps" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+<symbol id="i-mountain" viewBox="0 0 24 24"><path d="M8 3l4 8 5-5 5 15H2L8 3z"/></symbol>
+<symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-swap" viewBox="0 0 24 24"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></symbol>
+<symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></symbol>
+<symbol id="i-bars" viewBox="0 0 24 24"><path d="M6 20v-8M12 20V4M18 20v-12"/></symbol>
+</defs></svg>
+
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><span class="brand-mark"><svg class="ic" width="20" height="20" style="stroke-width:2.6"><use href="#i-logo"/></svg></span>Running</div>
+    <a class="navlink" href="#activites" data-nav="activites"><svg class="ic" width="20" height="20"><use href="#i-list"/></svg>Activités</a>
+    <a class="navlink" href="#importer" data-nav="importer"><svg class="ic" width="20" height="20"><use href="#i-upload"/></svg>Importer</a>
+    <a class="navlink" href="#reglages" data-nav="reglages"><svg class="ic" width="20" height="20"><use href="#i-sliders"/></svg>Réglages</a>
+    <div class="grow"></div>
+    <div class="themeseg" role="group" aria-label="Thème">
+      <button type="button" data-act="theme" data-v="light" data-tip="Thème clair" data-tip-pos="start" aria-label="Thème clair"><svg class="ic" width="17" height="17"><use href="#i-sun"/></svg></button>
+      <button type="button" data-act="theme" data-v="dark" data-tip="Thème sombre" aria-label="Thème sombre"><svg class="ic" width="17" height="17"><use href="#i-moon"/></svg></button>
+      <button type="button" data-act="theme" data-v="system" data-tip="Suivre le système" aria-label="Suivre le système"><svg class="ic" width="17" height="17"><use href="#i-monitor"/></svg></button>
+    </div>
+    <button class="who" type="button" data-act="profiles"><span class="avatar" data-avatar></span><span><b data-pname></b><small>Changer de profil</small></span></button>
+  </aside>
+
+  <div style="min-width:0">
+    <div class="topbar">
+      <div class="brand"><span class="brand-mark" style="width:32px;height:32px;border-radius:10px"><svg class="ic" width="18" height="18" style="stroke-width:2.6"><use href="#i-logo"/></svg></span>Running</div>
+      <div class="themeseg" role="group" aria-label="Thème">
+        <button type="button" data-act="theme" data-v="light" aria-label="Thème clair"><svg class="ic" width="16" height="16"><use href="#i-sun"/></svg></button>
+        <button type="button" data-act="theme" data-v="dark" aria-label="Thème sombre"><svg class="ic" width="16" height="16"><use href="#i-moon"/></svg></button>
+        <button type="button" data-act="theme" data-v="system" aria-label="Suivre le système"><svg class="ic" width="16" height="16"><use href="#i-monitor"/></svg></button>
+      </div>
+      <button class="who" type="button" data-act="profiles" aria-label="Changer de profil"><span class="avatar" data-avatar></span></button>
+    </div>
+    <main>
+      <section class="view" id="v-activites"></section>
+      <section class="view" id="v-activite"></section>
+      <section class="view" id="v-importer"></section>
+      <section class="view" id="v-reglages"></section>
+      <footer>Prototype de direction artistique : données fictives, fond de carte stylisé. Rien n'est enregistré ; l'export de fichiers et l'import réel arriveront avec l'application.</footer>
+    </main>
+  </div>
+</div>
+<div id="modal" role="dialog" aria-modal="true"><div class="sheet" id="sheet"></div></div>
+<div id="toast" role="status"></div>
+
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const root = document.documentElement;
+const ic = (n, s = 18) => `<svg class="ic" width="${s}" height="${s}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const NOW = new Date(2026, 10, 14);
+
+/* ---------- data ---------- */
+const SW = ["#B9AFFF", "#F7AFC3", "#8FE0BB", "#FFC39C", "#9CCBF7", "#EFD877"];
+let PROFILES = [
+  { id: "alex", name: "Alex", color: SW[0], hrmax: 186, rest: 52 },
+  { id: "camille", name: "Camille", color: SW[1], hrmax: 182, rest: 58 }
+];
+const TYPES = { tempo: "lav", ef: "mint", frac: "peach", long: "sky", race: "rose" };
+const TAGC = { "Endurance fondamentale": "mint", "Fractionné": "peach", "Compétition": "rose", "Tempo": "lav", "Sortie longue": "sky" };
+const PLANS = {
+  tempo: t => [[2, 365, "Échauffement"], [t - 4.21, 332, "Bloc tempo"], [2.21, 372, "Retour au calme"]],
+  ef: t => [[t, 378, "Footing"]],
+  long: t => [[t, 372, "Sortie longue"]],
+  race: t => [[t, 318, "Course"]],
+  frac: t => { const s = [[2, 370, "Échauffement"]]; for (let i = 1; i <= 5; i++) { s.push([.6, 282, "Rapide " + i]); s.push([.4, 405, "Récup " + i]); } s.push([t - 7, 380, "Retour au calme"]); return s; }
+};
+let ACTS = [
+  { id: "a2", profile: "alex", title: "Footing du mardi", date: [2026, 10, 10, 18, 55], type: "ef", dist: 7.52, seed: 2, tags: ["Endurance fondamentale"], rpe: 3, desc: "Sortie facile après le travail, en aisance respiratoire du début à la fin." },
+  { id: "a1", profile: "alex", title: "Sortie tempo le long des berges", date: [2026, 10, 8, 8, 42], type: "tempo", dist: 10.21, seed: 0, tags: ["Tempo"], rpe: 6, desc: "Départ frais, 6 °C. Deux kilomètres tranquilles puis bloc tempo jusqu'au pont. L'allure a bien tenu sur le plat, bonnes sensations au retour." },
+  { id: "a3", profile: "alex", title: "5 × 600 m au stade", date: [2026, 10, 5, 12, 20], type: "frac", dist: 8.4, seed: 3, tags: ["Fractionné"], rpe: 8, desc: "Cinq répétitions avec 400 m de récupération trottée. La dernière était dure." },
+  { id: "a4", profile: "alex", title: "Sortie longue du canal", date: [2026, 10, 1, 9, 5], type: "long", dist: 16.1, seed: 4, tags: ["Sortie longue", "Endurance fondamentale"], rpe: 5, desc: "Aller-retour le long du canal, un gel au dixième kilomètre." },
+  { id: "a5", profile: "alex", title: "Réveil musculaire", date: [2026, 9, 29, 7, 15], type: "ef", dist: 5.2, seed: 5, tags: ["Endurance fondamentale"], rpe: 2, desc: "" },
+  { id: "a6", profile: "alex", title: "10 km de la Vène", date: [2026, 9, 25, 10, 0], type: "race", dist: 10.0, seed: 6, tags: ["Compétition"], rpe: 9, desc: "Premier dossard ! Parti prudemment, fini fort." },
+  { id: "a7", profile: "alex", title: "Footing de récupération", date: [2026, 9, 22, 18, 30], type: "ef", dist: 6.03, seed: 7, tags: ["Endurance fondamentale"], rpe: 2, desc: "" },
+  { id: "a8", profile: "alex", title: "Fractionné du midi", date: [2026, 9, 20, 12, 10], type: "frac", dist: 8.4, seed: 8, tags: ["Fractionné"], rpe: 7, desc: "" },
+  { id: "a9", profile: "alex", title: "Sortie longue des berges", date: [2026, 9, 18, 9, 0], type: "long", dist: 14.3, seed: 9, tags: ["Sortie longue"], rpe: 5, desc: "" },
+  { id: "c1", profile: "camille", title: "Sortie à deux le long des berges", date: [2026, 10, 8, 8, 42], type: "tempo", dist: 10.21, seed: 0, tags: ["Tempo"], rpe: 7, desc: "Avec Alex, c'est lui qui avait la montre.", noHR: true, from: "a1" },
+  { id: "c2", profile: "camille", title: "Reprise en douceur", date: [2026, 10, 3, 17, 40], type: "ef", dist: 5.0, seed: 11, tags: ["Endurance fondamentale"], rpe: 3, desc: "" },
+  { id: "c3", profile: "camille", title: "Footing au parc", date: [2026, 9, 27, 9, 30], type: "ef", dist: 6.2, seed: 12, tags: ["Endurance fondamentale"], rpe: 4, desc: "" }
+];
+
+const CP = [[140,300],[205,225],[300,180],[410,150],[525,128],[625,165],[690,245],[655,325],[565,362],[470,342],[380,372],[290,402],[195,385]];
+const N = 600;
+function trace(seed) {
+  const cx = 415, cy = 262, ang = seed * 0.9, ca = Math.cos(ang), sa = Math.sin(ang), n = CP.length;
+  const cp = CP.map((p, i) => { const k = 0.86 + 0.14 * Math.sin(seed * 3 + i * 1.7); const x = (p[0] - cx) * k, y = (p[1] - cy) * k; return [400 + (x * ca - y * sa), 240 + (x * sa + y * ca) * (seed ? 0.78 : 1)]; });
+  const raw = [];
+  for (let i = 0; i < n; i++) {
+    const p0 = cp[(i - 1 + n) % n], p1 = cp[i], p2 = cp[(i + 1) % n], p3 = cp[(i + 2) % n];
+    for (let j = 0; j < 40; j++) { const t = j / 40, t2 = t * t, t3 = t2 * t; raw.push([0, 1].map(a => .5 * (2 * p1[a] + (-p0[a] + p2[a]) * t + (2 * p0[a] - 5 * p1[a] + 4 * p2[a] - p3[a]) * t2 + (-p0[a] + 3 * p1[a] - 3 * p2[a] + p3[a]) * t3))); }
+  }
+  const cum = [0]; for (let i = 1; i < raw.length; i++) cum.push(cum[i - 1] + Math.hypot(raw[i][0] - raw[i - 1][0], raw[i][1] - raw[i - 1][1]));
+  const len = cum[cum.length - 1] * 0.975, out = []; let k = 0;
+  for (let i = 0; i < N; i++) { const tg = len * i / (N - 1); while (k < cum.length - 2 && cum[k + 1] < tg) k++; const f = (tg - cum[k]) / ((cum[k + 1] - cum[k]) || 1); out.push([raw[k][0] + (raw[k + 1][0] - raw[k][0]) * f, raw[k][1] + (raw[k + 1][1] - raw[k][1]) * f]); }
+  return out;
+}
+const RUNS = {};
+function runOf(a) {
+  const key = a.type + "|" + a.dist + "|" + a.seed; if (RUNS[key]) return RUNS[key];
+  const total = a.dist, segs = PLANS[a.type](total), bounds = []; let acc = 0;
+  segs.forEach(s => { bounds.push([acc, acc + s[0], s[1], s[2]]); acc += s[0]; });
+  const segPace = d => { for (const b of bounds) if (d < b[1]) return b[2]; return bounds[bounds.length - 1][2]; };
+  const base = d => { let s = 0; for (let k = -2; k <= 2; k++) s += segPace(Math.min(total, Math.max(0, d + k * 0.02))); return s / 5; };
+  const ph = a.seed * 1.7;
+  const elev = d => 12 + 3.5 * Math.sin(d * 0.8 + ph) + 1.8 * Math.sin(d * 2.1 + ph * 2) + 0.7 * Math.sin(d * 5.3 + ph);
+  const R = { total, XY: trace(a.seed), D: [], E: [], P: [], T: [], H: [], C: [], G: [] };
+  let hr = 102, t = 0;
+  for (let i = 0; i < N; i++) {
+    const d = total * i / (N - 1), grade = (elev(d + .02) - elev(d - .02)) / 40 * 100;
+    const pace = base(d) + 5 * Math.sin(d * 3.1 + ph) + 3.5 * Math.sin(d * 7.3 + ph * .6) + grade * 9;
+    if (i) t += pace * total / (N - 1);
+    hr += (128 + (378 - pace) * 0.42 + grade * 3 + 14 * d / total - hr) * 0.035;
+    R.D.push(d); R.E.push(elev(d)); R.P.push(pace); R.T.push(t); R.G.push(grade);
+    R.H.push(hr + 1.1 * Math.sin(i * 0.21)); R.C.push(167 + (345 - pace) * 0.06 + 1.4 * Math.sin(i * 0.33));
+  }
+  const idx = d => Math.max(0, Math.min(N - 1, Math.round(d / total * (N - 1))));
+  const range = (i0, i1, label) => {
+    let up = 0, down = 0, hs = 0, cs = 0, gs = 0;
+    for (let i = i0 + 1; i <= i1; i++) { const de = R.E[i] - R.E[i - 1]; if (de > 0) up += de; else down -= de; hs += R.H[i]; cs += R.C[i]; gs += R.P[i] - R.G[i] * 9; }
+    const n = Math.max(1, i1 - i0), dist = R.D[i1] - R.D[i0], time = R.T[i1] - R.T[i0];
+    return { i0, i1, label, dist, time, pace: time / dist, gap: gs / n, up, down, hr: hs / n, cad: cs / n };
+  };
+  R.km = []; for (let k = 0; k < Math.ceil(total - 0.005); k++) R.km.push(range(idx(k), idx(Math.min(k + 1, total)), String(k + 1)));
+  R.laps = bounds.map(b => range(idx(b[0]), idx(b[1]), b[3]));
+  R.all = range(0, N - 1, "");
+  R.pmin = Math.min(...R.P); R.pmax = Math.max(...R.P); R.hpeak = Math.round(Math.max(...R.H));
+  R.pause = 40 + (a.seed * 37) % 150;
+  return RUNS[key] = R;
+}
+const zb = hrmax => [.5, .6, .7, .8, .9, 1].map(f => Math.round(f * hrmax));
+const zoneOf = (h, ZB) => { for (let z = 4; z > 0; z--) if (h >= ZB[z]) return z; return 0; };
+function zoneTimes(R, ZB) { const zt = [0, 0, 0, 0, 0]; for (let i = 1; i < N; i++) zt[zoneOf(R.H[i], ZB)] += R.T[i] - R.T[i - 1]; return zt; }
+const effortOf = zt => Math.round(zt.reduce((a, s, z) => a + s / 60 * (z + 1), 0));
+const effortWord = e => e < 90 ? "léger" : e < 170 ? "modéré" : e < 260 ? "soutenu" : "intense";
+const ZNAMES = ["Récupération", "Endurance", "Tempo", "Seuil", "VO₂ max"];
+const RPEW = ["", "très facile", "facile", "facile", "modéré", "modéré", "soutenu", "difficile", "très difficile", "extrême", "maximal"];
+
+/* ---------- format ---------- */
+const clock = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return (h ? h + ":" + (m < 10 ? "0" : "") : "") + m + ":" + (x < 10 ? "0" : "") + x; };
+const fr = (n, d) => n.toFixed(d).replace(".", ",");
+const dt = a => new Date(a.date[0], a.date[1], a.date[2], a.date[3], a.date[4]);
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const fdate = (a, long) => cap(dt(a).toLocaleDateString("fr-FR", long ? { weekday: "long", day: "numeric", month: "long", year: "numeric" } : { weekday: "short", day: "numeric", month: "short" }));
+const ftime = a => String(a.date[3]).padStart(2, "0") + ":" + String(a.date[4]).padStart(2, "0");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const tagHTML = t => `<span class="tag ${TAGC[t] || ""}">${esc(t)}</span>`;
+const css = n => getComputedStyle(root).getPropertyValue(n).trim();
+const hex = h => { h = h.replace("#", ""); return [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16)); };
+const mix = (a, b, t) => "rgb(" + a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",") + ")";
+
+/* ---------- state ---------- */
+const S = { profile: "alex", id: "a1", tag: null, period: "all", mode: "pace", series: "pace", showAlt: true, showKm: true, split: "km", cursor: null, sel: null, editing: false, basemap: true, units: "km", imports: [], theme: "system" };
+const prof = id => PROFILES.find(p => p.id === (id || S.profile));
+const act = () => ACTS.find(a => a.id === S.id);
+const avatar = (p, cls = "") => `<span class="avatar ${cls}" style="background:${p.color}">${esc(p.name.charAt(0).toUpperCase())}</span>`;
+
+/* ---------- toast & modal ---------- */
+let toastT; function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2600); }
+function modal(html) { $("#sheet").innerHTML = html; $("#modal").classList.add("on"); const f = $("#sheet button, #sheet input"); if (f) f.focus(); }
+function closeModal() { $("#modal").classList.remove("on"); }
+
+/* ---------- list ---------- */
+function renderList() {
+  const p = prof(), mine = ACTS.filter(a => a.profile === S.profile).sort((a, b) => dt(b) - dt(a));
+  const inMonth = mine.filter(a => a.date[1] === NOW.getMonth() && a.date[0] === NOW.getFullYear());
+  const sum = inMonth.reduce((o, a) => { const R = runOf(a); o.d += R.total; o.t += R.all.time; return o; }, { d: 0, t: 0 });
+  const tags = [...new Set(mine.flatMap(a => a.tags))];
+  let list = mine.filter(a => !S.tag || a.tags.includes(S.tag));
+  if (S.period === "month") list = list.filter(a => inMonth.includes(a));
+  if (S.period === "3m") list = list.filter(a => NOW - dt(a) < 90 * 864e5);
+  let h = `<div class="spread"><div><div class="eyebrow">Profil de ${esc(p.name)}</div><h1>Activités</h1></div>
+    <a class="btn primary" href="#importer">${ic("upload")}Importer</a></div>`;
+  if (!mine.length) {
+    h += `<div class="emptybox"><div class="big">${ic("route", 30)}</div><h2>Aucune sortie pour ${esc(p.name)}</h2><p class="muted" style="margin:0;max-width:44ch">Importez un fichier .gpx ou .fit, ou copiez une sortie depuis un autre profil du foyer.</p><a class="btn primary" href="#importer">${ic("upload")}Importer des fichiers</a></div>`;
+    $("#v-activites").innerHTML = h; return;
+  }
+  h += `<div class="tiles">
+    <div class="tile t-sky"><div class="top"><span class="chip">${ic("route", 16)}</span>Distance en novembre</div><div class="v">${fr(sum.d, 1)}<small>km</small></div></div>
+    <div class="tile t-lav"><div class="top"><span class="chip">${ic("calendar", 16)}</span>Sorties en novembre</div><div class="v">${inMonth.length}</div></div>
+    <div class="tile t-mint"><div class="top"><span class="chip">${ic("timer", 16)}</span>Temps de course</div><div class="v">${clock(sum.t)}</div></div>
+    <div class="tile t-peach"><div class="top"><span class="chip">${ic("gauge", 16)}</span>Allure moyenne</div><div class="v">${sum.d ? clock(sum.t / sum.d) : "—"}<small>/km</small></div></div></div>`;
+  h += `<div class="spread" style="align-items:center"><div class="filters" role="group" aria-label="Filtrer par tag">
+    <button class="fchip" type="button" data-act="tag" data-v="" aria-pressed="${!S.tag}">Toutes</button>
+    ${tags.map(t => `<button class="fchip" type="button" data-act="tag" data-v="${esc(t)}" aria-pressed="${S.tag === t}">${esc(t)}</button>`).join("")}</div>
+    <div class="seg" role="group" aria-label="Période">
+    ${[["all", "Tout"], ["month", "Ce mois"], ["3m", "3 mois"]].map(o => `<button type="button" data-act="period" data-v="${o[0]}" aria-pressed="${S.period === o[0]}">${o[1]}</button>`).join("")}</div></div>`;
+  if (!list.length) h += `<div class="emptybox"><div class="big">${ic("list", 28)}</div><h2>Aucune sortie ne correspond</h2><button class="btn" type="button" data-act="tag" data-v="">Réinitialiser les filtres</button></div>`;
+  let cur = "";
+  list.forEach((a, n) => {
+    const key = dt(a).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    if (key !== cur) {
+      if (cur) h += "</div>";
+      const km = list.filter(x => dt(x).toLocaleDateString("fr-FR", { month: "long", year: "numeric" }) === key).reduce((s, x) => s + x.dist, 0);
+      h += `<div class="month"><h2>${key}</h2><span class="muted">${fr(km, 1)} km</span></div><div class="acts">`; cur = key;
+    }
+    const R = runOf(a), c = TYPES[a.type];
+    let d = ""; for (let i = 0; i < N; i += 6) d += (i ? "L" : "M") + R.XY[i][0].toFixed(0) + "," + R.XY[i][1].toFixed(0);
+    h += `<a class="act" href="#activite" data-act="open" data-v="${a.id}">
+      <div class="thumb" style="background:var(--p-${c})"><svg viewBox="60 20 680 440" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="${d}" style="stroke:var(--i-${c})"/></svg>
+      <div class="km" style="color:var(--i-${c})">${fr(R.total, 2)}<small>km</small></div>${a.from ? `<div class="cp" data-tip="Copiée depuis un autre profil" data-tip-pos="end">${ic("copy", 13)}Copie</div>` : ""}</div>
+      <div class="body"><div><div class="muted" style="font-size:13px;font-weight:600">${fdate(a)} · ${ftime(a)}</div><h3>${esc(a.title)}</h3></div>
+      <div class="mini"><span data-tip="Temps en mouvement" data-tip-pos="start">${ic("timer", 15)}<b>${clock(R.all.time)}</b></span><span data-tip="Allure moyenne">${ic("gauge", 15)}<b>${clock(R.all.pace)}</b>/km</span><span data-tip="Fréquence cardiaque moyenne">${ic("heart", 15)}<b>${a.noHR ? "—" : Math.round(R.all.hr)}</b>${a.noHR ? "" : "bpm"}</span></div>
+      <div class="row" style="gap:6px">${a.tags.map(tagHTML).join("")}</div></div></a>`;
+  });
+  if (cur) h += "</div>";
+  $("#v-activites").innerHTML = h;
+}
+
+/* ---------- detail ---------- */
+let R, A, ZB, ZT, CH = {};
+function renderDetail() {
+  A = act(); if (!A) { go("activites"); return; }
+  R = runOf(A); const P = prof(A.profile); ZB = zb(P.hrmax); ZT = zoneTimes(R, ZB);
+  const hr = !A.noHR, eff = effortOf(ZT), others = PROFILES.filter(p => p.id !== A.profile);
+  if (!hr && S.mode === "hr") S.mode = "pace"; if (!hr && S.series === "hr") S.series = "pace";
+  if (R.laps.length < 2) S.split = "km";
+  const src = A.from && ACTS.find(x => x.id === A.from);
+  $("#v-activite").innerHTML = `
+  <div><a class="back" href="#activites">${ic("back", 17)}Toutes les activités</a>
+  <div class="spread" style="align-items:flex-start;margin-top:6px"><div style="min-width:0;flex:1 1 320px">
+    <h1>${esc(A.title)}</h1>
+    <div class="meta"><span>${ic("calendar", 16)}${fdate(A, true)}</span><span>${ic("clock", 16)}${ftime(A)}</span>${A.tags.map(tagHTML).join("")}</div></div>
+    <div class="row" style="position:relative">
+      <button class="iconbtn" type="button" data-act="export" data-tip="Exporter en GPX" aria-label="Exporter en GPX">${ic("download")}</button>
+      ${others.length ? `<button class="iconbtn" type="button" data-act="copy" data-tip="Copier vers un profil" aria-label="Copier vers un profil">${ic("users")}</button>` : ""}
+      <button class="iconbtn" type="button" data-act="more" data-tip="Autres actions" data-tip-pos="end" aria-label="Autres actions">${ic("dots")}</button>
+      <div class="pop" id="more">
+        <button type="button" data-act="original">${ic("file")}Fichier d'origine</button>
+        ${others.length ? `<button type="button" data-act="move">${ic("swap")}Déplacer vers un profil</button>` : ""}
+        <button type="button" class="dng" data-act="delete">${ic("trash")}Supprimer</button></div>
+    </div></div></div>
+  ${A.from ? `<div class="note">${ic("copy")}<span>Copiée depuis le profil ${src ? "de " + esc(prof(src.profile) ? prof(src.profile).name : "") : "d'origine"}${hr ? "" : ", sans fréquence cardiaque : elle appartient à la personne qui portait la montre"}.</span></div>` : ""}
+  <div class="tiles">
+    <div class="tile t-sky"><div class="top"><span class="chip">${ic("route", 16)}</span>Distance</div><div class="v">${fr(R.total, 2)}<small>km</small></div><div class="s">dénivelé +${Math.round(R.all.up)} m</div></div>
+    <div class="tile t-mint"><div class="top"><span class="chip">${ic("timer", 16)}</span>Temps en mouvement</div><div class="v">${clock(R.all.time)}</div><div class="s">écoulé ${clock(R.all.time + R.pause)}</div></div>
+    <div class="tile t-lav"><div class="top"><span class="chip">${ic("gauge", 16)}</span>Allure moyenne</div><div class="v">${clock(R.all.pace)}<small>/km</small></div><div class="s">ajustée à la pente ${clock(R.all.gap)}</div></div>
+    <div class="tile t-rose"><div class="top"><span class="chip">${ic("heart", 16)}</span>Fréquence cardiaque</div><div class="v">${hr ? Math.round(R.all.hr) : "—"}${hr ? "<small>bpm</small>" : ""}</div><div class="s">${hr ? "max " + R.hpeak + " bpm" : "non enregistrée"}</div></div>
+  </div>
+  <div class="dgrid"><div class="col">
+    <section class="card mapcard" aria-label="Parcours">
+      <svg id="map" viewBox="0 0 800 470" preserveAspectRatio="xMidYMid slice" role="img"></svg>
+      <div class="float tl seg" role="group" aria-label="Couleur du tracé">
+        <button type="button" data-act="mode" data-v="pace" aria-pressed="${S.mode === "pace"}">${ic("gauge", 15)}Allure</button>
+        <button type="button" data-act="mode" data-v="hr" aria-pressed="${S.mode === "hr"}" ${hr ? "" : "disabled"}>${ic("heart", 15)}FC</button></div>
+      <div class="float tr"><button class="iconbtn" type="button" data-act="basemap" aria-pressed="${S.basemap}" data-tip="Fond de carte" data-tip-pos="end" aria-label="Afficher ou masquer le fond de carte">${ic("layers")}</button></div>
+      <div class="legend" id="legend"></div><div class="tip" id="maptip"></div>
+    </section>
+    <section class="card" aria-label="Courbes">
+      <div class="card-h"><div class="seg compact" role="group" aria-label="Donnée affichée">
+        ${[["pace", "Allure", "gauge"], ["hr", "FC", "heart"], ["cad", "Cadence", "steps"], ["alt", "Altitude", "mountain"]].map(o => `<button type="button" data-act="series" data-v="${o[0]}" aria-pressed="${S.series === o[0]}" ${o[0] === "hr" && !hr ? "disabled" : ""} aria-label="${o[1]}">${ic(o[2], 15)}<span class="lb">${o[1]}</span></button>`).join("")}</div>
+        <div class="row" style="gap:8px">
+          <button class="iconbtn flat" type="button" data-act="showKm" aria-pressed="${S.showKm}" data-tip="Moyenne par kilomètre" aria-label="Moyenne par kilomètre">${ic("bars")}</button>
+          <button class="iconbtn flat" type="button" data-act="showAlt" aria-pressed="${S.showAlt}" data-tip="Relief en filigrane" data-tip-pos="end" aria-label="Relief en filigrane">${ic("mountain")}</button></div></div>
+      <div class="card-b"><div class="chartwrap"><svg id="chart" role="img"></svg><div class="tip" id="charttip"></div></div></div>
+    </section>
+  </div><div class="col">
+    <section class="card" aria-label="Zones de fréquence cardiaque"><div class="card-h"><h2>Zones cardiaques</h2><span class="muted" style="font-size:13px" data-tip="Réglable dans Réglages" data-tip-pos="end">FC max ${P.hrmax}</span></div><div class="card-b" id="zones"></div></section>
+    <section class="card journal" aria-label="Journal" id="journal"></section>
+  </div></div>
+  <section class="card" aria-label="Découpage"><div class="card-h"><h2>Découpage</h2>
+    ${R.laps.length > 1 ? `<div class="seg" role="group" aria-label="Type de découpage"><button type="button" data-act="split" data-v="km" aria-pressed="${S.split === "km"}">Kilomètres</button><button type="button" data-act="split" data-v="lap" aria-pressed="${S.split === "lap"}">Tours</button></div>` : ""}</div>
+    <div class="card-b"><div class="tablebox"><table id="splits"></table></div></div></section>`;
+  // zones
+  const z = $("#zones");
+  if (!hr) z.innerHTML = `<p class="muted" style="margin:0">Aucune fréquence cardiaque pour cette sortie : les zones et l'effort relatif ne peuvent pas être calculés.</p>`;
+  else {
+    const tot = ZT.reduce((a, b) => a + b, 0);
+    z.innerHTML = `<div class="zbar">${ZT.map((s, i) => s > 0 ? `<span style="flex:${s} 1 0;background:var(--z${i + 1})" data-tip="Z${i + 1} · ${clock(s)} · ${Math.round(s / tot * 100)} %" ${i > 2 ? 'data-tip-pos="end"' : i < 2 ? 'data-tip-pos="start"' : ""}></span>` : "").join("")}</div>
+      <div style="margin-top:10px">${[4, 3, 2, 1, 0].map(i => `<div class="zrow"><span class="zn"><span class="dot" style="background:var(--z${i + 1})"></span>Z${i + 1}</span><span class="zr">${ZNAMES[i]} · ${ZB[i]}–${ZB[i + 1]} bpm</span><b>${clock(ZT[i])}</b><span class="pc">${Math.round(ZT[i] / tot * 100)} %</span></div>`).join("")}</div>
+      <div class="effort"><span class="ring">${ic("flame", 24)}</span><div><div class="eyebrow">Effort relatif</div><span class="v num">${eff}</span> <span class="muted">· ${effortWord(eff)}</span></div></div>`;
+  }
+  renderJournal(); renderMap(); renderChart(); renderSplits(); bindDetail();
+}
+function renderJournal() {
+  const j = $("#journal"); if (!j) return;
+  if (S.editing) {
+    const all = [...new Set(["Endurance fondamentale", "Fractionné", "Compétition", ...ACTS.flatMap(a => a.tags)])];
+    j.innerHTML = `<div class="card-h"><h2>Journal</h2></div><div class="card-b">
+      <div class="field"><label for="jtitle">Titre</label><input id="jtitle" type="text" value="${esc(A.title)}"></div>
+      <div class="field"><label for="jdesc">Description</label><textarea id="jdesc">${esc(A.desc)}</textarea></div>
+      <div class="flabel">Ressenti de l'effort</div><div class="rpe">${[...Array(10)].map((_, i) => `<button type="button" class="${i < S.draftRpe ? "on" : ""}" data-act="rpe" data-v="${i + 1}" aria-label="${i + 1} sur 10" data-tip="${i + 1} · ${RPEW[i + 1]}"></button>`).join("")}</div>
+      <div class="flabel" style="margin-top:14px">Tags</div><div class="row" style="gap:6px;margin:6px 0 18px">${all.map(t => `<button type="button" class="tag ${S.draftTags.includes(t) ? (TAGC[t] || "") : ""}" style="${S.draftTags.includes(t) ? "" : "background:var(--surface-2);color:var(--ink-3)"}" data-act="jtag" data-v="${esc(t)}" aria-pressed="${S.draftTags.includes(t)}">${esc(t)}</button>`).join("")}</div>
+      <div class="row"><button class="btn primary" type="button" data-act="jsave">${ic("check")}Enregistrer</button><button class="btn" type="button" data-act="jcancel">Annuler</button></div></div>`;
+  } else {
+    j.innerHTML = `<div class="card-h"><h2>Journal</h2><button class="iconbtn flat" type="button" data-act="jedit" data-tip="Modifier" data-tip-pos="end" aria-label="Modifier le journal">${ic("edit")}</button></div><div class="card-b">
+      <p>${A.desc ? esc(A.desc) : '<span class="muted">Pas encore de note pour cette sortie.</span>'}</p>
+      <div class="eyebrow">Ressenti de l'effort</div>
+      ${A.rpe ? `<div class="rpe" aria-hidden="true">${[...Array(10)].map((_, i) => `<i class="${i < A.rpe ? "on" : ""}"></i>`).join("")}</div><div class="muted" style="margin-bottom:14px"><b class="num" style="font-size:18px;color:var(--ink)">${A.rpe}</b> / 10 · ${RPEW[A.rpe]}</div>` : `<p class="muted">Non renseigné</p>`}
+      <div class="eyebrow" style="margin-bottom:6px">Tags</div><div class="row" style="gap:6px">${A.tags.map(tagHTML).join("") || '<span class="muted">Aucun</span>'}</div></div>`;
+  }
+}
+const pathOf = (i0, i1) => { let s = "M" + R.XY[i0][0].toFixed(1) + "," + R.XY[i0][1].toFixed(1); for (let i = i0 + 1; i <= i1; i++) s += "L" + R.XY[i][0].toFixed(1) + "," + R.XY[i][1].toFixed(1); return s; };
+function renderMap() {
+  const m = $("#map"); if (!m) return;
+  const pf = hex(css("--pace-fast")), pm = hex(css("--pace-mid")), ps = hex(css("--pace-slow")), byHR = S.mode === "hr" && !A.noHR;
+  const col = i => { if (byHR) return `var(--z${zoneOf(R.H[i], ZB) + 1})`; const t = (R.P[i] - R.pmin) / (R.pmax - R.pmin); return t < .5 ? mix(pf, pm, t * 2) : mix(pm, ps, (t - .5) * 2); };
+  let h = `<rect width="800" height="470" fill="var(--map-land)"/>`;
+  if (S.basemap) {
+    h += `<path d="M250,215 C300,190 380,185 430,205 C470,222 465,275 420,290 C360,308 280,300 250,270 Z" fill="var(--map-park)"/><path d="M560,395 C610,380 690,390 720,420 C740,445 700,470 640,470 L570,470 C545,445 540,410 560,395 Z" fill="var(--map-park)"/><path d="M40,60 C90,40 150,55 165,95 C175,130 120,150 75,140 C40,130 20,90 40,60 Z" fill="var(--map-park)"/>`;
+    let g = ""; for (let a = -200; a < 1000; a += 62) g += `<path d="M${a},-10 L${a + 150},480"/>`; for (let b = -40; b < 560; b += 70) g += `<path d="M-10,${b} L810,${b - 95}"/>`;
+    h += `<g stroke="var(--map-road)" stroke-width="3" fill="none">${g}</g><g stroke="var(--map-road)" stroke-width="8" fill="none" stroke-linecap="round"><path d="M-10,118 C200,95 420,70 810,88"/><path d="M95,-10 C120,160 100,330 130,480"/><path d="M742,-10 C720,170 760,330 735,480"/></g>
+      <path d="M-20,285 C120,240 250,330 400,268 S640,215 820,290" fill="none" stroke="var(--map-water)" stroke-width="36" stroke-linecap="round"/>
+      <g font-family="Manrope,system-ui,sans-serif" font-size="12" font-weight="600" fill="var(--map-label)"><text x="318" y="250">Parc des Tanneurs</text><text x="592" y="440">Jardin du Port</text><text x="470" y="262" transform="rotate(-9 470 262)" font-style="italic">La Vène</text></g>`;
+  }
+  h += `<path d="${pathOf(0, N - 1)}" fill="none" stroke="var(--surface)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>`;
+  let segs = ""; for (let i = 0; i < N - 1; i += 2) segs += `<path d="${pathOf(i, Math.min(i + 2, N - 1))}" stroke="${col(Math.min(i + 1, N - 1))}"/>`;
+  h += `<g id="trace" fill="none" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">${segs}</g>
+    <path id="selA" fill="none" stroke="var(--ink)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" opacity="0"/><path id="selB" fill="none" stroke="var(--surface)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0"/>`;
+  const step = R.total > 12 ? 4 : 2;
+  for (let k = step; k < R.total; k += step) { const p = R.XY[Math.round(k / R.total * (N - 1))]; h += `<circle cx="${p[0]}" cy="${p[1]}" r="10" fill="var(--surface)"/><text x="${p[0]}" y="${p[1] + 4}" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-weight="600" font-size="11" fill="var(--ink)">${k}</text>`; }
+  const s = R.XY[0], e = R.XY[N - 1];
+  h += `<circle cx="${s[0]}" cy="${s[1]}" r="9" fill="var(--c-mint)" stroke="var(--surface)" stroke-width="4"/><circle cx="${e[0]}" cy="${e[1]}" r="9" fill="var(--ink)" stroke="var(--surface)" stroke-width="4"/><rect x="${e[0] - 3}" y="${e[1] - 3}" width="6" height="6" rx="1.5" fill="var(--surface)"/>
+    <g id="mk" opacity="0"><circle r="17" fill="var(--accent)" opacity=".25"/><circle r="7.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="3.5"/></g>`;
+  m.innerHTML = h; m.setAttribute("aria-label", "Tracé GPS coloré selon " + (byHR ? "la fréquence cardiaque" : "l'allure"));
+  $("#legend").innerHTML = byHR ? `<div class="zs">${[1, 2, 3, 4, 5].map(z => `<span><span class="dot" style="background:var(--z${z})"></span>Z${z}</span>`).join("")}</div>`
+    : `<div class="ends"><span>Rapide</span><span>Lent</span></div><div class="ramp" style="background:linear-gradient(90deg,var(--pace-fast),var(--pace-mid),var(--pace-slow))"></div><div class="ends num"><span>${clock(R.pmin)}</span><span>${clock(R.pmax)} /km</span></div>`;
+  applySel(); applyCursor();
+}
+const SER = {
+  pace: { label: "Allure", arr: () => R.P, inv: true, fmt: clock, unit: "/km", col: "var(--accent)", steps: [10, 15, 20, 30, 60, 120], avg: () => R.all.pace, km: r => r.pace },
+  hr: { label: "FC", arr: () => R.H, fmt: v => Math.round(v), unit: "bpm", col: "var(--c-rose)", steps: [5, 10, 20, 40], avg: () => R.all.hr, km: r => r.hr },
+  cad: { label: "Cadence", arr: () => R.C, fmt: v => Math.round(v), unit: "ppm", col: "var(--c-mint)", steps: [1, 2, 5, 10], avg: () => R.all.cad, km: r => r.cad },
+  alt: { label: "Altitude", arr: () => R.E, fmt: v => Math.round(v), unit: "m", col: "var(--c-sky)", steps: [2, 5, 10, 20] }
+};
+function renderChart() {
+  const svg = $("#chart"); if (!svg) return;
+  const W = svg.clientWidth || 800, Hh = svg.clientHeight || 270, se = SER[S.series], arr = se.arr();
+  const l = 46, r = 12, t = 16, b = 26, pw = W - l - r, ph = Hh - t - b;
+  let mn = Math.min(...arr), mx = Math.max(...arr); const pad = (mx - mn) * 0.12 || 1; mn -= pad; mx += pad;
+  const stp = se.steps.find(s => (mx - mn) / s <= 5) || se.steps[se.steps.length - 1];
+  const x = i => l + pw * i / (N - 1), y = v => se.inv ? t + (v - mn) / (mx - mn) * ph : t + ph - (v - mn) / (mx - mn) * ph;
+  CH = { l, pw, x, y, W };
+  svg.setAttribute("viewBox", `0 0 ${W} ${Hh}`); svg.setAttribute("aria-label", se.label + " en fonction de la distance");
+  let h = `<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${se.col}" stop-opacity=".34"/><stop offset="1" stop-color="${se.col}" stop-opacity="0"/></linearGradient></defs>`;
+  for (let v = Math.ceil(mn / stp) * stp; v <= mx; v += stp) h += `<line x1="${l}" x2="${W - r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--surface-2)" stroke-width="1.5"/><text x="${l - 8}" y="${y(v) + 4}" text-anchor="end">${se.fmt(v)}</text>`;
+  const kstep = R.total > 12 ? 2 : (pw < 430 ? 2 : 1);
+  for (let v = 0; v <= R.total; v += kstep) h += `<text x="${l + pw * v / R.total}" y="${t + ph + 19}" text-anchor="middle">${v}${v === 0 ? " km" : ""}</text>`;
+  h += `<text x="${l - 8}" y="${t - 4}" text-anchor="end">${se.unit}</text>`;
+  if (S.showAlt && S.series !== "alt") {
+    const e0 = Math.min(...R.E), e1 = Math.max(...R.E); let d = `M${x(0)},${t + ph}`;
+    for (let i = 0; i < N; i += 2) d += `L${x(i).toFixed(1)},${(t + ph - 6 - (R.E[i] - e0) / (e1 - e0) * ph * 0.22).toFixed(1)}`;
+    h += `<path d="${d}L${x(N - 1)},${t + ph}Z" fill="var(--ink)" opacity=".07"/>`;
+  }
+  h += `<rect id="selBand" y="${t}" height="${ph}" rx="10" fill="var(--accent)" opacity="0"/>`;
+  if (S.showKm && se.km) R.km.forEach(k => {
+    const x0 = x(k.i0) + 2, w = Math.max(2, x(k.i1) - x(k.i0) - 4), yy = y(se.km(k));
+    const fill = S.series === "hr" ? `var(--z${zoneOf(k.hr, ZB) + 1})` : se.col;
+    h += `<rect x="${x0.toFixed(1)}" y="${yy.toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(0, t + ph - yy).toFixed(1)}" rx="${Math.min(8, w / 2)}" fill="${fill}" opacity=".2"/>`;
+  });
+  let line = ""; for (let i = 0; i < N; i++) line += (i ? "L" : "M") + x(i).toFixed(1) + "," + y(arr[i]).toFixed(1);
+  if (!(S.showKm && se.km)) h += `<path d="${line}L${x(N - 1)},${t + ph}L${x(0)},${t + ph}Z" fill="url(#ag)"/>`;
+  if (se.avg) { const ya = y(se.avg()); h += `<line x1="${l}" x2="${W - r}" y1="${ya}" y2="${ya}" stroke="var(--ink-3)" stroke-width="1.5" stroke-dasharray="2 6" stroke-linecap="round"/><text x="${W - r}" y="${ya - 7}" text-anchor="end">moy. ${se.fmt(se.avg())}</text>`; }
+  h += `<path d="${line}" fill="none" stroke="${se.col}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>
+    <g id="cur" opacity="0"><line y1="${t}" y2="${t + ph}" stroke="var(--ink-3)" stroke-width="1.5"/><circle r="6.5" fill="${se.col}" stroke="var(--surface)" stroke-width="3.5"/></g>`;
+  svg.innerHTML = h; applySel(); applyCursor();
+}
+function tipHTML(i) {
+  const row = (c, l, v) => `<div><span><span class="dot" style="background:${c}"></span>${l}</span><b>${v}</b></div>`;
+  return `<h4>km ${fr(R.D[i], 2)}</h4>` + row("var(--pace-fast)", "Allure", clock(R.P[i]) + " /km") + (A.noHR ? "" : row(`var(--z${zoneOf(R.H[i], ZB) + 1})`, "FC · Z" + (zoneOf(R.H[i], ZB) + 1), Math.round(R.H[i]) + " bpm")) + row("var(--c-mint)", "Cadence", Math.round(R.C[i]) + " ppm") + row("var(--c-sky)", "Altitude", Math.round(R.E[i]) + " m");
+}
+function applyCursor() {
+  const i = S.cursor, mk = $("#mk"), cur = $("#cur"), ct = $("#charttip"), mt = $("#maptip");
+  if (!mk || !cur) return;
+  if (i == null) { mk.setAttribute("opacity", 0); cur.setAttribute("opacity", 0); ct.classList.remove("on"); mt.classList.remove("on"); return; }
+  mk.setAttribute("opacity", 1); mk.setAttribute("transform", `translate(${R.XY[i][0]},${R.XY[i][1]})`);
+  const cx = CH.x(i), cy = CH.y(SER[S.series].arr()[i]);
+  cur.setAttribute("opacity", 1); cur.setAttribute("transform", `translate(${cx},0)`); cur.querySelector("circle").setAttribute("cy", cy);
+  const html = tipHTML(i);
+  if (S.cursorFrom === "map") {
+    ct.classList.remove("on"); mt.innerHTML = html; mt.classList.add("on");
+    const m = $("#map"), ctm = m.getScreenCTM(), box = m.getBoundingClientRect(); const pt = m.createSVGPoint(); pt.x = R.XY[i][0]; pt.y = R.XY[i][1]; const sp = pt.matrixTransform(ctm);
+    const px = sp.x - box.left, py = sp.y - box.top;
+    mt.style.left = (px > box.width * 0.55 ? px - mt.offsetWidth - 18 : px + 18) + "px"; mt.style.top = Math.max(8, Math.min(box.height - mt.offsetHeight - 8, py - mt.offsetHeight / 2)) + "px";
+  } else {
+    mt.classList.remove("on"); ct.innerHTML = html; ct.classList.add("on");
+    ct.style.left = (cx > CH.W * 0.58 ? cx - ct.offsetWidth - 14 : cx + 14) + "px"; ct.style.top = "8px";
+  }
+}
+function applySel() {
+  const a = $("#selA"), b = $("#selB"), band = $("#selBand"), tr = $("#trace"); if (!a) return;
+  if (!S.sel) { a.setAttribute("opacity", 0); b.setAttribute("opacity", 0); if (tr) tr.setAttribute("opacity", 1); if (band) band.setAttribute("opacity", 0); return; }
+  const d = pathOf(S.sel.i0, S.sel.i1); a.setAttribute("d", d); b.setAttribute("d", d); a.setAttribute("opacity", 1); b.setAttribute("opacity", 1); if (tr) tr.setAttribute("opacity", .3);
+  if (band && CH.x) { band.setAttribute("x", CH.x(S.sel.i0)); band.setAttribute("width", Math.max(2, CH.x(S.sel.i1) - CH.x(S.sel.i0))); band.setAttribute("opacity", .14); }
+}
+function renderSplits() {
+  const tb = $("#splits"); if (!tb) return;
+  const rows = S.split === "km" ? R.km : R.laps, hr = !A.noHR, fast = Math.min(...rows.map(r => r.pace)), slow = Math.max(...rows.map(r => r.pace));
+  tb.innerHTML = `<thead><tr><th>${S.split === "km" ? "Km" : "Tour"}</th><th>Distance</th><th>Temps</th><th>Allure</th><th></th><th><span data-tip="Allure ajustée à la pente">Ajustée</span></th><th>Dénivelé</th><th>FC</th><th>Cadence</th></tr></thead><tbody>` +
+    rows.map((r, n) => `<tr data-row="${n}"><td class="${S.split === "km" ? "" : "name"}">${esc(r.label)}</td><td>${fr(r.dist, 2)}</td><td>${clock(r.time)}</td><td>${clock(r.pace)}</td><td class="bar"><div class="pb"><div class="t"><span style="width:${(slow === fast ? 100 : 36 + 64 * (slow - r.pace) / (slow - fast)).toFixed(0)}%"></span></div>${r.pace === fast && rows.length > 1 ? '<span class="best">plus rapide</span>' : ""}</div></td><td>${clock(r.gap)}</td><td class="muted">+${Math.round(r.up)} / −${Math.round(r.down)}</td><td>${hr ? Math.round(r.hr) : "—"}</td><td>${Math.round(r.cad)}</td></tr>`).join("") + "</tbody>";
+}
+function bindDetail() {
+  const c = $("#chart"), m = $("#map"), sp = $("#splits");
+  c.addEventListener("pointermove", ev => { const b = c.getBoundingClientRect(); S.cursorFrom = "chart"; S.cursor = Math.max(0, Math.min(N - 1, Math.round((ev.clientX - b.left - CH.l) / CH.pw * (N - 1)))); applyCursor(); });
+  c.addEventListener("pointerleave", () => { S.cursor = null; applyCursor(); });
+  m.addEventListener("pointermove", ev => {
+    const ctm = m.getScreenCTM(); if (!ctm) return; let pt = m.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY; pt = pt.matrixTransform(ctm.inverse());
+    let best = -1, bd = 1600; for (let i = 0; i < N; i++) { const dx = R.XY[i][0] - pt.x, dy = R.XY[i][1] - pt.y, q = dx * dx + dy * dy; if (q < bd) { bd = q; best = i; } }
+    S.cursorFrom = "map"; S.cursor = best < 0 ? null : best; applyCursor();
+  });
+  m.addEventListener("pointerleave", () => { S.cursor = null; applyCursor(); });
+  sp.addEventListener("pointerover", ev => { const tr = ev.target.closest("tr[data-row]"); if (!tr) return; S.sel = (S.split === "km" ? R.km : R.laps)[+tr.dataset.row]; sp.querySelectorAll("tr.on").forEach(x => x.classList.remove("on")); tr.classList.add("on"); applySel(); });
+  sp.addEventListener("pointerleave", () => { S.sel = null; sp.querySelectorAll("tr.on").forEach(x => x.classList.remove("on")); applySel(); });
+  if (window.ResizeObserver) { let lw = c.clientWidth; new ResizeObserver(() => { const w = c.clientWidth; if (w && w !== lw) { lw = w; renderChart(); } }).observe(c); }
+}
+
+/* ---------- import ---------- */
+function renderImport() {
+  const p = prof(), n = k => S.imports.filter(f => f.st === k).length;
+  $("#v-importer").innerHTML = `<div><div class="eyebrow">Fichiers .gpx et .fit</div><h1>Importer</h1></div>
+  <div class="igrid"><div class="col">
+    <div class="drop" id="drop"><div class="big">${ic("upload", 34)}</div><h2>Déposez vos fichiers ici</h2>
+      <p class="muted" style="margin:0;max-width:46ch">Plusieurs fichiers à la fois, par exemple tout votre historique exporté d'une autre application.</p>
+      <div class="row" style="justify-content:center"><label class="btn primary" for="file" style="cursor:pointer">${ic("file")}Choisir des fichiers</label><input id="file" type="file" multiple accept=".gpx,.fit" style="position:absolute;opacity:0;width:1px;height:1px">
+      <button class="btn" type="button" data-act="demo" style="background:var(--surface)">Essayer avec des exemples</button></div>
+      <button class="row" type="button" data-act="profiles" style="gap:8px;font-weight:600;font-size:14px;margin-top:4px" data-tip="Changer de profil">${avatar(p, "sm")}Ajoutés au profil de ${esc(p.name)}${ic("chev", 15)}</button></div>
+    ${S.imports.length ? `<section class="card"><div class="card-h"><h2>Résultat</h2><div class="row" style="gap:6px"><span class="tag mint">${n("ok")} importée${n("ok") > 1 ? "s" : ""}</span><span class="tag">${n("dup")} doublon${n("dup") > 1 ? "s" : ""}</span><span class="tag rose">${n("ko")} échec${n("ko") > 1 ? "s" : ""}</span></div></div>
+      <div class="card-b">${S.imports.map(f => `<div class="frow"><span class="st ${f.st || ""}">${ic(f.st === "ok" ? "check" : f.st === "dup" ? "copy" : f.st === "ko" ? "x" : "file")}</span><div class="grow"><div class="fn">${esc(f.name)}</div>${f.st ? `<div class="fs">${esc(f.msg)}</div>` : `<div class="prog"><span></span></div>`}</div>${f.open ? `<a class="btn" href="#activite" data-act="open" data-v="${f.open}" style="min-height:36px;padding:6px 14px">Voir</a>` : ""}</div>`).join("")}</div></section>` : ""}
+  </div>
+  <section class="card"><div class="card-h"><h2>Bon à savoir</h2></div><div class="card-b facts">
+    <div class="fact"><span class="chip" style="background:var(--p-mint);color:var(--i-mint)">${ic("copy")}</span><div><b>Doublons écartés</b><div class="muted" style="font-size:14px">Une sortie déjà présente dans le profil n'est pas importée deux fois, même depuis un autre format.</div></div></div>
+    <div class="fact"><span class="chip" style="background:var(--p-sky);color:var(--i-sky)">${ic("file")}</span><div><b>Fichier d'origine conservé</b><div class="muted" style="font-size:14px">Vous pouvez le retélécharger à tout moment depuis la sortie.</div></div></div>
+    <div class="fact"><span class="chip" style="background:var(--p-peach);color:var(--i-peach)">${ic("heart")}</span><div><b>Données manquantes tolérées</b><div class="muted" style="font-size:14px">Sans FC ni cadence, la sortie est importée et les mesures absentes sont signalées.</div></div></div>
+    <div class="fact"><span class="chip" style="background:var(--p-lav);color:var(--i-lav)">${ic("shield")}</span><div><b>Tout reste chez vous</b><div class="muted" style="font-size:14px">Les fichiers ne quittent pas votre serveur domestique.</div></div></div>
+  </div></section></div>`;
+  const d = $("#drop");
+  d.addEventListener("dragover", e => { e.preventDefault(); d.classList.add("over"); });
+  d.addEventListener("dragleave", () => d.classList.remove("over"));
+  d.addEventListener("drop", e => { e.preventDefault(); d.classList.remove("over"); startImport([...e.dataTransfer.files].map(f => ({ name: f.name }))); });
+  $("#file").addEventListener("change", e => startImport([...e.target.files].map(f => ({ name: f.name }))));
+}
+function startImport(files) {
+  if (!files.length) return;
+  S.imports = files.map(f => ({ name: f.name, plan: f.plan })); renderImport();
+  S.imports.forEach((f, i) => setTimeout(() => {
+    const res = f.plan || (/\.(gpx|fit)$/i.test(f.name) ? { st: "ok", msg: "Importée (simulation dans ce prototype)" } : { st: "ko", msg: "Format non reconnu : seuls les fichiers .gpx et .fit sont acceptés" });
+    Object.assign(f, res); if (S.route === "importer") renderImport();
+  }, 600 + i * 450));
+}
+const DEMO = [
+  { name: "2026-11-10_footing.fit", plan: { st: "ok", msg: "7,52 km · mardi 10 novembre", open: "a2" } },
+  { name: "2026-11-08_berges.fit", plan: { st: "ok", msg: "10,21 km · dimanche 8 novembre", open: "a1" } },
+  { name: "activity_strava_5x600.gpx", plan: { st: "ok", msg: "8,40 km · jeudi 5 novembre", open: "a3" } },
+  { name: "berges_export.gpx", plan: { st: "dup", msg: "Déjà importée : même sortie que 2026-11-08_berges.fit", open: "a1" } },
+  { name: "parcours_canal.gpx", plan: { st: "ko", msg: "Tracé sans horodatage : c'est un itinéraire, pas une sortie enregistrée" } }
+];
+
+/* ---------- settings ---------- */
+function renderSettings() {
+  const p = prof(), ZBp = zb(p.hrmax);
+  $("#v-reglages").innerHTML = `<div><div class="eyebrow">Profil de ${esc(p.name)}</div><h1>Réglages</h1></div>
+  <div class="sgrid">
+    <section class="card"><div class="card-h"><h2>Profil</h2></div><div class="card-b">
+      <div class="field"><label for="sname">Prénom</label><input id="sname" type="text" value="${esc(p.name)}" maxlength="24"></div>
+      <div class="flabel" style="margin-bottom:8px">Couleur</div><div class="swatches">${SW.map(c => `<button type="button" style="background:${c}" data-act="color" data-v="${c}" aria-pressed="${p.color === c}" aria-label="Couleur ${c}"></button>`).join("")}</div>
+      <div class="flabel" style="margin:18px 0 8px">Unités</div><div class="seg" role="group" aria-label="Unités"><button type="button" data-act="units" data-v="km" aria-pressed="${S.units === "km"}">Kilomètres</button><button type="button" data-act="units" data-v="mi" aria-pressed="${S.units === "mi"}">Miles</button></div>
+    </div></section>
+    <section class="card"><div class="card-h"><h2>Fréquence cardiaque</h2><span class="tag rose">${ic("heart", 13)}Zones</span></div><div class="card-b">
+      <div class="row" style="align-items:baseline;gap:8px"><span class="hrbig" id="hrv">${p.hrmax}</span><span class="muted">bpm max</span></div>
+      <input id="hrmax" type="range" min="150" max="210" value="${p.hrmax}" aria-label="Fréquence cardiaque maximale">
+      <div class="zprev" id="zprev">${zprev(ZBp)}</div>
+      <p class="muted" style="font-size:13.5px;margin:14px 0 0">Les zones et l'effort relatif de toutes les sorties du profil sont recalculés quand cette valeur change.</p>
+    </div></section>
+    <section class="card"><div class="card-h"><h2>Apparence</h2></div><div class="card-b">
+      <div class="themes">${[["light", "Clair", "#F4F3F9", "#FFFFFF"], ["dark", "Sombre", "#121118", "#252431"], ["system", "Système", "linear-gradient(105deg,#F4F3F9 50%,#121118 50%)", "#B9AFFF"]].map(t => `<button type="button" data-act="theme" data-v="${t[0]}" aria-pressed="${S.theme === t[0]}"><span class="pv" style="background:${t[2]}"><i style="height:40%;background:#B9AFFF"></i><i style="height:75%;background:#8FE0BB"></i><i style="height:55%;background:#FFC39C"></i><i style="height:90%;background:#F7AFC3"></i></span>${t[1]}</button>`).join("")}</div>
+      <div class="flabel" style="margin:18px 0 8px">Fond de carte</div><button class="switch" type="button" data-act="basemap" aria-pressed="${S.basemap}"><span class="tr"></span>Afficher les rues, parcs et cours d'eau</button>
+      <p class="muted" style="font-size:13.5px;margin:10px 0 0">Désactivé, aucune requête ne part vers un fournisseur de tuiles : le tracé s'affiche sur fond uni.</p>
+    </div></section>
+    <section class="card"><div class="card-h"><h2>Profils du foyer</h2><button class="iconbtn flat" type="button" data-act="addprofile" data-tip="Ajouter un profil" data-tip-pos="end" aria-label="Ajouter un profil">${ic("plus")}</button></div><div class="card-b">
+      ${PROFILES.map(q => `<div class="prow">${avatar(q)}<div class="grow"><b>${esc(q.name)}</b><div class="muted" style="font-size:13px">${ACTS.filter(a => a.profile === q.id).length} sortie(s) · FC max ${q.hrmax}</div></div>${q.id === S.profile ? '<span class="tag lav">Actif</span>' : `<button class="btn" type="button" data-act="setprofile" data-v="${q.id}" style="min-height:36px;padding:6px 14px">Activer</button>`}${PROFILES.length > 1 ? `<button class="iconbtn flat" type="button" data-act="delprofile" data-v="${q.id}" data-tip="Supprimer ce profil" data-tip-pos="end" aria-label="Supprimer le profil ${esc(q.name)}" style="width:36px;height:36px">${ic("trash", 16)}</button>` : ""}</div>`).join("")}
+      <div class="note" style="margin-top:14px">${ic("shield")}<span>Pas de mot de passe : toute personne connectée à votre réseau domestique peut ouvrir l'application et changer de profil.</span></div>
+    </div></section>
+  </div>`;
+  $("#sname").addEventListener("input", e => { p.name = e.target.value.trim() || "Sans nom"; chrome(); });
+  $("#hrmax").addEventListener("input", e => { p.hrmax = +e.target.value; $("#hrv").textContent = p.hrmax; $("#zprev").innerHTML = zprev(zb(p.hrmax)); });
+}
+const zprev = ZB => [4, 3, 2, 1, 0].map(i => `<span class="num" style="font-weight:600">Z${i + 1}</span><span class="b" style="background:var(--z${i + 1});width:${40 + i * 15}%"></span><span class="muted num" style="font-size:14px">${ZB[i]}–${ZB[i + 1]} bpm</span>`).join("");
+
+/* ---------- chrome, routing, theme ---------- */
+function chrome() {
+  const p = prof();
+  document.querySelectorAll("[data-avatar]").forEach(e => { e.style.background = p.color; e.textContent = p.name.charAt(0).toUpperCase(); });
+  document.querySelectorAll("[data-pname]").forEach(e => e.textContent = p.name);
+  document.querySelectorAll('[data-act="theme"]').forEach(b => b.setAttribute("aria-pressed", b.dataset.v === S.theme));
+}
+const ROUTES = { activites: renderList, activite: renderDetail, importer: renderImport, reglages: renderSettings };
+function route() {
+  let r = S.route; if (!ROUTES[r]) r = S.route = "activites";
+  S.cursor = null; S.sel = null; S.editing = false;
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + r));
+  document.querySelectorAll("[data-nav]").forEach(a => { if (a.dataset.nav === (r === "activite" ? "activites" : r)) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+  ROUTES[r](); chrome();
+  return r;
+}
+function go(r) { S.route = r; if (/^https?:$/.test(location.protocol) && location.hash !== "#" + r) { location.hash = r; return; } route(); window.scrollTo(0, 0); }
+const hostTheme = root.getAttribute("data-theme");
+function setTheme(m, save) {
+  S.theme = m;
+  if (m === "system") { if (hostTheme) root.setAttribute("data-theme", hostTheme); else root.removeAttribute("data-theme"); } else root.setAttribute("data-theme", m);
+  if (save) { try { localStorage.setItem("running-proto-theme", m); } catch (e) {} }
+  chrome(); if ($("#v-activite").classList.contains("on")) renderMap();
+}
+function profileSheet() {
+  modal(`<h2>Changer de profil</h2><div>${PROFILES.map(p => `<button class="pick" type="button" data-act="setprofile" data-v="${p.id}" aria-pressed="${p.id === S.profile}">${avatar(p)}<span style="flex:1">${esc(p.name)}<br><small class="muted" style="font-weight:500">${ACTS.filter(a => a.profile === p.id).length} sortie(s)</small></span>${p.id === S.profile ? ic("check") : ""}</button>`).join("")}</div>
+    <div class="row" style="justify-content:space-between"><button class="btn" type="button" data-act="addprofile">${ic("plus")}Nouveau profil</button><button class="btn" type="button" data-act="close">Fermer</button></div>`);
+}
+function targetSheet(kind) {
+  const others = PROFILES.filter(p => p.id !== A.profile); S.target = others[0].id; S.keepHR = false;
+  const draw = () => modal(`<h2>${kind === "copy" ? "Copier vers un profil" : "Déplacer vers un profil"}</h2>
+    <p class="muted" style="margin:0">${kind === "copy" ? "Pour une sortie faite à deux : l'autre personne obtient sa propre sortie, avec son journal." : "La sortie quitte ce profil. Ses zones sont recalculées avec la FC max du nouveau profil."}</p>
+    <div>${others.map(p => `<button class="pick" type="button" data-act="target" data-v="${p.id}" aria-pressed="${S.target === p.id}">${avatar(p)}<span style="flex:1">${esc(p.name)}</span>${S.target === p.id ? ic("check") : ""}</button>`).join("")}</div>
+    ${kind === "copy" && !A.noHR ? `<button class="switch" type="button" data-act="keephr" aria-pressed="${S.keepHR}"><span class="tr"></span><span>Conserver la fréquence cardiaque<br><small class="muted" style="font-weight:500">Désactivé par défaut : c'est la FC de la personne qui portait la montre.</small></span></button>` : ""}
+    <div class="row" style="justify-content:flex-end"><button class="btn" type="button" data-act="close">Annuler</button><button class="btn primary" type="button" data-act="${kind === "copy" ? "docopy" : "domove"}">${kind === "copy" ? "Copier" : "Déplacer"}</button></div>`);
+  S.redraw = draw; draw();
+}
+const ACTIONS = {
+  theme: v => setTheme(v, true),
+  profiles: profileSheet, close: closeModal,
+  setprofile: v => { S.profile = v; S.tag = null; closeModal(); if (S.route === "activite") go("activites"); else route(); toast("Profil actif : " + prof().name); },
+  addprofile: () => modal(`<h2>Nouveau profil</h2><div class="field" style="margin:0"><label for="npname">Prénom</label><input id="npname" type="text" maxlength="24" placeholder="Par exemple : Sam"></div><div class="row" style="justify-content:flex-end"><button class="btn" type="button" data-act="close">Annuler</button><button class="btn primary" type="button" data-act="createprofile">Créer</button></div>`),
+  createprofile: () => { const n = $("#npname").value.trim(); if (!n) { $("#npname").focus(); return; } if (PROFILES.some(p => p.name.toLowerCase() === n.toLowerCase())) { toast("Ce prénom est déjà utilisé"); return; } const id = "p" + Date.now(); PROFILES.push({ id, name: n, color: SW[PROFILES.length % SW.length], hrmax: 185, rest: 60 }); S.profile = id; closeModal(); route(); toast("Profil créé : " + n); },
+  delprofile: v => { const p = prof(v), n = ACTS.filter(a => a.profile === v).length; modal(`<h2>Supprimer le profil de ${esc(p.name)} ?</h2><p class="muted" style="margin:0">${n ? n + " sortie(s) seront définitivement supprimées avec ce profil." : "Ce profil ne contient aucune sortie."} Les copies déjà faites vers d'autres profils sont conservées.</p><div class="row" style="justify-content:flex-end"><button class="btn" type="button" data-act="close">Annuler</button><button class="btn danger" type="button" data-act="dodelprofile" data-v="${v}">${ic("trash")}Supprimer</button></div>`); },
+  dodelprofile: v => { PROFILES = PROFILES.filter(p => p.id !== v); ACTS = ACTS.filter(a => a.profile !== v); if (S.profile === v) S.profile = PROFILES[0].id; closeModal(); route(); toast("Profil supprimé"); },
+  color: v => { prof().color = v; route(); },
+  units: v => { S.units = v; renderSettings(); toast("Les miles seront appliqués partout dans l'application"); },
+  basemap: () => { S.basemap = !S.basemap; route(); },
+  tag: v => { S.tag = v || null; if (!v) S.period = "all"; renderList(); },
+  period: v => { S.period = v; renderList(); },
+  open: v => { S.id = v; },
+  mode: v => { S.mode = v; renderDetail(); },
+  series: v => { S.series = v; renderDetail(); },
+  showAlt: () => { S.showAlt = !S.showAlt; renderDetail(); },
+  showKm: () => { S.showKm = !S.showKm; renderDetail(); },
+  split: v => { S.split = v; S.sel = null; renderDetail(); },
+  more: () => $("#more").classList.toggle("open"),
+  export: () => toast("Export GPX : inactif dans ce prototype"),
+  original: () => toast("Téléchargement du fichier d'origine : inactif dans ce prototype"),
+  copy: () => targetSheet("copy"), move: () => targetSheet("move"),
+  target: v => { S.target = v; S.redraw(); }, keephr: () => { S.keepHR = !S.keepHR; S.redraw(); },
+  docopy: () => { const root0 = A.from || A.id; if (ACTS.some(a => a.profile === S.target && (a.from === root0 || a.id === root0))) { closeModal(); toast("Cette sortie est déjà dans le profil de " + prof(S.target).name); return; } ACTS.push({ ...A, id: "x" + Date.now(), profile: S.target, from: root0, noHR: A.noHR || !S.keepHR, tags: [...A.tags], desc: "", rpe: 0 }); closeModal(); toast("Ajoutée au profil de " + prof(S.target).name); },
+  domove: () => { A.profile = S.target; closeModal(); toast("Déplacée vers le profil de " + prof(S.target).name); go("activites"); },
+  delete: () => modal(`<h2>Supprimer cette sortie ?</h2><p class="muted" style="margin:0">« ${esc(A.title)} », son journal et son fichier d'origine seront définitivement supprimés.</p><div class="row" style="justify-content:flex-end"><button class="btn" type="button" data-act="close">Annuler</button><button class="btn danger" type="button" data-act="dodelete">${ic("trash")}Supprimer</button></div>`),
+  dodelete: () => { ACTS = ACTS.filter(a => a.id !== A.id); closeModal(); toast("Sortie supprimée"); go("activites"); },
+  jedit: () => { S.editing = true; S.draftRpe = A.rpe; S.draftTags = [...A.tags]; renderJournal(); },
+  jcancel: () => { S.editing = false; renderJournal(); },
+  rpe: v => { A.desc = $("#jdesc").value; A.title = $("#jtitle").value.trim() || A.title; S.draftRpe = S.draftRpe === +v ? 0 : +v; renderJournal(); },
+  jtag: v => { A.desc = $("#jdesc").value; A.title = $("#jtitle").value.trim() || A.title; S.draftTags = S.draftTags.includes(v) ? S.draftTags.filter(t => t !== v) : [...S.draftTags, v]; renderJournal(); },
+  jsave: () => { A.title = $("#jtitle").value.trim() || A.title; A.desc = $("#jdesc").value.trim(); A.rpe = S.draftRpe; A.tags = S.draftTags; S.editing = false; renderDetail(); toast("Journal enregistré"); },
+  demo: () => startImport(DEMO.map(d => ({ ...d })))
+};
+document.addEventListener("click", e => {
+  const more = $("#more"); if (more && !e.target.closest('[data-act="more"]')) more.classList.remove("open");
+  if (e.target.id === "modal") { closeModal(); return; }
+  const el = e.target.closest("[data-act]");
+  if (el && !el.disabled) { const fn = ACTIONS[el.dataset.act]; if (fn) fn(el.dataset.v, el, e); }
+  const link = e.target.closest('a[href^="#"]'); if (link) { e.preventDefault(); go(link.getAttribute("href").slice(1)); }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+window.addEventListener("hashchange", () => { S.route = location.hash.replace("#", ""); route(); window.scrollTo(0, 0); });
+if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if ($("#v-activite").classList.contains("on")) renderMap(); });
+let saved = null; try { saved = localStorage.getItem("running-proto-theme"); } catch (e) {}
+S.theme = saved === "light" || saved === "dark" ? saved : "system";
+if (S.theme !== "system") root.setAttribute("data-theme", S.theme);
+S.route = location.hash.replace("#", "") || "activites";
+route();
+})();
+</script>
+</body>
+</html>
