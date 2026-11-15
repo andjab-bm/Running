@@ -2,7 +2,7 @@
 
 Tasks marked **(device)** need the owner's Pixel 8 and/or Galaxy Watch 4; everything else can be done on a development machine with the Android emulator.
 
-The current development machine (2 cores, 6 GB of memory) cannot run the emulator next to a build, so the checks worded "in the emulator" are done on the owner's Pixel 8 instead, following the checklist in `docs/android.md`. Code for 5.2–5.5, 6.1–6.6, 8.1, 8.3 and 8.4 (local runs only) is written and compiles; those tasks stay open until checked on the phone.
+The current development machine (2 cores, 6 GB of memory) cannot run the emulator next to a build, so the checks worded "in the emulator" are done on the owner's Pixel 8 instead, following the checklist in `docs/android.md`. Code for 5.2–5.5, 6.1–6.6, 7.2, 7.3, 7.5, 8.1, 8.3 and 8.4 is written and compiles; those tasks stay open until checked on the phone. The sync logic itself (7.1, 7.4) is covered by unit tests and by a run of the client against a real local server.
 
 ## 1. Phone and watch prototype (approval gate)
 
@@ -54,10 +54,10 @@ The current development machine (2 cores, 6 GB of memory) cannot run the emulato
 
 ## 7. Sync
 
-- [ ] 7.1 Implement the server client (health check with product signature, profiles, profile settings, import, journal patch, activity list); verify unit tests against a mock server for success, duplicate, failed file, unknown profile and unreachable host
+- [x] 7.1 Implement the server client (health check with product signature, profiles, profile settings, import, journal patch, activity list); verify unit tests against a mock server for success, duplicate, failed file, unknown profile and unreachable host
 - [ ] 7.2 Build server pairing and profile selection in the settings, caching units and zones; verify against a local server the valid-address, wrong-address and choose-a-profile scenarios of `run-sync`
 - [ ] 7.3 Implement the background sync work (unmetered constraint, enqueue on save, periodic check while runs are pending, oldest first, journal fields applied after import, later journal edits sent as a patch without re-upload); verify against a local server the coming-home, several-pending-runs, effort, no-title and both carry-later-edits scenarios, and that nothing is sent on a metered emulator network
-- [ ] 7.4 Implement retry and failure handling and the manual sync action; verify the connection-lost, already-on-the-server, file-refused, profile-deleted and server-unreachable scenarios
+- [x] 7.4 Implement retry and failure handling and the manual sync action; verify the connection-lost, already-on-the-server, file-refused, profile-deleted and server-unreachable scenarios
 - [ ] 7.5 Document pairing, the home-network rule and the cleartext-HTTP caveat in `docs/android.md`; verify the pairing steps work as written on a fresh install
 
 ## 8. Phone history

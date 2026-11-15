@@ -41,7 +41,13 @@ import dev.wellbeing.phone.data.AppDb
 import dev.wellbeing.phone.data.LapEntity
 import dev.wellbeing.phone.data.RunEntity
 import dev.wellbeing.phone.data.Settings
+import dev.wellbeing.phone.data.RunState
+import dev.wellbeing.phone.data.ServerActivityEntity
 import dev.wellbeing.phone.data.SyncState
+import dev.wellbeing.phone.sync.Sync
+import dev.wellbeing.phone.sync.SyncResult
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import dev.wellbeing.running.Format
 import dev.wellbeing.running.Sample
 import kotlinx.coroutines.launch
@@ -91,9 +97,39 @@ fun HistoryScreen(settings: Settings, onOpen: (Long) -> Unit) {
     val u = settings.units
     val list = runs ?: return
 
+    val scope = rememberCoroutineScope()
+    val report by Sync.last.collectAsState()
+    val syncing by Sync.running.collectAsState()
+    val remote by remember(settings.profileId) {
+        settings.profileId?.let { AppDb.get(context).runs().watchServerActivities(it) } ?: flowOf(emptyList())
+    }.collectAsState(initial = emptyList())
+    // Activities already on this phone appear once: only the others are added from the server.
+    val known = list.mapNotNull { it.serverActivityId }.toSet()
+    val serverOnly = remote.filter { it.id !in known }
+    val pending = list.count { it.sync == SyncState.PENDING || it.journalDirty }
+
     LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 18.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { Text(stringResource(R.string.tab_history), style = Type.h1, color = c.ink) }
-        if (list.isEmpty()) item {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.tab_history), style = Type.h1, color = c.ink, modifier = Modifier.weight(1f))
+                IconButton(Icon.REFRESH, stringResource(R.string.sync_now), { scope.launch { Sync.run(context) } })
+            }
+            val status = when {
+                syncing -> stringResource(R.string.sync_running)
+                else -> when (report?.result) {
+                    SyncResult.DONE -> stringResource(R.string.sync_done)
+                    SyncResult.UNREACHABLE -> stringResource(R.string.sync_unreachable)
+                    SyncResult.METERED -> stringResource(R.string.sync_metered)
+                    SyncResult.NOT_CONFIGURED -> stringResource(R.string.sync_not_configured)
+                    SyncResult.NOT_OUR_SERVER -> stringResource(R.string.sync_not_ours)
+                    SyncResult.PROFILE_MISSING -> stringResource(R.string.profile_missing)
+                    null -> if (settings.serverUrl.isBlank()) stringResource(R.string.sync_not_configured) else ""
+                }
+            }
+            val line = listOf(status, if (pending > 0) stringResource(R.string.sync_pending_count, pending) else "").filter { it.isNotEmpty() }.joinToString(" · ")
+            if (line.isNotEmpty()) Text(line, style = Type.small, color = if (report?.result == SyncResult.PROFILE_MISSING) c.rose.ink else c.ink2, modifier = Modifier.padding(top = 4.dp))
+        }
+        if (list.isEmpty() && serverOnly.isEmpty()) item {
             Card {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(stringResource(R.string.history_empty_title), style = Type.h3, color = c.ink)
@@ -101,7 +137,8 @@ fun HistoryScreen(settings: Settings, onOpen: (Long) -> Unit) {
                 }
             }
         } else item {
-            val t = Totals.of(list, month)
+            // Totals cover the whole profile: runs of this phone plus those only on the server.
+            val t = Totals.of(list + serverOnly.map { RunEntity(state = RunState.SAVED, startT = it.startT, distance = it.distance, movingMs = it.movingMs) }, month)
             Card {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Segmented(listOf(stringResource(R.string.week) to !month, stringResource(R.string.month) to month), { month = it == 1 })
@@ -113,7 +150,11 @@ fun HistoryScreen(settings: Settings, onOpen: (Long) -> Unit) {
                 }
             }
         }
-        items(list, key = { it.id }) { run ->
+        // One list in date order: negative ids are activities that exist only on the server.
+        val rows = (list + serverOnly.map {
+            RunEntity(id = -it.id, state = RunState.SAVED, startT = it.startT, distance = it.distance, movingMs = it.movingMs, title = it.title, sync = SyncState.SYNCED, serverActivityId = it.id)
+        }).sortedByDescending { it.startT }
+        items(rows, key = { it.id }) { run ->
             Row(
                 Modifier.fillMaxWidth().clip(Radius.tile).background(c.surface).clickable(role = Role.Button) { onOpen(run.id) }.padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -126,7 +167,7 @@ fun HistoryScreen(settings: Settings, onOpen: (Long) -> Unit) {
                         style = Type.figure(13), color = c.ink2,
                     )
                     Spacer(Modifier.height(5.dp))
-                    SyncTag(run)
+                    if (run.id < 0) Tag(stringResource(R.string.sync_server_only), Pastel(c.surface2, c.ink2), Icon.CLOUD) else SyncTag(run)
                 }
                 AppIcon(Icon.CHEVRON, c.ink3, 18.dp)
             }
@@ -151,6 +192,10 @@ fun RunPage(runId: Long, settings: Settings, onBack: () -> Unit) {
         laps = dao.laps(runId)
         track = dao.samples(runId).map { Sample(it.t, it.lat, it.lon, it.ele, it.dist, it.cadence, it.speed) }
     }
+    if (runId < 0) {
+        ServerRunPage(-runId, settings, onBack)
+        return
+    }
     val r = run ?: return
 
     Box(Modifier.fillMaxSize()) {
@@ -165,7 +210,14 @@ fun RunPage(runId: Long, settings: Settings, onBack: () -> Unit) {
                 Eyebrow(runDate(r.startT))
                 Text(runTitle(r), style = Type.h1, color = c.ink)
             }
-            if (r.sync == SyncState.FAILED && r.failReason != null) Card(color = c.rose.fill) { Text(r.failReason, style = Type.strong, color = c.rose.ink) }
+            if (r.sync == SyncState.FAILED && r.failReason != null) Card(color = c.rose.fill) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(r.failReason, style = Type.strong, color = c.rose.ink)
+                    AppButton(stringResource(R.string.retry), {
+                        scope.launch { dao.updateRun(r.copy(sync = SyncState.PENDING, failReason = null)); Sync.run(context) }
+                    }, icon = Icon.REFRESH)
+                }
+            }
             MiniMap(track, Modifier.fillMaxWidth().height(190.dp), live = false)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 MiniTile(stringResource(R.string.f_distance), Format.distance(r.distance, u), Format.distanceUnit(u), c.sky, Modifier.weight(1f))
@@ -234,11 +286,47 @@ fun RunPage(runId: Long, settings: Settings, onBack: () -> Unit) {
                     AppButton(stringResource(R.string.save), {
                         sheet = null
                         // An uploaded run is marked so the change is sent at the next sync.
-                        scope.launch { dao.updateRun(r.copy(title = title.trim(), rpe = rpe, note = note.trim(), journalDirty = r.sync == SyncState.SYNCED)) }
+                        scope.launch {
+                            dao.updateRun(r.copy(title = title.trim(), rpe = rpe, note = note.trim(), journalDirty = r.sync == SyncState.SYNCED))
+                            if (r.sync == SyncState.SYNCED) Sync.schedule(context)
+                        }
                     }, kind = ButtonKind.PRIMARY, icon = Icon.CHECK, modifier = Modifier.fillMaxWidth())
                     AppButton(stringResource(R.string.cancel), { sheet = null }, modifier = Modifier.fillMaxWidth())
                 }
             }
+        }
+    }
+}
+
+/** An activity that exists only on the server: its summary, from the last list retrieved. */
+@Composable
+private fun ServerRunPage(activityId: Long, settings: Settings, onBack: () -> Unit) {
+    val c = LocalColors.current
+    val context = LocalContext.current
+    var a by remember { mutableStateOf<ServerActivityEntity?>(null) }
+    val u = settings.units
+    LaunchedEffect(activityId) {
+        a = settings.profileId?.let { AppDb.get(context).runs().watchServerActivities(it).first().firstOrNull { x -> x.id == activityId } }
+    }
+    val r = a ?: return
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(Icon.BACK, stringResource(R.string.back), onBack)
+            Spacer(Modifier.weight(1f))
+            Tag(stringResource(R.string.sync_server_only), Pastel(c.surface2, c.ink2), Icon.CLOUD)
+        }
+        Column {
+            Eyebrow(runDate(r.startT))
+            Text(r.title.ifEmpty { stringResource(R.string.title_default) }, style = Type.h1, color = c.ink)
+        }
+        Text(stringResource(R.string.server_only_note), style = Type.small, color = c.ink2)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MiniTile(stringResource(R.string.f_distance), Format.distance(r.distance, u), Format.distanceUnit(u), c.sky, Modifier.weight(1f))
+            MiniTile(stringResource(R.string.f_time), Format.duration(r.movingMs / 1000.0), "", c.mint, Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MiniTile(stringResource(R.string.f_avg_pace), Format.pace(if (r.distance < 20) null else r.movingMs / 1000.0 / (r.distance / 1000), u), Format.paceUnit(u), c.lav, Modifier.weight(1f))
+            MiniTile(stringResource(R.string.avg_hr), r.avgHr?.toString() ?: Format.PLACEHOLDER, if (r.avgHr != null) stringResource(R.string.unit_bpm) else "", c.rose, Modifier.weight(1f))
         }
     }
 }

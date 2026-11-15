@@ -125,4 +125,27 @@
     <string name="theme_light">Clair</string>
     <string name="theme_dark">Sombre</string>
     <string name="theme_system">Système</string>
+    <string name="server_title">Serveur à la maison</string>
+    <string name="server_address">Adresse</string>
+    <string name="server_connect">Connecter</string>
+    <string name="server_connected">Connecté · v%1$s</string>
+    <string name="server_unreachable">Injoignable</string>
+    <string name="server_checking">Vérification…</string>
+    <string name="server_no_answer">Aucun serveur ne répond à cette adresse. Le réglage précédent est conservé.</string>
+    <string name="server_not_ours">Un autre service répond à cette adresse, pas le serveur Well-being. Le réglage précédent est conservé.</string>
+    <string name="server_privacy">Les sorties ne sont envoyées qu\'à cette adresse, en Wi-Fi, jamais ailleurs.</string>
+    <string name="profile_title">Profil</string>
+    <string name="profile_hint">Unités et zones cardiaques viennent du profil choisi sur le serveur.</string>
+    <string name="profile_missing">Le profil choisi n\'existe plus sur le serveur : choisis-en un autre pour envoyer tes sorties.</string>
+    <string name="sync_now">Synchroniser maintenant</string>
+    <string name="sync_running">Synchronisation en cours…</string>
+    <string name="sync_done">Serveur joignable · tout est à jour</string>
+    <string name="sync_unreachable">Serveur injoignable</string>
+    <string name="sync_metered">Connexion limitée : l\'envoi attend le Wi-Fi</string>
+    <string name="sync_not_configured">Aucun serveur configuré : les sorties restent sur le téléphone</string>
+    <string name="sync_not_ours">L\'adresse configurée n\'est pas le serveur Well-being</string>
+    <string name="sync_pending_count">%1$d en attente</string>
+    <string name="sync_server_only">Serveur</string>
+    <string name="server_only_note">Cette sortie n\'a pas été enregistrée sur ce téléphone : seul son résumé est disponible ici.</string>
+    <string name="retry">Réessayer</string>
 </resources>

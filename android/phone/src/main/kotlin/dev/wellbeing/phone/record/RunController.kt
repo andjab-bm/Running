@@ -88,7 +88,11 @@ object RunController {
         app = context.applicationContext
         dao = AppDb.get(app).runs()
         main.launch { SettingsStore(app).flow.collect { settings = it } }
-        io.launch { findInterrupted() }
+        io.launch {
+            findInterrupted()
+            // Runs saved earlier and still waiting get another chance at each start of the app.
+            if (dao.toSync().isNotEmpty()) dev.wellbeing.phone.sync.Sync.schedule(app)
+        }
     }
 
     private fun now() = System.currentTimeMillis()
@@ -196,6 +200,7 @@ object RunController {
             f.run.laps.mapIndexed { i, l -> LapEntity(f.runId, i, l.startT, l.endT, l.distance, l.movingMs, l.manual, s.lapHeartRates[i]) },
             f.run.timer.map { TimerEntity(f.runId, it.t, it.start) },
         )
+        dev.wellbeing.phone.sync.Sync.schedule(app)
         withContext(Dispatchers.Main) { clear() }
     }
 

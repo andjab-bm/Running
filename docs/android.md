@@ -177,3 +177,27 @@ The development machine cannot run the emulator, so the behaviours below are che
 10. **Kill mid-run** — start a run, swipe the app away from the recent apps, reopen: "Course interrompue" offers to resume or to end and keep. (`run-recording`: app killed, end an interrupted run)
 11. **Settings** — replace a field, switch theme to Sombre: the next run and the whole app follow. (`live-run-screens`: replace a field; `mobile-theming`: forced theme)
 12. **The file** — import the shared `.fit` in the web app: same distance, laps and pauses. (`run-recording`: server reads back a recorded run)
+
+## Pairing with the home server and syncing
+
+1. Start the server on the home network (see [architecture.md](architecture.md)) and note its address, for example `http://192.168.1.20:8080`. The phone must be on the same Wi-Fi.
+2. In the app: **Réglages → Serveur à la maison**, type the address (`192.168.1.20:8080` is enough) and press **Connecter**. The app checks that the address answers as this server — status, version and database fields of `/api/v1/health` — before keeping it; a wrong address leaves the previous setting untouched.
+3. Choose the **profile** your runs go to. Units and heart-rate zones come from that profile and are refreshed at every sync.
+
+From then on a saved run is uploaded without any action:
+
+- **Only on an unmetered network.** Being home is inferred from "unmetered and the server answers within 3 s"; the Wi-Fi name is never read. On mobile data nothing is sent, not even by the manual button.
+- **When** — as soon as the phone is on such a network after a run is saved or edited, then every 15 minutes while something is still pending (so joining another Wi-Fi first does not postpone the upload for hours), and at each start of the app. The manual button in Historique does the same thing immediately.
+- **What** — the run's `.fit` file through `POST /profiles/{id}/imports`, then its title, effort and note through `PATCH /activities/{id}`. An empty title leaves the server's generated title. Editing a synced run later sends only the notes.
+- **Retries are safe.** The server refuses a run it already holds and names the existing activity; the phone then marks the run as synced. A file the server rejects is marked "Échec" with the reason and is not retried by itself.
+- **Profile deleted on the server** — nothing is uploaded and the app asks for another profile.
+
+**Plain HTTP.** The server has no TLS, so the app allows cleartext traffic. It only ever contacts the address typed in the settings. Away from home, reach the server through a VPN (WireGuard, Tailscale); never expose its port to the internet.
+
+To try the client against a real server from a development machine, start a server with an empty data directory, create a profile, then run from `android/`:
+
+```bash
+WELLBEING_TEST_SERVER=http://127.0.0.1:8090 ./gradlew :phone:testDebugUnitTest --tests "*LiveServerTest*"
+```
+
+Checklist additions on the phone: connect to the server and pick a profile (step 2–3 above); save a run at home and see it turn "Synchronisée" and appear in the web app with its effort and note; save one on mobile data and see it stay "En attente" until the phone is back on the home Wi-Fi; activities imported through the web appear in Historique with the "Serveur" tag.

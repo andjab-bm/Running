@@ -137,6 +137,7 @@ fun SettingsScreen(settings: Settings, store: SettingsStore) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(stringResource(R.string.tab_settings), style = Type.h1, color = c.ink)
+            ServerSettings(settings, store)
             Card {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(stringResource(R.string.settings_main_screen), style = Type.h3, color = c.ink)
