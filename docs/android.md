@@ -133,3 +133,47 @@ The recording logic lives in `core` (`SessionEngine`): it is driven only by even
 ### Deviation from the design document
 
 - **The run in progress is stored as its event log**, not as sample rows written every five seconds. Samples, laps and timer events are derived from the engine when the run is saved. This is what makes the rebuilt run identical to the interrupted one.
+
+## Trying the phone app without going for a run
+
+In the emulator (or on the phone with developer options), a debug build can be driven from a terminal:
+
+```bash
+adb shell pm grant dev.wellbeing.app android.permission.ACCESS_FINE_LOCATION
+```
+
+```bash
+adb emu geo fix 2.3522 48.8566 35
+```
+
+```bash
+adb shell am broadcast -p dev.wellbeing.app -a dev.wellbeing.DEBUG_HR --ei bpm 150
+```
+
+`geo fix` takes longitude, then latitude, then altitude, and only works in the emulator; sending a sequence of fixes one second apart simulates movement. The `DEBUG_HR` broadcast stands in for the watch and exists only in debug builds.
+
+## How the phone app is organised
+
+- `record/RunController` — the one run that can exist at a time. The interface, the foreground service and the watch link all go through it. It owns the engine (main thread only) and writes the event log through a single background thread.
+- `record/RecordingService` — the `location` foreground service: fused location at 1 Hz, step detector, barometer, wake lock and the notification. It is started from the ready screen, which is the only way Android allows without background-location permission.
+- `data/` — Room database (`runs`, `events`, `hr_samples`, `samples`, `laps`, `timer_events`, `server_activities`) and the settings store.
+- `ui/` — Compose screens. Colours come from `core`'s `Tokens`, which a test compares with the web app's `tokens.css`. Bricolage Grotesque and Manrope are bundled (`res/font`, SIL Open Font License) so nothing is fetched at run time.
+
+Altitude is the fix's mean-sea-level altitude corrected by the barometer: the barometer gives the shape of the climb, and its offset from GPS is tracked slowly (`OFFSET_TRACKING`, 2 % per fix).
+
+## Checklist on the phone
+
+The development machine cannot run the emulator, so the behaviours below are checked on the Pixel 8 with a debug build. Each line names the spec scenario it covers.
+
+1. **First opening** — the Courir tab explains why location is needed; refusing keeps the Start button away; accepting shows "Recherche de la position…" then "Position trouvée" outdoors. (`run-recording`: permission refused, good fix)
+2. **Start, screen off** — start, lock the phone, walk or run a few hundred metres, wake it: the live screen shows over the lock screen with time and distance still counting, and the notification shows the same figures. (`run-recording`: screen off; `live-run-screens`: waking the phone, notification)
+3. **Main screen** — average pace with one bar per kilometre, cadence, heart rate placeholder (no watch yet), total time and distance beside the trace. (`live-run-screens`: default layout, pace bars, mini-map, no heart rate)
+4. **Auto-pause** — stop at a crossing: "Pause auto" within about ten seconds, resumes a few seconds after leaving. (`run-recording`: traffic light)
+5. **Lap** — press Tour, swipe to the lap screen: lap 2 from zero, lap 1 time and pace below. (`live-run-screens`: after a lap mark)
+6. **Lock** — press Verrouiller, tap and swipe everywhere: nothing changes; hold the pill to unlock. (`live-run-screens`: rain, unlock)
+7. **Stop** — pause, tap the stop button briefly: nothing; hold it: the summary appears. (`run-recording`: accidental and deliberate stop)
+8. **Save** — set a title, an effort and a note, save: the run is in Historique as "En attente" with its laps and trace. (`run-recording`: save; `phone-history`: run list, run page)
+9. **Edit, share, delete** — on the run page, change the effort with the pencil; share the `.fit` to Files; delete with the confirmation. (`phone-history`: edit, share, delete)
+10. **Kill mid-run** — start a run, swipe the app away from the recent apps, reopen: "Course interrompue" offers to resume or to end and keep. (`run-recording`: app killed, end an interrupted run)
+11. **Settings** — replace a field, switch theme to Sombre: the next run and the whole app follow. (`live-run-screens`: replace a field; `mobile-theming`: forced theme)
+12. **The file** — import the shared `.fit` in the web app: same distance, laps and pauses. (`run-recording`: server reads back a recorded run)

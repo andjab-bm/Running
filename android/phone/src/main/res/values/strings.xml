@@ -1,4 +1,128 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Well-being</string>
+
+    <string name="tab_run">Courir</string>
+    <string name="tab_history">Historique</string>
+    <string name="tab_settings">Réglages</string>
+
+    <string name="state_ready">Prêt</string>
+    <string name="state_running">En course</string>
+    <string name="state_paused">En pause</string>
+    <string name="state_auto_paused">Pause auto</string>
+    <string name="notif_channel">Course en cours</string>
+    <string name="notif_ready">Recherche de la position</string>
+
+    <string name="ready_title">Prêt à courir</string>
+    <string name="ready_profile">%1$s · profil actif</string>
+    <string name="ready_no_profile">Aucun serveur configuré</string>
+    <string name="gps_ok">Position trouvée</string>
+    <string name="gps_ok_detail">Précision ± %1$d m</string>
+    <string name="gps_wait">Recherche de la position…</string>
+    <string name="gps_wait_detail">Reste à découvert quelques secondes</string>
+    <string name="watch_off">Montre non connectée</string>
+    <string name="watch_off_detail">Ouvre l\'app sur la montre pour la fréquence cardiaque</string>
+    <string name="watch_on">Montre connectée</string>
+    <string name="watch_on_detail">%1$d bpm · fréquence cardiaque active</string>
+    <string name="autopause_on">Pause automatique activée</string>
+    <string name="autopause_off">Pause automatique désactivée</string>
+    <string name="start">Démarrer</string>
+    <string name="start_hint_ready">Tu peux aussi démarrer depuis la montre.</string>
+    <string name="start_hint_wait">Tu peux démarrer maintenant : la distance sera comptée dès que la position sera trouvée.</string>
+    <string name="perm_title">Accès à la position</string>
+    <string name="perm_body">Pour enregistrer ta trace et ta distance, l\'application a besoin de la position précise pendant la course. Les notifications affichent la course en cours, et l\'activité physique sert à mesurer la cadence. Rien n\'est envoyé hors de ton serveur.</string>
+    <string name="perm_grant">Autoriser</string>
+    <string name="perm_settings">Ouvrir les réglages de l\'application</string>
+
+    <string name="banner_auto">Pause automatique · reprise dès que tu repars</string>
+    <string name="banner_paused">En pause · le temps total continue</string>
+    <string name="locked">Verrouillé</string>
+    <string name="locked_toast">Écran verrouillé</string>
+    <string name="unlock_hold">Maintenir pour déverrouiller</string>
+    <string name="act_lap">Tour</string>
+    <string name="act_pause">Mettre en pause</string>
+    <string name="act_resume">Reprendre</string>
+    <string name="act_lock">Verrouiller</string>
+    <string name="act_stop">Terminer la course (maintenir)</string>
+    <string name="hold">Maintenir</string>
+    <string name="page_metrics">Métriques</string>
+    <string name="page_lap">Tour en cours</string>
+
+    <string name="f_time">Temps</string>
+    <string name="f_elapsed">Temps total</string>
+    <string name="f_distance">Distance</string>
+    <string name="f_pace">Allure</string>
+    <string name="f_avg_pace">Allure moy.</string>
+    <string name="f_lap_pace">Allure tour</string>
+    <string name="f_hr">FC</string>
+    <string name="f_cadence">Cadence</string>
+    <string name="f_gain">Dénivelé +</string>
+    <string name="f_clock">Heure</string>
+    <string name="f_combined">Temps total, distance et mini-carte</string>
+    <string name="unit_bpm">bpm</string>
+    <string name="unit_spm">ppm</string>
+    <string name="minimap">Mini-carte</string>
+    <string name="km_hint">Allure de chaque kilomètre</string>
+    <string name="lap_n">Tour %1$d</string>
+    <string name="lap_n_dist">Tour %1$d · %2$s %3$s</string>
+    <string name="laps_previous">Tours précédents</string>
+    <string name="laps_none">Aucun tour marqué</string>
+    <string name="laps_hint">Appuie sur Tour pour découper ta sortie.</string>
+    <string name="laps">Tours</string>
+
+    <string name="summary_eyebrow">Course terminée</string>
+    <string name="summary_short">Sortie très courte : elle sera sans doute à supprimer.</string>
+    <string name="title">Titre</string>
+    <string name="title_default">Sortie</string>
+    <string name="rpe">Ressenti de l\'effort</string>
+    <string name="rpe_value">Ressenti de l\'effort · %1$d/10</string>
+    <string name="note">Note</string>
+    <string name="note_hint">Sensations, météo, parcours…</string>
+    <string name="save">Enregistrer</string>
+    <string name="cancel">Annuler</string>
+    <string name="discard">Supprimer cette sortie</string>
+    <string name="discard_title">Supprimer cette sortie ?</string>
+    <string name="discard_body">Elle sera effacée du téléphone et ne sera jamais envoyée au serveur.</string>
+    <string name="delete">Supprimer</string>
+
+    <string name="interrupted_title">Course interrompue</string>
+    <string name="interrupted_body">Une course de %1$s (%2$s) n\'a pas été terminée. Tu peux la reprendre maintenant ou la terminer en gardant ce qui a été enregistré.</string>
+    <string name="interrupted_resume">Reprendre la course</string>
+    <string name="interrupted_end">Terminer et garder</string>
+
+    <string name="history_empty_title">Aucune sortie pour l\'instant</string>
+    <string name="history_empty_body">Enregistre ta première course depuis l\'onglet Courir.</string>
+    <string name="week">Cette semaine</string>
+    <string name="month">Ce mois</string>
+    <string name="runs">Sorties</string>
+    <string name="sync_synced">Synchronisée</string>
+    <string name="sync_pending">En attente</string>
+    <string name="sync_failed">Échec</string>
+    <string name="back">Retour</string>
+    <string name="edit">Modifier le titre, le ressenti et la note</string>
+    <string name="edit_title">Modifier la sortie</string>
+    <string name="edit_synced_hint">La modification sera aussi envoyée au serveur à la prochaine synchronisation.</string>
+    <string name="share_fit">Partager le fichier .fit</string>
+    <string name="delete_local">Supprimer du téléphone</string>
+    <string name="delete_synced_title">Supprimer du téléphone ?</string>
+    <string name="delete_synced_body">Les données enregistrées seront retirées de ce téléphone. La sortie reste sur le serveur.</string>
+    <string name="delete_pending_body">Elle n\'a pas encore été envoyée au serveur : elle sera définitivement perdue.</string>
+    <string name="delete_forever">Supprimer définitivement</string>
+    <string name="effort">Ressenti</string>
+    <string name="avg_hr">FC moy.</string>
+
+    <string name="settings_main_screen">Écran principal</string>
+    <string name="slot_top">Grand champ du haut</string>
+    <string name="slot_left">Milieu gauche</string>
+    <string name="slot_right">Milieu droite</string>
+    <string name="slot_bottom">Champ du bas</string>
+    <string name="settings_during">Pendant la course</string>
+    <string name="autopause">Pause automatique</string>
+    <string name="autopause_detail">Met en pause à l\'arrêt, reprend au mouvement</string>
+    <string name="keep_on">Garder l\'écran allumé</string>
+    <string name="keep_on_detail">L\'écran ne s\'éteint pas pendant une course</string>
+    <string name="appearance">Apparence</string>
+    <string name="theme_light">Clair</string>
+    <string name="theme_dark">Sombre</string>
+    <string name="theme_system">Système</string>
 </resources>

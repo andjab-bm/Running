@@ -2,6 +2,8 @@
 
 Tasks marked **(device)** need the owner's Pixel 8 and/or Galaxy Watch 4; everything else can be done on a development machine with the Android emulator.
 
+The current development machine (2 cores, 6 GB of memory) cannot run the emulator next to a build, so the checks worded "in the emulator" are done on the owner's Pixel 8 instead, following the checklist in `docs/android.md`. Code for 5.2–5.5, 6.1–6.6, 8.1, 8.3 and 8.4 (local runs only) is written and compiles; those tasks stay open until checked on the phone.
+
 ## 1. Phone and watch prototype (approval gate)
 
 - [x] 1.1 Build `prototype/mobile-recording.html` as one self-contained page on the approved tokens, with a phone frame and a round watch frame, a Light/Dark switch and a simulated run that ticks; verify it opens from the file system with no build step and no console errors
@@ -34,7 +36,7 @@ Tasks marked **(device)** need the owner's Pixel 8 and/or Galaxy Watch 4; everyt
 
 ## 5. Recording on the phone
 
-- [ ] 5.1 Create the Room database (runs, samples, heart-rate samples, laps, timer events, cached server activities) and the settings store; verify a migration/schema test and a DAO round-trip test pass
+- [x] 5.1 Create the Room database (runs, samples, heart-rate samples, laps, timer events, cached server activities) and the settings store; verify a migration/schema test and a DAO round-trip test pass
 - [ ] 5.2 Implement the permission flow (precise location, notifications, activity recognition) with explanations; verify in the emulator the permission-refused scenario of `run-recording`
 - [ ] 5.3 Implement the location foreground service started from the ready screen, feeding fused location, barometer and step-detector readings to the engine and flushing samples every 5 s; verify with emulator route playback that a run records with the screen off and the notification shows its state
 - [ ] 5.4 Implement saving: write the FIT file at stop, store the summary and journal fields, discard with confirmation, and the short-run default; verify in the emulator the save, discard and very-short-run scenarios, and that the saved file imports into a local server
@@ -61,7 +63,7 @@ Tasks marked **(device)** need the owner's Pixel 8 and/or Galaxy Watch 4; everyt
 ## 8. Phone history
 
 - [ ] 8.1 Build the run list with local runs, cached server activities merged without duplicates, sync-state badges and the empty state; verify the offline, imported-history, synced-run and no-run scenarios of `phone-history`
-- [ ] 8.2 Implement weekly and monthly totals; verify a unit test for the three-runs-this-week scenario including a week crossing a month boundary
+- [x] 8.2 Implement weekly and monthly totals; verify a unit test for the three-runs-this-week scenario including a week crossing a month boundary
 - [ ] 8.3 Build the run page (summary, laps, trace drawing, journal fields with editing of title, effort and note, failure reason with retry); verify on a recorded three-lap run and on a server-only activity, and the change-the-effort-later and cancel scenarios
 - [ ] 8.4 Implement FIT sharing and local deletion with the two confirmation texts; verify the shared file is byte-identical to the stored one and that deleting a synced run leaves the server activity in place
 
