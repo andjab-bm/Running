@@ -12,7 +12,7 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", config.port)).await?;
     tracing::info!(port = config.port, data_dir = %config.data_dir.display(), "running-server {} listening", env!("CARGO_PKG_VERSION"));
 
-    axum::serve(listener, app(AppState { db, config }))
+    axum::serve(listener, app(AppState::new(db, config)))
         .with_graceful_shutdown(shutdown())
         .await?;
     Ok(())

@@ -1,6 +1,8 @@
 //! Derives streams, summary, splits, laps, zones and effort from parsed samples.
 //!
 //! All tunable constants are gathered at the top and documented in `docs/metrics.md`.
+use serde::{Deserialize, Serialize};
+
 use super::{ParseError, Parsed, Sample};
 
 /// A gap longer than this between two samples counts as a pause (seconds).
@@ -66,7 +68,7 @@ impl ZoneConfig {
 }
 
 /// Index-aligned series for one activity. Interval `i` is the stretch between samples `i - 1` and `i`.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Streams {
     /// Seconds since the first sample.
     pub t: Vec<f64>,

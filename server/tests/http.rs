@@ -11,7 +11,7 @@ async fn test_app() -> (axum::Router, tempfile::TempDir) {
     let mut config = Config::from_lookup(|_| None).unwrap();
     config.data_dir = dir.path().to_path_buf();
     let db = db::open(&config.data_dir).await.unwrap();
-    (app(AppState { db, config }), dir)
+    (app(AppState::new(db, config)), dir)
 }
 
 async fn get(app: &axum::Router, path: &str) -> (StatusCode, Vec<u8>) {

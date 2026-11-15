@@ -81,4 +81,7 @@ Versions were taken from crates.io and npm on 2026-11-15. Current documentation 
 - **SvelteKit 3 configures the adapter in `vite.config.ts`**; there is no `svelte.config.js` any more.
 - **The fallback page is `200.html`, not `index.html`**, as the SvelteKit documentation recommends for single-page apps. The server maps unknown paths to it.
 - **Fonts are self-hosted** through the `@fontsource-variable` packages, so the browser makes no request to Google (the prototype did).
+- **The OpenAPI document is written by hand next to the router** (`server/src/api/openapi.rs`) instead of being derived from handler annotations. `cargo test` fails when `docs/api/openapi.json` differs from it or when a listed route is not served; refresh the file with `UPDATE_OPENAPI=1 cargo test --test openapi`. A route added to the router but not to the list would go unnoticed.
+- **Splits and laps share one `segments` table**, told apart by a `kind` column.
+- **Stored streams are JSON compressed with zstd**, about 15 kB per kilometre at one sample per second.
 - **Default map style**: OpenFreeMap "positron" is the placeholder default for `MAP_STYLE_URL`; the final choice is made when the map is built (task 8.2).

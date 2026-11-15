@@ -31,27 +31,27 @@
 
 ## 4. Storage and import
 
-- [ ] 4.1 Write SQLite migrations for profiles, activities (with `profile_id`, `copied_from`, `metrics_version`), splits, laps, tags and activity_tags; verify migrations apply to an empty database at startup and a migration test passes
-- [ ] 4.2 Read current zstd documentation (Context7), then implement stream blob encoding/decoding (column arrays, compressed) and reference-counted original-file storage keyed by SHA-256 under the data directory; verify a round-trip unit test, that a stored original is byte-identical, and that a file shared by two activities survives deletion of one
-- [ ] 4.3 Implement `POST /api/v1/profiles/{pid}/imports` accepting multiple files with per-file `imported`/`duplicate`/`failed` results, size limit and bounded concurrency; verify integration tests reproduce the mixed-batch, active-profile and unknown-profile scenarios of `activity-import`
-- [ ] 4.4 Implement per-profile duplicate detection by content hash and by start time/duration proximity; verify integration tests cover same-file, cross-format, same-file-in-two-profiles and re-import-after-deletion scenarios
-- [ ] 4.5 Implement GPX 1.1 export and original-file download endpoints; verify an integration test validates the exported file parses back within 0.5 % distance and that the original download matches the upload hash
+- [x] 4.1 Write SQLite migrations for profiles, activities (with `profile_id`, `copied_from`, `metrics_version`), splits, laps, tags and activity_tags; verify migrations apply to an empty database at startup and a migration test passes
+- [x] 4.2 Read current zstd documentation (Context7), then implement stream blob encoding/decoding (column arrays, compressed) and reference-counted original-file storage keyed by SHA-256 under the data directory; verify a round-trip unit test, that a stored original is byte-identical, and that a file shared by two activities survives deletion of one
+- [x] 4.3 Implement `POST /api/v1/profiles/{pid}/imports` accepting multiple files with per-file `imported`/`duplicate`/`failed` results, size limit and bounded concurrency; verify integration tests reproduce the mixed-batch, active-profile and unknown-profile scenarios of `activity-import`
+- [x] 4.4 Implement per-profile duplicate detection by content hash and by start time/duration proximity; verify integration tests cover same-file, cross-format, same-file-in-two-profiles and re-import-after-deletion scenarios
+- [x] 4.5 Implement GPX 1.1 export and original-file download endpoints; verify an integration test validates the exported file parses back within 0.5 % distance and that the original download matches the upload hash
 
 ## 5. Activity API
 
-- [ ] 5.1 Implement `GET /profiles/{pid}/activities` with cursor pagination, tag and date filters and preview polyline, and `GET /activities/{id}` with summary, splits and laps; verify integration tests for ordering, paging, filtering and 404
-- [ ] 5.2 Implement `GET /activities/{id}/streams` with `low` and `full` resolutions; verify an integration test checks series alignment and the low-resolution bound
-- [ ] 5.3 Implement `PATCH /activities/{id}` for title, description, RPE and tags (predefined tags seeded, custom tags created on use) with validation, and default title generation at import; verify integration tests for save, invalid RPE, cleared RPE and custom tag suggestion
-- [ ] 5.4 Implement `DELETE /activities/{id}` removing rows, blobs and the original file when no other activity references it; verify an integration test confirms the file is gone from the data directory
-- [ ] 5.5 Generate and commit the OpenAPI document to `docs/api/openapi.json` (regenerated at the end of group 6); verify a CI check fails when the committed file is out of date
+- [x] 5.1 Implement `GET /profiles/{pid}/activities` with cursor pagination, tag and date filters and preview polyline, and `GET /activities/{id}` with summary, splits and laps; verify integration tests for ordering, paging, filtering and 404
+- [x] 5.2 Implement `GET /activities/{id}/streams` with `low` and `full` resolutions; verify an integration test checks series alignment and the low-resolution bound
+- [x] 5.3 Implement `PATCH /activities/{id}` for title, description, RPE and tags (predefined tags seeded, custom tags created on use) with validation, and default title generation at import; verify integration tests for save, invalid RPE, cleared RPE and custom tag suggestion
+- [x] 5.4 Implement `DELETE /activities/{id}` removing rows, blobs and the original file when no other activity references it; verify an integration test confirms the file is gone from the data directory
+- [x] 5.5 Describe the API as an OpenAPI 3.1 document in `server/src/api/openapi.rs` and commit it to `docs/api/openapi.json` (regenerated at the end of group 6); verify a test fails when the committed file is out of date or a listed route is not served
 
 ## 6. Profiles and trusted-network access
 
-- [ ] 6.1 Implement `GET|POST /profiles` and `GET|PUT|DELETE /profiles/{pid}` (name, colour, max/resting HR, default and custom zones, units, time zone) with validation, unique names, the default-HR fallback flag, and deletion refusing the last profile; verify integration tests cover every scenario of `athlete-profile`
-- [ ] 6.2 Recompute zones, effort and splits for a profile's activities when its settings change; verify an integration test shows updated zone times after changing max HR
-- [ ] 6.3 Implement `POST /activities/{id}/copy` (target profile, keep-HR option, existing-copy detection) and `POST /activities/{id}/move` with metrics recomputed for the target profile; verify integration tests cover every copy and move scenario of `activity-library`
-- [ ] 6.4 Reject cross-site state-changing requests (Origin / Sec-Fetch-Site check, required custom header, no permissive CORS); verify integration tests refuse a forged cross-origin delete and accept a same-origin write and a credential-less non-browser upload
-- [ ] 6.5 Regenerate the OpenAPI document with the profile, copy and move endpoints; verify the CI freshness check passes
+- [x] 6.1 Implement `GET|POST /profiles` and `GET|PUT|DELETE /profiles/{pid}` (name, colour, max/resting HR, default and custom zones, units, time zone) with validation, unique names, the default-HR fallback flag, and deletion refusing the last profile; verify integration tests cover every scenario of `athlete-profile`
+- [x] 6.2 Recompute zones, effort and splits for a profile's activities when its settings change; verify an integration test shows updated zone times after changing max HR
+- [x] 6.3 Implement `POST /activities/{id}/copy` (target profile, keep-HR option, existing-copy detection) and `POST /activities/{id}/move` with metrics recomputed for the target profile; verify integration tests cover every copy and move scenario of `activity-library`
+- [x] 6.4 Reject cross-site state-changing requests (Origin / Sec-Fetch-Site check, required custom header, no permissive CORS); verify integration tests refuse a forged cross-origin delete and accept a same-origin write and a credential-less non-browser upload
+- [x] 6.5 Regenerate the OpenAPI document with the profile, copy and move endpoints; verify the CI freshness check passes
 
 ## 7. Web app shell, theming and library
 

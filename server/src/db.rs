@@ -1,4 +1,4 @@
-//! SQLite connection pool living in the data directory.
+//! SQLite connection pool living in the data directory, migrated at startup.
 use std::path::Path;
 
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePool, SqlitePoolOptions};
@@ -11,5 +11,8 @@ pub async fn open(data_dir: &Path) -> anyhow::Result<SqlitePool> {
         .journal_mode(SqliteJournalMode::Wal)
         .foreign_keys(true);
     // A small pool is plenty for a household and keeps memory low on a Raspberry Pi.
-    Ok(SqlitePoolOptions::new().max_connections(4).connect_with(options).await?)
+    let pool = SqlitePoolOptions::new().max_connections(4).connect_with(options).await?;
+    // Migrations are embedded in the binary and applied forward-only.
+    sqlx::migrate!("./migrations").run(&pool).await?;
+    Ok(pool)
 }
