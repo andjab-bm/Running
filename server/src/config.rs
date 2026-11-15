@@ -3,6 +3,8 @@ use std::{env, path::PathBuf};
 
 /// Public vector style used when `MAP_STYLE_URL` is not set.
 pub const DEFAULT_MAP_STYLE_URL: &str = "https://tiles.openfreemap.org/styles/positron";
+/// Its dark counterpart, used when `MAP_STYLE_URL_DARK` is not set.
+pub const DEFAULT_MAP_STYLE_URL_DARK: &str = "https://tiles.openfreemap.org/styles/dark";
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -14,6 +16,9 @@ pub struct Config {
     pub max_upload_bytes: usize,
     /// Map style URL handed to the browser (`MAP_STYLE_URL`); empty disables the basemap.
     pub map_style_url: String,
+    /// Style used with the dark theme (`MAP_STYLE_URL_DARK`). Follows `MAP_STYLE_URL` when that one is
+    /// customised or disabled and no dark style is given.
+    pub map_style_url_dark: String,
 }
 
 impl Config {
@@ -33,11 +38,20 @@ impl Config {
                 .map_err(|_| anyhow::anyhow!("MAX_UPLOAD_MB must be a whole number, got {v:?}"))?,
             None => 50,
         };
+        let map_style_url = get("MAP_STYLE_URL").unwrap_or_else(|| DEFAULT_MAP_STYLE_URL.to_string());
+        let map_style_url_dark = get("MAP_STYLE_URL_DARK").unwrap_or_else(|| {
+            if map_style_url == DEFAULT_MAP_STYLE_URL {
+                DEFAULT_MAP_STYLE_URL_DARK.to_string()
+            } else {
+                map_style_url.clone()
+            }
+        });
         Ok(Self {
             port,
             data_dir: get("DATA_DIR").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("./data")),
             max_upload_bytes: max_mb * 1024 * 1024,
-            map_style_url: get("MAP_STYLE_URL").unwrap_or_else(|| DEFAULT_MAP_STYLE_URL.to_string()),
+            map_style_url,
+            map_style_url_dark,
         })
     }
 }
@@ -53,12 +67,14 @@ mod tests {
         assert_eq!(c.data_dir, PathBuf::from("./data"));
         assert_eq!(c.max_upload_bytes, 50 * 1024 * 1024);
         assert_eq!(c.map_style_url, DEFAULT_MAP_STYLE_URL);
+        assert_eq!(c.map_style_url_dark, DEFAULT_MAP_STYLE_URL_DARK);
     }
 
     #[test]
     fn empty_map_style_disables_the_basemap() {
         let c = Config::from_lookup(|k| (k == "MAP_STYLE_URL").then(String::new)).unwrap();
         assert!(c.map_style_url.is_empty());
+        assert!(c.map_style_url_dark.is_empty());
     }
 
     #[test]

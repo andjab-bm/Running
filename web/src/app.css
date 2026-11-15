@@ -1,6 +1,7 @@
 @import '@fontsource-variable/bricolage-grotesque';
 @import '@fontsource-variable/manrope';
 @import './lib/tokens.css';
+@import './lib/ui.css';
 
 *,
 *::before,

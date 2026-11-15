@@ -1063,6 +1063,38 @@
         "summary": "Index-aligned sample series"
       }
     },
+    "/config": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "map_style_url": {
+                      "description": "MapLibre style for the light theme; empty disables the basemap",
+                      "type": "string"
+                    },
+                    "map_style_url_dark": {
+                      "type": "string"
+                    },
+                    "max_upload_bytes": {
+                      "type": "integer"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Client configuration"
+          }
+        },
+        "summary": "Settings the web app needs: map styles and upload limit"
+      }
+    },
     "/health": {
       "get": {
         "responses": {

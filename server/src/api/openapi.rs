@@ -8,6 +8,7 @@ use serde_json::{Map, Value, json};
 /// Every route of the API: method, path, summary, whether it changes state.
 pub const ROUTES: &[(&str, &str, &str)] = &[
     ("get", "/health", "Service and data store status"),
+    ("get", "/config", "Settings the web app needs: map styles and upload limit"),
     ("get", "/profiles", "List household profiles"),
     ("post", "/profiles", "Create a profile"),
     ("get", "/profiles/{profile_id}", "Read a profile and its heart-rate zones"),
@@ -243,6 +244,20 @@ fn operation(method: &str, path: &str, summary: &str) -> Value {
         ("get", "/health") => {
             responses.insert("200".into(), ok("Healthy", Some(r#ref("Health"))));
             responses.insert("503".into(), ok("Data store unreachable", Some(r#ref("Health"))));
+        }
+        ("get", "/config") => {
+            responses.insert(
+                "200".into(),
+                ok(
+                    "Client configuration",
+                    Some(json!({ "type": "object", "properties": {
+                        "version": { "type": "string" },
+                        "map_style_url": { "type": "string", "description": "MapLibre style for the light theme; empty disables the basemap" },
+                        "map_style_url_dark": { "type": "string" },
+                        "max_upload_bytes": { "type": "integer" }
+                    } })),
+                ),
+            );
         }
         ("get", "/profiles") => {
             responses.insert(

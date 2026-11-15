@@ -19,6 +19,7 @@ use crate::AppState;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
+        .route("/config", get(config))
         // Uploads are limited per file while streaming, not by a total body size,
         // so a whole history can be imported in one request.
         .route(
@@ -104,6 +105,16 @@ async fn health(State(state): State<AppState>) -> (StatusCode, Json<Value>) {
             "database": if db_ok { "ok" } else { "unreachable" },
         })),
     )
+}
+
+/// Settings the web app needs from the server. Empty map style URLs mean "no basemap".
+async fn config(State(state): State<AppState>) -> Json<Value> {
+    Json(json!({
+        "version": env!("CARGO_PKG_VERSION"),
+        "map_style_url": state.config.map_style_url,
+        "map_style_url_dark": state.config.map_style_url_dark,
+        "max_upload_bytes": state.config.max_upload_bytes,
+    }))
 }
 
 /// Unknown API paths answer with JSON instead of falling through to the web app shell.

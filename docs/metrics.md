@@ -15,6 +15,7 @@ The figures are estimates. They will not match Strava or Garmin to the second, b
 
 - Samples are sorted by time. Positions outside valid ranges, or exactly (0, 0), are discarded.
 - **Distance**: if at least `MIN_DEVICE_DIST_COVERAGE` (80 %) of samples carry the device's own cumulative distance, it is used (forced to be non-decreasing). Otherwise distance is the sum of great-circle (haversine) steps between consecutive positions, on a sphere of radius `EARTH_RADIUS_M` (6 371 000 m).
+- **Stepped distances are interpolated.** Strava on Android refreshes the distance only every other second, which would make speed oscillate. A distance that stays flat for at most `DIST_PLATEAU_MAX_S` (8 s) is spread linearly over the samples it covers; a longer plateau is treated as a real stop.
 - **Cadence** is expressed in steps per minute for both legs. Devices usually store one leg; when the median non-zero cadence is under `PER_LEG_CADENCE_BELOW` (120), all values are doubled.
 
 ## 3. Moving time
@@ -64,7 +65,9 @@ Five zones are given by six bounds; by default 50–60–70–80–90–100 % of
 
 ## 8. Reduced-resolution streams
 
-Charts use at most `LOW_RES_POINTS` (2 000) points per series. The points are chosen once, with the largest-triangle-three-buckets method on speed over time, and the same indices are used for every series so they stay aligned. The first and last samples are always kept.
+Charts use at most `LOW_RES_POINTS` (2 000) points per series. The points are evenly spaced samples, the same indices for every series so they stay aligned, and the first and last samples are always kept. Even spacing is deliberate: shape-preserving reductions favour local extremes, which exaggerates GPS noise on a pace curve.
+
+The web app smooths the pace curve further for display (a mean over about 100 m); summary figures, splits and laps never use the reduced or smoothed series.
 
 ## Test data
 

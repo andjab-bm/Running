@@ -15,6 +15,8 @@ export default defineConfig({
 			adapter: adapter({ fallback: '200.html' })
 		})
 	],
+	// MapLibre starts its worker as an ES module.
+	worker: { format: 'es' },
 	server: {
 		// During `npm run dev`, API calls go to the Rust server started with `cargo run`.
 		proxy: { '/api': 'http://localhost:8080' }

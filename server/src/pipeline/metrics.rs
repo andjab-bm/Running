@@ -24,6 +24,8 @@ pub const GRADE_CLAMP: f64 = 0.30;
 /// Share of samples that must carry a channel for it to be used.
 pub const MIN_ELE_COVERAGE: f64 = 0.5;
 pub const MIN_DEVICE_DIST_COVERAGE: f64 = 0.8;
+/// A device distance that stays flat for up to this long is interpolated (seconds).
+pub const DIST_PLATEAU_MAX_S: f64 = 8.0;
 /// Cadence medians below this are per-leg values and are doubled (steps/min).
 pub const PER_LEG_CADENCE_BELOW: f64 = 120.0;
 /// Largest number of points in the reduced-resolution streams.
@@ -212,6 +214,21 @@ pub fn build_streams(parsed: &Parsed) -> Result<Streams, ParseError> {
                 cur = cur.max(d - base);
             }
             dist[i] = cur;
+        }
+        // Some devices refresh the distance only every few seconds, leaving it flat in
+        // between. Spread each step over the samples it covers, unless the plateau is
+        // long enough to be a real stop.
+        let mut k0 = 0;
+        for k1 in 1..n {
+            if dist[k1] > dist[k0] {
+                if k1 - k0 > 1 && t[k1] - t[k0] <= DIST_PLATEAU_MAX_S {
+                    let (d0, d1, t0, t1) = (dist[k0], dist[k1], t[k0], t[k1]);
+                    for i in k0 + 1..k1 {
+                        dist[i] = d0 + (d1 - d0) * (t[i] - t0) / (t1 - t0);
+                    }
+                }
+                k0 = k1;
+            }
         }
     } else {
         let mut last: Option<(f64, f64)> = None;
@@ -495,38 +512,19 @@ pub fn zones(s: &Streams, cfg: &ZoneConfig) -> Option<ZoneDistribution> {
     })
 }
 
-/// Picks at most `max` indices that keep the shape of `y` over `x` (largest-triangle-three-buckets).
-pub fn downsample(x: &[f64], y: &[f64], max: usize) -> Vec<usize> {
-    let n = x.len();
-    if n <= max || max < 3 {
+/// Picks at most `max` evenly spaced indices, always keeping the first and last sample.
+///
+/// Even spacing is deliberate: shape-preserving methods favour local extremes,
+/// which exaggerates GPS noise on a pace curve.
+pub fn downsample(n: usize, max: usize) -> Vec<usize> {
+    if n <= max || max < 2 {
         return (0..n).collect();
     }
-    let every = (n - 2) as f64 / (max - 2) as f64;
-    let mut out = Vec::with_capacity(max);
-    out.push(0);
-    let mut a = 0usize;
-    for i in 0..max - 2 {
-        let start = (i as f64 * every) as usize + 1;
-        let end = (((i + 1) as f64 * every) as usize + 1).min(n - 1);
-        let next_end = (((i + 2) as f64 * every) as usize + 1).min(n);
-        let next = &(end..next_end.max(end + 1).min(n)).collect::<Vec<_>>();
-        let (ax, ay) = (
-            next.iter().map(|j| x[*j]).sum::<f64>() / next.len() as f64,
-            next.iter().map(|j| y[*j]).sum::<f64>() / next.len() as f64,
-        );
-        let mut best = start;
-        let mut best_area = -1.0;
-        for j in start..end.max(start + 1) {
-            let area = ((x[a] - ax) * (y[j] - y[a]) - (x[a] - x[j]) * (ay - y[a])).abs();
-            if area > best_area {
-                best_area = area;
-                best = j;
-            }
-        }
-        out.push(best);
-        a = best;
+    let step = (n - 1) as f64 / (max - 1) as f64;
+    let mut out: Vec<usize> = (0..max).map(|k| (k as f64 * step).round() as usize).collect();
+    if let Some(last) = out.last_mut() {
+        *last = n - 1;
     }
-    out.push(n - 1);
     out.dedup();
     out
 }
@@ -542,7 +540,7 @@ pub fn process(parsed: &Parsed, zone_cfg: &ZoneConfig, units: Units) -> Result<P
         .fold(f64::INFINITY, f64::min);
     let whole = segment(&streams, Axis::Time, 0.0, streams.elapsed());
     let max_hr = streams.hr.as_ref().and_then(|h| h.iter().flatten().copied().reduce(f64::max));
-    let low_res = downsample(&streams.t, &streams.speed, LOW_RES_POINTS);
+    let low_res = downsample(streams.len(), LOW_RES_POINTS);
     Ok(Processed {
         start_time,
         name: parsed.name.clone(),

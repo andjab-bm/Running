@@ -84,4 +84,5 @@ Versions were taken from crates.io and npm on 2026-11-15. Current documentation 
 - **The OpenAPI document is written by hand next to the router** (`server/src/api/openapi.rs`) instead of being derived from handler annotations. `cargo test` fails when `docs/api/openapi.json` differs from it or when a listed route is not served; refresh the file with `UPDATE_OPENAPI=1 cargo test --test openapi`. A route added to the router but not to the list would go unnoticed.
 - **Splits and laps share one `segments` table**, told apart by a `kind` column.
 - **Stored streams are JSON compressed with zstd**, about 15 kB per kilometre at one sample per second.
+- **Reduced-resolution streams are evenly spaced samples**, not largest-triangle-three-buckets as first designed: that method kept the extremes of a noisy pace signal and made the curve look jagged.
 - **Default map style**: OpenFreeMap "positron" is the placeholder default for `MAP_STYLE_URL`; the final choice is made when the map is built (task 8.2).

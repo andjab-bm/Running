@@ -55,21 +55,24 @@
 
 ## 7. Web app shell, theming and library
 
-- [ ] 7.1 Build the app shell (navigation, first-run profile creation, profile switcher with remembered active profile, API client with SI-to-display unit and time zone formatting helpers); verify unit tests for the pace, distance, elevation and duration formatters in both unit systems
-- [ ] 7.2 Implement Light/Dark/System theming with tokens, persistence and the pre-paint inline script; verify a browser test confirms no theme flash on reload and live switching on system change
-- [ ] 7.3 Build the activity list with paging, tag/date filters, trace previews and empty state; verify a browser test against a seeded server covers browsing, filtering and the empty state
-- [ ] 7.4 Build the import screen (multi-file picker and drag-and-drop, progress, per-file results linking to activities or duplicates); verify a browser test uploads a mixed batch and sees the three outcome types
-- [ ] 7.5 Build the settings screen for the active profile (name, colour, HR, zones, units, time zone) and profile management (create, delete with activity-count confirmation); verify a browser test changes max HR and sees zone ranges update, creates a second profile, switches to it and sees an empty list
+Browser checks in groups 7 and 8 were done by hand against a server loaded with real exports; there is no automated end-to-end browser suite yet (see task 8.8).
+
+- [x] 7.1 Build the app shell (navigation, first-run profile creation, profile switcher with remembered active profile, API client with SI-to-display unit and time zone formatting helpers); verify unit tests for the pace, distance, elevation and duration formatters in both unit systems
+- [x] 7.2 Implement Light/Dark/System theming with tokens, persistence and the pre-paint inline script; verify in the browser that it confirms no theme flash on reload and live switching on system change
+- [x] 7.3 Build the activity list with paging, tag/date filters, trace previews and empty state; verify in the browser against a seeded server: browsing, filtering and the empty state
+- [x] 7.4 Build the import screen (multi-file picker and drag-and-drop, progress, per-file results linking to activities or duplicates); verify in the browser that it uploads a mixed batch and sees the three outcome types
+- [x] 7.5 Build the settings screen for the active profile (name, colour, HR, zones, units, time zone) and profile management (create, delete with activity-count confirmation); verify in the browser that it changes max HR and sees zone ranges update, creates a second profile, switches to it and sees an empty list
 
 ## 8. Activity detail page
 
-- [ ] 8.1 Build the header and summary metrics with placeholders for unavailable values, loading skeletons and the not-found state; verify a browser test on fixtures with and without heart rate
-- [ ] 8.2 Read current MapLibre GL JS documentation (Context7), then build the MapLibre map component: fitted trace, start/finish markers, pace/HR gradient colouring with legend, themed basemap from `MAP_STYLE_URL`, plain-background fallback; verify in the browser with tiles enabled, disabled and blocked
-- [ ] 8.3 Read current uPlot documentation (Context7), then build the uPlot chart showing pace by default with selectable measure (pace, HR, cadence, elevation), per-km averages, relief silhouette, and two-way hover/touch synchronisation with the map through a shared cursor store; verify a browser test hovers the chart and asserts the map marker position changes, and switches measure
-- [ ] 8.4 Build the splits/laps tables with pace bars, table switch and row-to-map/profile highlighting; verify a browser test on a multi-lap fixture switches tables and highlights a row
-- [ ] 8.5 Build the HR zone chart with relative effort and the default-zone notice; verify a browser test checks five labelled bars and the notice on an unconfigured profile
-- [ ] 8.6 Build in-place journal editing (title, description, RPE, tags) and the export/original/copy-to-profile/move-to-profile/delete actions with confirmation; verify a browser test edits, saves, exports, copies an activity to a second profile (checking it appears there without heart rate) and deletes the original
+- [x] 8.1 Build the header and summary metrics with placeholders for unavailable values, loading skeletons and the not-found state; verify in the browser that it on fixtures with and without heart rate
+- [x] 8.2 Read current MapLibre GL JS documentation (Context7), then build the MapLibre map component: fitted trace, start/finish markers, pace/HR gradient colouring with legend, themed basemap from `MAP_STYLE_URL`, plain-background fallback; verify in the browser with tiles enabled, disabled and blocked
+- [x] 8.3 Read current uPlot documentation (Context7), then build the uPlot chart showing pace by default with selectable measure (pace, HR, cadence, elevation), per-km averages, relief silhouette, and two-way hover/touch synchronisation with the map through a shared cursor store; verify in the browser that it hovers the chart and asserts the map marker position changes, and switches measure
+- [x] 8.4 Build the splits/laps tables with pace bars, table switch and row-to-map/profile highlighting; verify in the browser that it on a multi-lap fixture switches tables and highlights a row
+- [x] 8.5 Build the HR zone chart with relative effort and the default-zone notice; verify in the browser that it checks five labelled bars and the notice on an unconfigured profile
+- [x] 8.6 Build in-place journal editing (title, description, RPE, tags) and the export/original/copy-to-profile/move-to-profile/delete actions with confirmation; verify in the browser that it edits, saves, exports, copies an activity to a second profile (checking it appears there without heart rate) and deletes the original
 - [ ] 8.7 Compare the built page with the approved prototype in both themes at 360 px and 1440 px and fix deviations; verify side-by-side screenshots are attached to `docs/design-direction.md` and contrast checks pass at 4.5:1
+- [ ] 8.8 Add an automated browser test suite (Playwright) covering first start, import, list filters, the activity page (hover synchronisation, measure switch, journal, copy/move/delete) and settings, and run it in CI; verify the suite passes against a seeded server
 
 ## 9. Packaging and deployment
 

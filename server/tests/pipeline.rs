@@ -246,6 +246,35 @@ fn partial_records_with_the_same_timestamp_are_merged() {
     assert!(close(r.summary.whole.avg_cad.unwrap(), 170.0, 0.01));
 }
 
+#[test]
+fn stepped_device_distance_is_interpolated() {
+    // The device refreshes its distance every other second; a 60 s stop stays flat.
+    let mut p = Parsed::default();
+    let mut d = 0.0;
+    for s in 0..=600u32 {
+        let stopped = (300..360).contains(&s);
+        if s > 0 && !stopped && s % 2 == 0 {
+            d += 6.0;
+        }
+        p.samples.push(Sample {
+            time: T0 + f64::from(s),
+            lat: Some(48.0 + d / M_PER_DEG),
+            lon: Some(2.0),
+            dist: Some(d),
+            ..Sample::default()
+        });
+    }
+    let r = run(&p);
+    let s = &r.streams;
+    assert!(close(s.total_dist(), d, 1e-9));
+    // Between two refreshes the distance now advances every second.
+    assert!(close(s.dist[101] - s.dist[100], 3.0, 1e-6) && close(s.dist[102] - s.dist[101], 3.0, 1e-6));
+    // Speed is steady instead of alternating between 0 and 6 m/s.
+    assert!(s.speed[50..250].iter().all(|v| close(*v, 3.0, 0.05)), "{:?}", &s.speed[50..60]);
+    // The stop is not smeared: distance is flat inside it.
+    assert!(close(s.dist[340], s.dist[310], 1e-9));
+}
+
 const GPX: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1" xmlns:ns3="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">
  <metadata><name>Doc name</name></metadata>
