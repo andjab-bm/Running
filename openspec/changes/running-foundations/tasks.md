@@ -19,14 +19,15 @@
 
 ## 3. Parsing and metrics pipeline
 
-- [ ] 3.1 Assemble `testdata/` fixtures (GPX with and without HR, GPX route without timestamps, FIT with laps and pauses, FIT without GPS elevation, corrupt file), anonymising start locations if taken from real runs; verify a README in `testdata/` lists each fixture and its expected key figures
-- [ ] 3.2 Read current fitparser and gpx documentation (Context7), then implement format sniffing and the GPX and FIT parsers into a common sample model; verify unit tests parse every valid fixture and return typed errors for the corrupt and timestamp-less ones
-- [ ] 3.3 Implement normalisation (invalid fix removal, cumulative distance, cadence in steps/min) and the moving mask (recorded pauses, speed and gap thresholds); verify unit tests cover the recorded-pause, detected-stop and brief-slowdown scenarios of `activity-metrics`
-- [ ] 3.4 Implement elevation smoothing with gain/loss hysteresis and grade-adjusted pace; verify unit tests cover the noisy-flat, real-climb, uphill-split and flat-split scenarios
-- [ ] 3.5 Implement distance splits (metric and imperial) and laps with per-segment metrics; verify unit tests assert the 5.4 km case, split distances summing to total, pause exclusion and single-lap fallback
-- [ ] 3.6 Implement HR zone distribution and relative effort from a zone definition; verify unit tests assert percentages sum to 100 %, linearity in duration and the unavailable case
-- [ ] 3.7 Implement index-aligned stream downsampling to at most 2 000 points; verify a unit test on a synthetic 4-hour activity checks the bound and the preserved endpoints
-- [ ] 3.8 Document the algorithms and their constants in `docs/metrics.md`; verify every constant named in the code appears in the document
+- [x] 3.1 Assemble test data: synthetic runs and GPX documents built in `server/tests/pipeline.rs` (with and without HR, route without timestamps, unrecognised and corrupt content) and the owner's real FIT exports in the git-ignored `testdata/`; verify `testdata/README.md` lists each real file and its expected key figures
+- [x] 3.2 Read current fitparser and gpx documentation (Context7), then implement format sniffing and the GPX and FIT parsers into a common sample model; verify unit tests parse every valid fixture and return typed errors for the corrupt and timestamp-less ones
+- [x] 3.3 Implement normalisation (invalid fix removal, cumulative distance, cadence in steps/min) and the moving mask (recorded pauses, speed and gap thresholds); verify unit tests cover the recorded-pause, detected-stop and brief-slowdown scenarios of `activity-metrics`
+- [x] 3.4 Implement elevation smoothing with gain/loss hysteresis and grade-adjusted pace; verify unit tests cover the noisy-flat, real-climb, uphill-split and flat-split scenarios
+- [x] 3.5 Implement distance splits (metric and imperial) and laps with per-segment metrics; verify unit tests assert the 5.4 km case, split distances summing to total, pause exclusion and single-lap fallback
+- [x] 3.6 Implement HR zone distribution and relative effort from a zone definition; verify unit tests assert percentages sum to 100 %, linearity in duration and the unavailable case
+- [x] 3.7 Implement index-aligned stream downsampling to at most 2 000 points; verify a unit test on a synthetic 4-hour activity checks the bound and the preserved endpoints
+- [x] 3.8 Document the algorithms and their constants in `docs/metrics.md`; verify every constant named in the code appears in the document
+- [ ] 3.9 Obtain a FIT recording with heart rate and several laps (for example from the watch), add it to `testdata/`, and extend the real-file test to assert lap count and average heart rate against the file's own lap and session messages; verify the test passes on that file
 
 ## 4. Storage and import
 

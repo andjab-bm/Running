@@ -2,6 +2,7 @@
 pub mod api;
 pub mod config;
 pub mod db;
+pub mod pipeline;
 pub mod web;
 
 use axum::Router;
