@@ -23,6 +23,7 @@
     <string name="watch_off">Montre non connectée</string>
     <string name="watch_off_detail">Ouvre l\'app sur la montre pour la fréquence cardiaque</string>
     <string name="watch_on">Montre connectée</string>
+    <string name="watch_on_waiting">En attente de la fréquence cardiaque…</string>
     <string name="watch_on_detail">%1$d bpm · fréquence cardiaque active</string>
     <string name="autopause_on">Pause automatique activée</string>
     <string name="autopause_off">Pause automatique désactivée</string>

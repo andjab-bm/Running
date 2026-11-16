@@ -29,6 +29,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +56,7 @@ import dev.wellbeing.phone.data.Settings
 import dev.wellbeing.phone.record.Command
 import dev.wellbeing.phone.record.Finished
 import dev.wellbeing.phone.record.RunController
+import dev.wellbeing.phone.watch.WatchLink
 import dev.wellbeing.running.Format
 import dev.wellbeing.running.Snapshot
 import kotlinx.coroutines.launch
@@ -131,12 +133,19 @@ fun ReadyScreen(s: Snapshot?, settings: Settings) {
             if (ok) stringResource(R.string.gps_ok_detail, s.gpsAccuracy?.roundToInt() ?: 0) else stringResource(R.string.gps_wait_detail),
             if (ok) c.mint else c.butter,
         )
+        // The watch is connected as soon as its app has joined; heart rate follows a little later.
+        val watch by WatchLink.connected.collectAsState()
         val hr = s?.heartRate
+        val joined = watch || hr != null
         StatusRow(
             Icon.WATCH,
-            stringResource(if (hr != null) R.string.watch_on else R.string.watch_off),
-            if (hr != null) stringResource(R.string.watch_on_detail, hr) else stringResource(R.string.watch_off_detail),
-            if (hr != null) c.mint else null,
+            stringResource(if (joined) R.string.watch_on else R.string.watch_off),
+            when {
+                hr != null -> stringResource(R.string.watch_on_detail, hr)
+                joined -> stringResource(R.string.watch_on_waiting)
+                else -> stringResource(R.string.watch_off_detail)
+            },
+            if (joined) c.mint else null,
         )
         StatusRow(Icon.PAUSE, stringResource(if (settings.autoPause) R.string.autopause_on else R.string.autopause_off), stringResource(R.string.autopause_detail), null)
         Spacer(Modifier.weight(1f))

@@ -99,6 +99,12 @@ class MainActivity : ComponentActivity() {
         permitted = hasSensorPermission()
     }
 
+    override fun onStop() {
+        super.onStop()
+        // Closed without a run being measured: the watch has left, and the phone shows it at once.
+        if (!WatchSession.measuring.value) WatchSession.bye()
+    }
+
     companion object {
         private const val HELLO_MS = 3_000L
     }

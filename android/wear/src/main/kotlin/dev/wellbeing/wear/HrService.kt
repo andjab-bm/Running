@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.SystemClock
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.health.services.client.ExerciseUpdateCallback
 import androidx.health.services.client.HealthServices
@@ -85,13 +86,17 @@ class HrService : LifecycleService() {
             exercise.setUpdateCallback(callback)
             val caps = exercise.getCapabilities()
             val type = if (ExerciseType.RUNNING in caps.supportedExerciseTypes) ExerciseType.RUNNING else ExerciseType.WORKOUT
+            val fiveSeconds = BatchingMode.HEART_RATE_5_SECONDS in caps.supportedBatchingModeOverrides
+            // What this watch declares, readable with `adb logcat -s WellbeingHr` (see docs/android.md).
+            Log.i(TAG, "exercise=$type running=${ExerciseType.RUNNING in caps.supportedExerciseTypes} " +
+                "types=${caps.supportedExerciseTypes.size} batchingOverrides=${caps.supportedBatchingModeOverrides} hr5s=$fiveSeconds")
             val config = ExerciseConfig.builder(type)
                 .setDataTypes(setOf(DataType.HEART_RATE_BPM))
                 .setIsAutoPauseAndResumeEnabled(false)
                 .setIsGpsEnabled(false)
             // Where the watch supports it, heart rate is delivered every five seconds even with
             // the screen off, so the phone's live figure does not lag.
-            if (BatchingMode.HEART_RATE_5_SECONDS in caps.supportedBatchingModeOverrides) {
+            if (fiveSeconds) {
                 config.setBatchingModeOverrides(setOf(BatchingMode.HEART_RATE_5_SECONDS))
             }
             exercise.startExercise(config.build())
@@ -141,6 +146,7 @@ class HrService : LifecycleService() {
     }
 
     companion object {
+        private const val TAG = "WellbeingHr"
         private const val CHANNEL = "run"
         private const val NOTIFICATION_ID = 1
         private const val FLUSH_MS = 5_000L

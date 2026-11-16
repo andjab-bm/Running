@@ -14,7 +14,11 @@ import dev.wellbeing.running.Units
 import dev.wellbeing.running.WatchProtocol
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -33,6 +37,34 @@ object WatchLink {
     private var interactive = true
     private var lastSent = 0L
     private var lastState: WatchProtocol.State? = null
+
+    private val _connected = MutableStateFlow(false)
+    /**
+     * True while the watch app is joined: it has been heard from recently and has not said bye.
+     * This is the link itself, not the heart rate, which can take a while to arrive or be refused.
+     */
+    val connected: StateFlow<Boolean> = _connected
+    private var lastHeard = 0L
+    private var watchdog: Job? = null
+
+    /** Notes that the watch just spoke, and watches for it going silent. */
+    private fun heard() {
+        lastHeard = System.currentTimeMillis()
+        _connected.value = true
+        if (watchdog?.isActive == true) return
+        watchdog = main.launch {
+            while (_connected.value) {
+                delay(1_000)
+                // An open watch app says hello every three seconds; a dimmed one only speaks
+                // when it has heart rate to deliver.
+                val limit = if (interactive) SILENT_MS else SILENT_DIMMED_MS
+                if (System.currentTimeMillis() - lastHeard > limit) _connected.value = false
+            }
+        }
+    }
+
+    private const val SILENT_MS = 10_000L
+    private const val SILENT_DIMMED_MS = 120_000L
 
     fun init(context: Context) {
         if (::app.isInitialized) return
@@ -80,14 +112,14 @@ object WatchLink {
     /** Called for every message from the watch. */
     fun onMessage(source: String, path: String, data: ByteArray) {
         // Any message names the watch: the phone may have been restarted since the hello.
-        if (path != WatchProtocol.PATH_BYE) node = source
+        if (path != WatchProtocol.PATH_BYE) { node = source; heard() }
         when (path) {
             WatchProtocol.PATH_HELLO -> {
                 node = source
                 interactive = WatchProtocol.Hello.decode(data)?.interactive ?: true
                 push(force = true)
             }
-            WatchProtocol.PATH_BYE -> if (node == source) node = null
+            WatchProtocol.PATH_BYE -> if (node == source) { node = null; _connected.value = false }
             WatchProtocol.PATH_HR -> {
                 // Samples carry the time of their measurement: a batch that arrives late, after
                 // a dropout, still lands at the right place in the run.

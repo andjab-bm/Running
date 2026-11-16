@@ -159,7 +159,8 @@ private fun SplitBars(s: Snapshot, settings: Settings, modifier: Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
         for (b in bars) {
             Column(Modifier.weight(1f, fill = false).widthIn(max = 44.dp).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom) {
-                Text(Format.pace(b.pace, settings.units), style = Type.eyebrow.copy(letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified), color = c.ink2, maxLines = 1)
+                // Figures use the full ink: the secondary ink falls short of 7:1 on the pastel fills.
+                Text(Format.pace(b.pace, settings.units), style = Type.eyebrow.copy(letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified), color = c.ink, maxLines = 1)
                 val h = (0.3 + 0.7 * (hi - b.pace) / (hi - lo)).toFloat()
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
                     Box(
@@ -167,7 +168,7 @@ private fun SplitBars(s: Snapshot, settings: Settings, modifier: Modifier) {
                             .background(if (b.current) c.lav.ink.copy(alpha = 0.4f) else c.accent),
                     )
                 }
-                Text(b.n.toString(), style = Type.eyebrow.copy(letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified), color = c.ink2)
+                Text(b.n.toString(), style = Type.eyebrow.copy(letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified), color = c.ink)
             }
         }
     }

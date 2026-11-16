@@ -132,6 +132,8 @@ The recording logic lives in `core` (`SessionEngine`): it is driven only by even
 
 **The file.** `FitEncoder` writes one FIT activity: `file_id`, timer `event`s, one `record` per second, `lap`s, a `session` (sport: running) and an `activity`. Cadence is stored the FIT way, per leg; the server doubles it back. `server/tests/fixtures/android-recorder*.fit` are produced by the encoder from a scripted run and imported by `server/tests/android_fit.rs`: a change on either side that breaks the contract fails a test.
 
+**Checked with third-party decoders** (2026-11-16). Both fixtures were read with Garmin's official decoder (`garmin-fit-sdk` 21.221.0 for Python) and with `fitdecode` 0.11.0, CRC enforced in both: recognised as FIT, integrity check passed, no decoding error, and the same message counts from both tools — 1 `file_id`, 6 `event`, 1 804 `record`, 3 `lap`, 1 `session`, 1 `activity`. The session read back by Garmin's decoder is a run of 5 028.8 m, timer time 1 799 s, elapsed time 1 900 s, 3 laps, average heart rate 140 (absent in the file without heart rate), which are the figures the phone computed.
+
 ### Deviation from the design document
 
 - **The run in progress is stored as its event log**, not as sample rows written every five seconds. Samples, laps and timer events are derived from the engine when the run is saved. This is what makes the rebuilt run identical to the interrupted one.
@@ -211,7 +213,7 @@ The watch never records by itself. It joins the run prepared on the phone, measu
 **Using it**
 
 1. On the phone, open **Courir** (the ready screen). This is what creates the session.
-2. On the watch, open **Well-being**. The first time, accept the sensor permission. The watch shows "Prêt" with your heart rate and a start button; the phone's ready screen shows "Montre connectée".
+2. On the watch, open **Well-being**. The first time, accept the sensor permission. The watch shows "Prêt" with your heart rate and a start button; the phone's ready screen shows "Montre connectée" as soon as the watch app has joined, then the heart rate once the sensor has a reading (this can take half a minute).
 3. Start from either device. During the run the watch shows time, pace (large), distance and heart rate, with the zone lit on the rim. Swipe left for Tour, Pause/Reprendre and Terminer (hold).
 4. The app must be opened by hand for each run: Android does not let a watch app start measuring from the background.
 
@@ -221,14 +223,23 @@ A short vibration means the phone applied the command; a double vibration and "N
 
 - `WatchSession` finds the phone through the `wellbeing_phone` capability and exchanges the messages defined in `core`'s `WatchProtocol`: `hello` and `bye`, `state` (phone → watch), `hr` (batches of timestamped samples), `cmd` and `ack`.
 - While the app is on screen it says hello every three seconds; the phone answers with the state. No state for five seconds shows "Téléphone injoignable". While the screen is dimmed the phone sends the state once a minute, and the dimmed screen shows the four figures in grey.
+- The phone considers the watch connected while it hears from it: any message counts, the watch says "bye" when its app is closed without a run being measured, and ten seconds of silence from an open watch app (two minutes from a dimmed one) end the connection. Heart rate is not what decides it.
 - `HrService` runs a Health Services exercise with heart rate as its only data type and GPS off, asking for five-second batching where the watch supports it. Starting it ends any exercise tracked by another app, such as Samsung Health — only one exercise can run at a time on the watch.
 - Heart rate that cannot be delivered waits in memory (up to thirty minutes) and goes out when the link returns; each sample carries the time it was measured, so it lands at the right place in the run.
 - Measuring stops when the run is stopped or discarded on the phone, or after ten minutes without the phone. Nothing about the run is kept on the watch.
 
+**What the watch declares** (task 9.1, to do once with the watch connected over Wi-Fi debugging). When heart-rate capture starts, the app writes one line with the exercise type it chose and the batching modes the watch supports:
+
+```bash
+adb -s <watch-ip>:<debug-port> logcat -s WellbeingHr
+```
+
+`hr5s=true` means the five-second heart-rate batching is declared and used; `hr5s=false` means default batching (the live heart rate on the phone lags while the watch screen is off; the recorded file is unaffected). Findings on the Galaxy Watch 4: *not recorded yet*.
+
 **Checklist on the watch** (with the phone app installed and a run prepared)
 
 1. Opening the watch app with nothing prepared on the phone shows "Prépare la course". (`watch-companion`: nothing prepared)
-2. With the ready screen open on the phone, the watch shows "Prêt" and a heart rate; the phone shows "Montre connectée". (session prepared on the phone)
+2. With the ready screen open on the phone, the watch shows "Prêt" and a heart rate; the phone shows "Montre connectée" within a few seconds, before the heart rate arrives, and "Montre non connectée" again shortly after the watch app is closed. (session prepared on the phone)
 3. Start from the watch: the run starts on the phone and the watch vibrates. (start from the wrist)
 4. Lap, pause and resume from the watch are applied on the phone within a second. (lap from the wrist, paused)
 5. Lower the wrist for a few minutes, then look: figures are current within two seconds. After saving, the run has heart rate throughout. (wrist down, glance)
