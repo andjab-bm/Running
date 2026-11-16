@@ -40,7 +40,9 @@ ENV CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
 WORKDIR /src/server
 COPY server/ ./
 COPY --from=web /src/web/build /src/web/build
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
+# Each architecture gets its own registry cache: both builds run at the same time, and sharing one
+# makes them unpack the same crate simultaneously ("File exists (os error 17)").
+RUN --mount=type=cache,target=/usr/local/cargo/registry,id=cargo-registry-$TARGETARCH \
     --mount=type=cache,target=/src/server/target,id=target-$TARGETARCH \
     set -eux; \
     triple="$(cat /triple)"; \
