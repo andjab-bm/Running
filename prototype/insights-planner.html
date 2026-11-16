@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Running — prototype progression et planification</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Same tokens and building blocks as prototype/activity-detail.html (approved 2026-11-15).
+   New here: heatmap, bar and line charts, session outline, step editor, phone delivery pill. */
+:root{
+  --bg:#F4F3F9; --surface:#FFFFFF; --surface-2:#EFEEF7; --surface-3:#E6E4F2;
+  --ink:#1E1B2E; --ink-2:#54506B; --ink-3:#6A6682;
+  --accent:#6252DE; --accent-soft:#E7E3FC; --on-accent:#FFFFFF;
+  --p-lav:#E7E3FC; --p-mint:#D6F3E5; --p-peach:#FFE4D3; --p-sky:#D8EAFB; --p-butter:#FBF1C9; --p-rose:#FCDFE7;
+  --i-lav:#5446C9; --i-mint:#1B7550; --i-peach:#A94F1C; --i-sky:#1D639F; --i-butter:#7D6000; --i-rose:#A82C5A;
+  --c-rose:#E46F90; --c-mint:#35AF80; --c-sky:#4A97D8; --c-peach:#EE8A4C;
+  --z1:#A3ABC8; --z2:#7DB7F0; --z3:#6FD0A3; --z4:#FFAE70; --z5:#F58AA5;
+  --pace-fast:#6252DE; --pace-mid:#4FC3A8; --pace-slow:#FFB26B;
+  --map-land:#ECEBF4; --map-park:#D9F0E2; --map-water:#D3E6FA; --map-road:#FFFFFF; --map-label:#6A6682;
+  --shadow:0 12px 32px rgba(70,58,140,.07);
+  --pop:0 16px 48px rgba(40,30,90,.18);
+  --font-display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --font-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r-xl:28px; --r-lg:20px; --r-md:14px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121118; --surface:#1B1A25; --surface-2:#252431; --surface-3:#302F3F;
+    --ink:#F2F0FA; --ink-2:#BDB9D1; --ink-3:#9F9BB6;
+    --accent:#A99BFF; --accent-soft:#2D2A4B; --on-accent:#15122B;
+    --p-lav:#2C2949; --p-mint:#1C372E; --p-peach:#3F2D20; --p-sky:#1C2F44; --p-butter:#38321A; --p-rose:#40222E;
+    --i-lav:#BDB2FF; --i-mint:#8FE0BB; --i-peach:#FFC39C; --i-sky:#9CCBF7; --i-butter:#EFD877; --i-rose:#F7AFC3;
+    --c-rose:#F58AA5; --c-mint:#6FD0A3; --c-sky:#7DB7F0; --c-peach:#FFAE70;
+    --pace-fast:#A99BFF; --pace-mid:#5FD6BB; --pace-slow:#FFC08A;
+    --map-land:#191822; --map-park:#1B2E29; --map-water:#1B2A40; --map-road:#292836; --map-label:#9F9BB6;
+    --shadow:none; --pop:0 16px 48px rgba(0,0,0,.5);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121118; --surface:#1B1A25; --surface-2:#252431; --surface-3:#302F3F;
+  --ink:#F2F0FA; --ink-2:#BDB9D1; --ink-3:#9F9BB6;
+  --accent:#A99BFF; --accent-soft:#2D2A4B; --on-accent:#15122B;
+  --p-lav:#2C2949; --p-mint:#1C372E; --p-peach:#3F2D20; --p-sky:#1C2F44; --p-butter:#38321A; --p-rose:#40222E;
+  --i-lav:#BDB2FF; --i-mint:#8FE0BB; --i-peach:#FFC39C; --i-sky:#9CCBF7; --i-butter:#EFD877; --i-rose:#F7AFC3;
+  --c-rose:#F58AA5; --c-mint:#6FD0A3; --c-sky:#7DB7F0; --c-peach:#FFAE70;
+  --pace-fast:#A99BFF; --pace-mid:#5FD6BB; --pace-slow:#FFC08A;
+  --map-land:#191822; --map-park:#1B2E29; --map-water:#1B2A40; --map-road:#292836; --map-label:#9F9BB6;
+  --shadow:none; --pop:0 16px 48px rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:36px;font-weight:600;line-height:1.1}
+h2{font-size:20px;font-weight:600}
+h3{font-size:17px;font-weight:600}
+p{margin:0}
+.num{font-family:var(--font-display);font-variant-numeric:tabular-nums}
+.ic{flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.muted{color:var(--ink-2)}
+.small{font-size:13px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+[data-tip]{position:relative}
+[data-tip]:hover::after,[data-tip]:focus-visible::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:5px 10px;border-radius:9px;font:600 12px/1.3 var(--font-body);white-space:nowrap;z-index:60;pointer-events:none;letter-spacing:0;text-transform:none}
+[data-tip][data-tip-pos="end"]:hover::after,[data-tip][data-tip-pos="end"]:focus-visible::after{left:auto;right:0;transform:none}
+[data-tip][data-tip-pos="start"]:hover::after,[data-tip][data-tip-pos="start"]:focus-visible::after{left:0;transform:none}
+
+/* shell */
+.app{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}
+.rail{position:sticky;top:0;height:100vh;padding:22px 16px;display:flex;flex-direction:column;gap:6px}
+.brand{font-family:var(--font-display);font-weight:700;font-size:23px;display:flex;align-items:center;gap:10px;padding:4px 10px 20px}
+.brand-mark{width:36px;height:36px;border-radius:12px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center}
+.navlink{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:var(--r-md);color:var(--ink-2);font-weight:600;transition:background .15s,color .15s}
+.navlink:hover{background:var(--surface-2);color:var(--ink)}
+.navlink[aria-current="page"]{background:var(--surface);color:var(--accent);box-shadow:var(--shadow)}
+.rail .grow{flex:1}
+.themeseg{display:flex;background:var(--surface-2);border-radius:999px;padding:4px;gap:2px;align-self:flex-start}
+.themeseg button{width:36px;height:32px;border-radius:999px;display:grid;place-items:center;color:var(--ink-3);transition:background .15s,color .15s}
+.themeseg button:hover{color:var(--ink)}
+.themeseg button[aria-pressed="true"]{background:var(--surface);color:var(--i-lav);box-shadow:var(--shadow)}
+.who{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-md);width:100%;text-align:left;margin-top:8px;transition:background .15s}
+.who:hover{background:var(--surface-2)}
+#modal{position:fixed;inset:0;background:rgba(20,16,40,.45);display:none;place-items:center;z-index:80;padding:16px}
+#modal.on{display:grid}
+.sheet{background:var(--surface);border-radius:var(--r-xl);padding:24px;width:min(440px,100%);box-shadow:var(--pop);display:flex;flex-direction:column;gap:12px}
+.pick{display:flex;align-items:center;gap:12px;padding:10px;border-radius:var(--r-md);width:100%;text-align:left;font-weight:600}
+.pick:hover{background:var(--surface-2)}
+.pick[aria-pressed="true"]{background:var(--accent-soft)}
+.pick small{display:block;font-weight:500;color:var(--ink-2);font-size:13px}
+.who small{display:block;color:var(--ink-3);font-size:12px;line-height:1.2}
+.who b{font-weight:600;line-height:1.2;display:block}
+.avatar{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font:600 15px var(--font-display);color:#1E1B2E;flex:none;background:#B9AFFF}
+.avatar.xs{width:22px;height:22px;font-size:11px}
+.fchip{display:inline-flex;align-items:center;gap:7px;padding:6px 14px 6px 8px;border-radius:999px;background:var(--surface);font-weight:600;font-size:13.5px;color:var(--ink-2);box-shadow:var(--shadow);min-height:36px;transition:background .15s,color .15s}
+.fchip:hover{color:var(--ink)}
+.fchip[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.owners{position:absolute;left:10px;top:10px;background:var(--surface);border-radius:999px;padding:3px 10px 3px 3px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;color:var(--ink)}
+.owners .avatar+.avatar{margin-left:-11px;box-shadow:0 0 0 2px var(--surface)}
+.topbar{display:none}
+main{padding:28px 32px 56px;min-width:0;max-width:1280px;width:100%;display:flex;flex-direction:column;gap:20px}
+@media (prefers-reduced-motion:no-preference){main>*{animation:rise .25s ease}@keyframes rise{from{transform:translateY(6px)}to{transform:none}}}
+
+/* building blocks */
+.card{background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow);min-width:0}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:20px 22px 0}
+.card-b{padding:16px 22px 22px}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:999px;padding:4px;gap:2px;flex-wrap:wrap}
+.seg button{padding:6px 14px;border-radius:999px;color:var(--ink-2);font-size:13.5px;font-weight:600;min-height:32px;display:inline-flex;align-items:center;gap:6px;transition:background .15s,color .15s}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.card .seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);box-shadow:none}
+.tabs{display:inline-flex;background:var(--surface);border-radius:999px;padding:5px;gap:4px;box-shadow:var(--shadow);align-self:flex-start;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.tabs button{padding:9px 18px;border-radius:999px;color:var(--ink-2);font-weight:600;display:inline-flex;gap:8px;align-items:center;white-space:nowrap;transition:background .15s,color .15s}
+.tabs button:hover{background:var(--surface-2);color:var(--ink)}
+.tabs button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.iconbtn{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:var(--surface);color:var(--ink-2);box-shadow:var(--shadow);transition:background .15s,color .15s,transform .15s}
+.iconbtn:hover{background:var(--accent-soft);color:var(--i-lav);transform:translateY(-1px)}
+.iconbtn.flat{background:var(--surface-2);box-shadow:none}
+.iconbtn.sm{width:34px;height:34px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;font-weight:600;background:var(--surface-2);min-height:42px;transition:background .15s,transform .15s}
+.btn:hover{background:var(--surface-3)}
+.btn.primary{background:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{transform:translateY(-1px);background:var(--accent)}
+.btn.danger{background:var(--p-rose);color:var(--i-rose)}
+.btn.sm{min-height:34px;padding:6px 14px;font-size:13.5px}
+.tag{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--p-butter);color:var(--i-butter);white-space:nowrap}
+.tag.lav{background:var(--p-lav);color:var(--i-lav)}.tag.mint{background:var(--p-mint);color:var(--i-mint)}.tag.peach{background:var(--p-peach);color:var(--i-peach)}.tag.sky{background:var(--p-sky);color:var(--i-sky)}.tag.rose{background:var(--p-rose);color:var(--i-rose)}.tag.plain{background:var(--surface-2);color:var(--ink-2)}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.spread{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
+.dgrid{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:20px;align-items:start}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+.back{display:inline-flex;align-items:center;gap:8px;color:var(--ink-2);font-weight:600;font-size:14px;padding:6px 12px 6px 8px;border-radius:999px;margin-left:-8px;align-self:flex-start}
+.back:hover{background:var(--surface-2);color:var(--ink)}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.tile{border-radius:var(--r-lg);padding:16px 18px;display:flex;flex-direction:column;gap:6px;min-width:0;transition:transform .15s}
+.tile:hover{transform:translateY(-2px)}
+.tile .top{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.tile .chip{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:var(--surface)}
+.tile .v{font:600 32px/1.1 var(--font-display);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tile .v small{font:600 14px var(--font-body);color:var(--ink-2);margin-left:4px}
+.tile .s{font-size:12.5px;color:var(--ink-2)}
+.t-lav{background:var(--p-lav)}.t-lav .chip{color:var(--i-lav)}
+.t-sky{background:var(--p-sky)}.t-sky .chip{color:var(--i-sky)}
+.t-mint{background:var(--p-mint)}.t-mint .chip{color:var(--i-mint)}
+.t-rose{background:var(--p-rose)}.t-rose .chip{color:var(--i-rose)}
+.t-peach{background:var(--p-peach)}.t-peach .chip{color:var(--i-peach)}
+.t-butter{background:var(--p-butter)}.t-butter .chip{color:var(--i-butter)}
+.note{display:flex;gap:10px;align-items:flex-start;background:var(--p-sky);border-radius:var(--r-lg);padding:12px 16px;font-size:14px}
+.note .ic{color:var(--i-sky);margin-top:2px}
+.note.butter{background:var(--p-butter)}.note.butter .ic{color:var(--i-butter)}
+.emptybox{background:var(--surface);border-radius:var(--r-xl);padding:44px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;box-shadow:var(--shadow)}
+.emptybox .big{width:64px;height:64px;border-radius:22px;background:var(--p-lav);color:var(--i-lav);display:grid;place-items:center}
+.emptybox p{max-width:52ch;color:var(--ink-2)}
+.tablebox{overflow-x:auto;margin:0 -8px}
+table{border-collapse:separate;border-spacing:0 2px;width:100%;min-width:560px}
+th,td{padding:9px 12px;text-align:right;white-space:nowrap}
+th{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+td{font:500 16px var(--font-display);font-variant-numeric:tabular-nums;transition:background .12s}
+td:first-child{border-radius:12px 0 0 12px;text-align:left}td:last-child{border-radius:0 12px 12px 0}
+th:first-child{text-align:left}
+td.name{font:600 14.5px var(--font-body)}
+tbody tr:hover td,tbody tr.on td{background:var(--surface-2)}
+tbody tr[data-act]{cursor:pointer}
+.best{font:700 11px var(--font-body);color:var(--i-lav);background:var(--p-lav);padding:2px 8px;border-radius:999px}
+.medal{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;font:700 12px var(--font-display);background:var(--surface-2);color:var(--ink-2)}
+.medal.m1{background:var(--p-butter);color:var(--i-butter)}.medal.m2{background:var(--surface-3);color:var(--ink)}.medal.m3{background:var(--p-peach);color:var(--i-peach)}
+textarea,input[type=text],input[type=number],select{background:var(--surface-2);border:0;border-radius:var(--r-md);padding:9px 12px;min-height:40px}
+input[type=text]{width:100%}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label,.flabel{font-size:13px;font-weight:600;color:var(--ink-2)}
+.demo{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--ink-3)}
+.demo .seg button{min-height:28px;padding:4px 11px;font-size:12.5px}
+
+/* heatmap */
+.heatwrap{overflow-x:auto;padding-bottom:4px}
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,14px);grid-auto-columns:14px;gap:4px;width:max-content}
+.heat button{width:14px;height:14px;border-radius:4px;background:var(--surface-2);transition:transform .12s}
+.heat button:hover,.heat button.on{transform:scale(1.35);outline:2px solid var(--ink);outline-offset:1px}
+.heat .out{visibility:hidden}
+.heat .l1{background:color-mix(in srgb,var(--hm) 28%,var(--surface-2))}
+.heat .l2{background:color-mix(in srgb,var(--hm) 52%,var(--surface-2))}
+.heat .l3{background:color-mix(in srgb,var(--hm) 78%,var(--surface-2))}
+.heat .l4{background:var(--hm)}
+.months{display:grid;grid-auto-flow:column;grid-auto-columns:18px;font-size:11.5px;font-weight:600;color:var(--ink-3);margin-bottom:6px;width:max-content}
+.months span{white-space:nowrap;overflow:visible}
+.hlegend{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-3)}
+.hlegend i{width:13px;height:13px;border-radius:4px;display:block}
+.daybox{background:var(--surface-2);border-radius:var(--r-lg);padding:12px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;min-height:54px;margin-top:14px}
+
+/* charts */
+.bars{display:flex;align-items:flex-end;gap:6px;height:200px;padding-top:22px}
+.bars .b{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;height:100%;position:relative}
+.bars .b i{display:block;width:100%;max-width:44px;border-radius:10px 10px 4px 4px;background:var(--accent);min-height:3px;transition:filter .15s,transform .15s;transform-origin:bottom}
+.bars .b:hover i{transform:scaleY(1.04);filter:brightness(1.08)}
+.bars .b.cur i{background:repeating-linear-gradient(135deg,var(--accent) 0 5px,color-mix(in srgb,var(--accent) 55%,var(--surface)) 5px 10px)}
+.bars .b.zero i{background:var(--surface-3)}
+.bars .b span{font-size:11px;font-weight:600;color:var(--ink-3);white-space:nowrap}
+.bars .b em{font:600 12px var(--font-display);font-style:normal;position:absolute;bottom:calc(var(--h) + 26px);opacity:0;transition:opacity .12s;background:var(--ink);color:var(--bg);padding:2px 7px;border-radius:7px;white-space:nowrap;z-index:5}
+.bars .b:hover em{opacity:1}
+svg.chart{display:block;width:100%;height:auto;overflow:visible}
+svg.chart text{font:600 11.5px var(--font-body);fill:var(--ink-3);font-variant-numeric:tabular-nums}
+.lg{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.lg i{display:inline-block;width:14px;height:4px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.mini3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.mini3>div{background:var(--surface-2);border-radius:var(--r-lg);padding:14px 16px 10px}
+
+/* records */
+.recs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.rec{border-radius:var(--r-lg);padding:16px 18px;background:var(--surface);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:4px;text-align:left;transition:transform .15s,background .15s}
+.rec:hover{transform:translateY(-2px)}
+.rec[aria-pressed="true"]{background:var(--p-lav);box-shadow:none}
+.rec .d{font-size:13px;font-weight:700;color:var(--ink-2)}
+.rec .t{font:600 34px/1.1 var(--font-display);font-variant-numeric:tabular-nums}
+.rec .o{font-size:12.5px;color:var(--ink-2)}
+.rec.none .t{color:var(--ink-3);font-size:22px;line-height:1.6}
+.pred{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 16px;align-items:center;padding:12px;border-radius:var(--r-md)}
+.pred:hover{background:var(--surface-2)}
+.pred .t{font:600 26px var(--font-display);font-variant-numeric:tabular-nums}
+.pred .d{font:600 16px var(--font-display);min-width:74px}
+
+/* load */
+.status{border-radius:var(--r-lg);padding:18px 20px;display:flex;flex-direction:column;gap:6px}
+.status .v{font:600 28px/1.15 var(--font-display)}
+.gaugebar{height:12px;border-radius:6px;display:flex;gap:3px;margin-top:8px}
+.gaugebar i{flex:1;border-radius:6px;background:var(--surface);opacity:.55}
+.gaugebar i.on{opacity:1;background:var(--ink)}
+.ring{--p:0;width:112px;height:112px;border-radius:50%;background:conic-gradient(var(--c-mint) calc(var(--p)*1%),var(--surface-2) 0);display:grid;place-items:center;flex:none}
+.ring>div{width:88px;height:88px;border-radius:50%;background:var(--surface);display:grid;place-items:center;text-align:center;font:600 24px/1 var(--font-display)}
+.ring small{display:block;font:600 11.5px var(--font-body);color:var(--ink-2);margin-top:3px}
+details{background:var(--surface-2);border-radius:var(--r-lg);padding:14px 18px}
+details summary{font-weight:600;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
+details summary::-webkit-details-marker{display:none}
+details[open] summary .ic{transform:rotate(180deg)}
+details ul{margin:10px 0 0;padding-left:18px;color:var(--ink-2);max-width:70ch}
+details li{margin:4px 0}
+
+/* library cards */
+.libs{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.lib{background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow);padding:18px;display:flex;flex-direction:column;gap:12px;text-align:left;transition:transform .18s,box-shadow .18s;min-width:0}
+.lib:hover{transform:translateY(-3px);box-shadow:0 20px 44px rgba(70,58,140,.13)}
+.lib .thumb{border-radius:20px;aspect-ratio:16/8;position:relative;overflow:hidden;background:var(--p-sky)}
+.lib .thumb svg{position:absolute;inset:0;width:100%;height:100%}
+.lib .mini{display:flex;gap:16px;flex-wrap:wrap;color:var(--ink-2);font-size:13.5px}
+.lib .mini b{font:600 15.5px var(--font-display);color:var(--ink);font-variant-numeric:tabular-nums}
+.outline{display:flex;align-items:flex-end;gap:3px;height:54px;background:var(--surface-2);border-radius:14px;padding:8px}
+.outline i{display:block;border-radius:5px;min-width:4px;transition:transform .12s;transform-origin:bottom}
+.outline i:hover{transform:scaleY(1.1)}
+.k-warmup{background:var(--c-mint);height:45%}.k-effort{background:var(--accent);height:100%}.k-recovery{background:var(--c-sky);height:30%}.k-cooldown{background:var(--c-peach);height:40%}
+.phone{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--surface-2);color:var(--ink-2);transition:background .15s}
+.phone:hover{background:var(--surface-3)}
+.phone.wait{background:var(--p-butter);color:var(--i-butter)}
+.phone.ok{background:var(--p-mint);color:var(--i-mint)}
+
+/* editor */
+.step{display:grid;grid-template-columns:8px minmax(120px,1fr) minmax(0,1.3fr) minmax(0,1.6fr) auto;gap:10px;align-items:center;padding:10px;border-radius:var(--r-md);transition:background .15s}
+.step:hover{background:var(--surface-2)}
+.step .bar{width:8px;align-self:stretch;border-radius:4px;height:auto}
+.step .pair{display:flex;gap:6px;align-items:center;min-width:0;flex-wrap:wrap}
+.step select,.step input{min-width:0}
+.step input[type=text]{width:74px;text-align:center;font-family:var(--font-display);font-variant-numeric:tabular-nums}
+.step .acts{display:flex;gap:2px}
+.repeat{background:var(--p-lav);border-radius:var(--r-lg);padding:10px;display:flex;flex-direction:column;gap:4px}
+.repeat .step:hover{background:color-mix(in srgb,var(--surface) 60%,transparent)}
+.repeat .step select,.repeat .step input{background:var(--surface)}
+.repeat .head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:4px 8px 6px;font-weight:600}
+.stepper{display:inline-flex;align-items:center;background:var(--surface);border-radius:999px;padding:3px}
+.stepper button{width:30px;height:30px;border-radius:50%;display:grid;place-items:center}
+.stepper button:hover{background:var(--surface-2)}
+.stepper b{font:600 17px var(--font-display);min-width:34px;text-align:center}
+.switch{display:inline-flex;align-items:center;gap:10px;font-weight:600;font-size:13.5px}
+.switch .tr{width:40px;height:24px;border-radius:12px;background:var(--surface-3);position:relative;flex:none;transition:background .15s}
+.switch .tr::after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:var(--surface);transition:transform .15s}
+.switch[aria-pressed="true"] .tr{background:var(--accent)}
+.switch[aria-pressed="true"] .tr::after{transform:translateX(16px)}
+
+/* map stand-in */
+.mapbox{position:relative;border-radius:var(--r-xl);overflow:hidden;background:var(--map-land)}
+.mapbox svg{display:block;width:100%;height:auto}
+.prow{display:flex;align-items:center;gap:12px;padding:10px;border-radius:var(--r-md);width:100%;text-align:left}
+.prow:hover{background:var(--surface-2)}
+.prow .grow{flex:1;min-width:0}
+.prow .th{width:64px;height:44px;border-radius:12px;background:var(--p-sky);flex:none;overflow:hidden}
+.prow .th svg{width:100%;height:100%}
+.target{display:inline-flex;align-items:center;gap:6px}
+.target i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.hit i{background:var(--c-mint)}.miss i{background:var(--c-peach)}.undone{color:var(--ink-3)}
+#toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:999px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:90;max-width:calc(100% - 32px);text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+footer{color:var(--ink-3);font-size:13px;max-width:72ch}
+
+@media (max-width:1180px){.dgrid,.grid2{grid-template-columns:minmax(0,1fr)}.recs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .rail{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;flex-direction:row;justify-content:space-around;padding:8px 6px calc(8px + env(safe-area-inset-bottom));background:var(--surface);box-shadow:0 -8px 30px rgba(40,30,90,.10);z-index:50;border-radius:22px 22px 0 0}
+  .rail .brand,.rail .grow,.rail .themeseg,.rail .who{display:none}
+  .navlink{flex-direction:column;gap:3px;font-size:11px;padding:8px 8px;flex:1;min-width:0}
+  .navlink[aria-current="page"]{box-shadow:none;background:var(--accent-soft);color:var(--i-lav)}
+  .topbar{display:flex;align-items:center;gap:10px;padding:12px 16px 0}
+  .topbar .brand{padding:0;flex:1;font-size:20px}
+  .topbar .who{width:auto;margin:0;padding:4px}
+  main{padding:16px 16px 110px}
+  h1{font-size:28px}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .tile .v{font-size:26px}
+  .card-h{padding:16px 16px 0}.card-b{padding:14px 16px 18px}
+  .mini3{grid-template-columns:minmax(0,1fr)}
+  .step{grid-template-columns:8px minmax(0,1fr) auto}
+  .step .pair{grid-column:2/4}
+  .step .acts{grid-row:1;grid-column:3}
+  .bars{gap:3px}.bars .b span{font-size:9.5px}
+  #toast{bottom:96px}
+}
+@media (max-width:420px){.recs{grid-template-columns:minmax(0,1fr)}.libs{grid-template-columns:minmax(0,1fr)}.rec .t{font-size:30px}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-logo" viewBox="0 0 24 24"><path d="M3 17c4 0 4-10 9-10s4 10 9 10"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+<symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+<symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+<symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/></symbol>
+<symbol id="i-gauge" viewBox="0 0 24 24"><path d="M12 14l4-4M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></symbol>
+<symbol id="i-mountain" viewBox="0 0 24 24"><path d="M8 3l4 8 5-5 5 15H2L8 3z"/></symbol>
+<symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+<symbol id="i-swap" viewBox="0 0 24 24"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></symbol>
+<symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></symbol>
+<symbol id="i-bars" viewBox="0 0 24 24"><path d="M6 20v-8M12 20V4M18 20v-12"/></symbol>
+<symbol id="i-trend" viewBox="0 0 24 24"><path d="M23 6l-9.5 9.5-5-5L1 18M17 6h6v6"/></symbol>
+<symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></symbol>
+<symbol id="i-repeat" viewBox="0 0 24 24"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></symbol>
+<symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 20C5 20 1 12 1 12a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9.6 9.6 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.2 3.2M1 1l22 22M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+<symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+<symbol id="i-battery" viewBox="0 0 24 24"><rect x="1" y="6" width="18" height="12" rx="2"/><path d="M23 13v-2M5 10v4M9 10v4"/></symbol>
+</defs></svg>
+
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><span class="brand-mark"><svg class="ic" width="20" height="20" style="stroke-width:2.6"><use href="#i-logo"/></svg></span>Running</div>
+    <a class="navlink" href="#" data-act="nav" data-v="acts"><svg class="ic" width="20" height="20"><use href="#i-list"/></svg>Activités</a>
+    <a class="navlink" href="#" data-act="nav" data-v="progress"><svg class="ic" width="20" height="20"><use href="#i-trend"/></svg>Progression</a>
+    <a class="navlink" href="#" data-act="nav" data-v="segments"><svg class="ic" width="20" height="20"><use href="#i-flag"/></svg>Segments</a>
+    <a class="navlink" href="#" data-act="nav" data-v="plan"><svg class="ic" width="20" height="20"><use href="#i-timer"/></svg>Planifier</a>
+    <a class="navlink" href="#" data-act="nav" data-v="settings"><svg class="ic" width="20" height="20"><use href="#i-sliders"/></svg>Réglages</a>
+    <div class="grow"></div>
+    <div class="themeseg" role="group" aria-label="Thème">
+      <button type="button" data-act="theme" data-v="light" data-tip="Thème clair" data-tip-pos="start" aria-label="Thème clair"><svg class="ic" width="17" height="17"><use href="#i-sun"/></svg></button>
+      <button type="button" data-act="theme" data-v="dark" data-tip="Thème sombre" aria-label="Thème sombre"><svg class="ic" width="17" height="17"><use href="#i-moon"/></svg></button>
+      <button type="button" data-act="theme" data-v="system" data-tip="Suivre le système" aria-label="Suivre le système"><svg class="ic" width="17" height="17"><use href="#i-monitor"/></svg></button>
+    </div>
+    <button class="who" type="button" data-act="profiles"><span class="avatar" data-avatar></span><span><b data-pname></b><small>Changer de profil</small></span></button>
+  </aside>
+  <div style="min-width:0">
+    <div class="topbar">
+      <div class="brand"><span class="brand-mark" style="width:32px;height:32px;border-radius:10px"><svg class="ic" width="18" height="18" style="stroke-width:2.6"><use href="#i-logo"/></svg></span>Running</div>
+      <div class="themeseg" role="group" aria-label="Thème">
+        <button type="button" data-act="theme" data-v="light" aria-label="Thème clair"><svg class="ic" width="16" height="16"><use href="#i-sun"/></svg></button>
+        <button type="button" data-act="theme" data-v="dark" aria-label="Thème sombre"><svg class="ic" width="16" height="16"><use href="#i-moon"/></svg></button>
+        <button type="button" data-act="theme" data-v="system" aria-label="Suivre le système"><svg class="ic" width="16" height="16"><use href="#i-monitor"/></svg></button>
+      </div>
+      <button class="who" type="button" data-act="profiles" aria-label="Changer de profil"><span class="avatar" data-avatar></span></button>
+    </div>
+    <main id="main"></main>
+  </div>
+</div>
+<div id="modal" role="dialog" aria-modal="true" aria-label="Profils du foyer"><div class="sheet" id="sheet"></div></div>
+<div id="toast" role="status"></div>
+
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const root = document.documentElement;
+const ic = (n, s = 18) => `<svg class="ic" width="${s}" height="${s}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const TODAY = new Date(2026, 10, 16);
+const DAY = 864e5;
+const MONTHS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+const pad = n => String(n).padStart(2, "0");
+const dur = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return h ? `${h}:${pad(m)}:${pad(x)}` : `${m}:${pad(x)}`; };
+const pace = s => `${Math.floor(Math.round(s) / 60)}:${pad(Math.round(s) % 60)}`;
+const dec = (n, d = 1) => n.toFixed(d).replace(".", ",");
+const fdate = d => `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+const sdate = d => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+let seed = 7;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+/* ---------- fictional data ---------- */
+// One entry per day that has runs: { d: Date, runs: [{ km, min, load, title }] }
+function makeYear(y, density) {
+  const out = [];
+  const end = y === 2026 ? TODAY : new Date(y, 11, 31);
+  for (let d = new Date(y, 0, 1); d <= end; d = new Date(d.getTime() + DAY)) {
+    const wd = (d.getDay() + 6) % 7;
+    const base = [0.12, 0.62, 0.08, 0.58, 0.1, 0.3, 0.72][wd] * density;
+    if (rnd() < base) {
+      const long = wd === 6;
+      const km = long ? 9 + rnd() * 7 : 4 + rnd() * 5;
+      const runs = [{ km, min: km * (5.9 + rnd() * 0.7), load: Math.round(km * (9 + rnd() * 5)), title: long ? "Sortie longue" : wd === 3 ? "Fractionné" : "Footing" }];
+      if (rnd() < 0.04) runs.push({ km: 3, min: 19, load: 28, title: "Footing du soir" });
+      out.push({ d: new Date(d), runs });
+    }
+  }
+  return out;
+}
+let YEARS = { 2026: makeYear(2026, 1), 2025: makeYear(2025, 0.7), 2024: [] };
+const sum = (a, f) => a.reduce((t, x) => t + f(x), 0);
+const dayVal = (e, m) => sum(e.runs, r => m === "dist" ? r.km : m === "time" ? r.min : r.load);
+
+const makeProgress = slow => {  // last 12 months, oldest first; hr is missing in one month
+  const a = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(2026, 10 - i, 1);
+    a.push({ label: MONTHS[d.getMonth()], pace: 402 + slow - (11 - i) * 3.1 + (rnd() - .5) * 6, long: (8 + (11 - i) * 0.75 + rnd() * 1.5) * (slow ? .6 : 1), hr: i === 7 ? null : 156 - (11 - i) * 0.6 + (rnd() - .5) * 3 });
+  }
+  return a;
+};
+let PROGRESS = makeProgress(0);
+
+let RECORDS = [
+  { d: "400 m", m: 400, best: [[98, new Date(2026, 9, 8)], [101, new Date(2026, 8, 17)], [104, new Date(2026, 6, 2)]], hist: [[112, new Date(2025, 9, 4)], [106, new Date(2026, 2, 12)], [104, new Date(2026, 6, 2)], [101, new Date(2026, 8, 17)], [98, new Date(2026, 9, 8)]] },
+  { d: "1 km", m: 1000, best: [[292, new Date(2026, 9, 8)], [298, new Date(2026, 8, 3)], [305, new Date(2026, 5, 20)]], hist: [[338, new Date(2025, 8, 14)], [321, new Date(2026, 1, 7)], [305, new Date(2026, 5, 20)], [298, new Date(2026, 8, 3)], [292, new Date(2026, 9, 8)]] },
+  { d: "5 km", m: 5000, best: [[1660, new Date(2026, 10, 2)], [1695, new Date(2026, 8, 20)], [1742, new Date(2026, 5, 6)]], hist: [[1910, new Date(2025, 9, 18)], [1805, new Date(2026, 2, 28)], [1742, new Date(2026, 5, 6)], [1695, new Date(2026, 8, 20)], [1660, new Date(2026, 10, 2)]] },
+  { d: "10 km", m: 10000, best: [[3485, new Date(2026, 9, 25)], [3580, new Date(2026, 7, 9)], [3730, new Date(2026, 3, 12)]], hist: [[3730, new Date(2026, 3, 12)], [3580, new Date(2026, 7, 9)], [3485, new Date(2026, 9, 25)]] },
+  { d: "Semi-marathon", m: 21097.5, best: [[7950, new Date(2026, 9, 11)]], hist: [[7950, new Date(2026, 9, 11)]] },
+  { d: "Marathon", m: 42195, best: [], hist: [] }
+];
+const riegel = (t, d1, d2) => t * Math.pow(d2 / d1, 1.06);
+
+// 84 days of load ending today, zero on rest days
+const makeLoad = () => {
+  const map = new Map(YEARS[2026].map(e => [e.d.toDateString(), sum(e.runs, r => r.load)]));
+  const a = [];
+  for (let i = 83; i >= 0; i--) { const d = new Date(TODAY.getTime() - i * DAY); a.push({ d, v: map.get(d.toDateString()) || 0 }); }
+  return a;
+};
+let LOAD = makeLoad();
+function ewma(days, tau) { let e = 0; const k = 1 - Math.exp(-1 / tau); return days.map(x => (e += (x.v - e) * k)); }
+
+const shape = (n, f, w = 320, h = 160) => {  // closed or open fictional trace as an SVG path
+  let p = "";
+  for (let i = 0; i <= n; i++) { const [x, y] = f(i / n); p += `${i ? "L" : "M"}${(x * w).toFixed(1)} ${(y * h).toFixed(1)}`; }
+  return p;
+};
+const TR = {
+  quai: shape(40, t => [0.08 + t * 0.84, 0.62 - Math.sin(t * 3.1) * 0.28 + Math.sin(t * 11) * 0.03]),
+  parc: shape(60, t => [0.5 + Math.cos(t * 6.283) * 0.34 * (1 + .18 * Math.sin(t * 18.8)), 0.5 + Math.sin(t * 6.283) * 0.36]),
+  cote: shape(30, t => [0.15 + t * 0.7, 0.85 - t * 0.7 + Math.sin(t * 9) * 0.05]),
+  canal: shape(80, t => [0.5 + Math.cos(t * 6.283) * 0.4, 0.5 + Math.sin(t * 12.566) * 0.3]),
+  pont: shape(30, t => [0.1 + t * 0.8, 0.4 + Math.sin(t * 6.283) * 0.2])
+};
+const eff = (n, base, from) => Array.from({ length: n }, (_, i) => ({ d: new Date(from.getTime() + i * (TODAY - from) / Math.max(1, n - 1)), t: Math.round(base * (1.12 - 0.12 * i / Math.max(1, n - 1)) + (rnd() - .5) * base * 0.05), hr: Math.round(158 + rnd() * 12) }));
+let SEGMENTS = [
+  { id: "quai", name: "1,2 km · vers l'est", km: 1.2, gain: 4, tr: TR.quai, hidden: false, efforts: eff(14, 372, new Date(2026, 1, 3)) },
+  { id: "parc", name: "2,1 km · boucle", km: 2.1, gain: 18, tr: TR.parc, hidden: false, efforts: eff(9, 690, new Date(2026, 3, 8)) },
+  { id: "cote", name: "650 m · vers le nord", km: 0.65, gain: 41, tr: TR.cote, hidden: false, efforts: eff(6, 268, new Date(2026, 5, 2)) },
+  { id: "pont", name: "800 m · vers l'ouest", km: 0.8, gain: 6, tr: TR.pont, hidden: false, efforts: eff(3, 262, new Date(2026, 8, 30)) },
+  { id: "rue", name: "320 m · vers le sud", km: 0.32, gain: 1, tr: TR.pont, hidden: true, efforts: eff(31, 118, new Date(2025, 10, 1)) }
+];
+
+const st = (kind, t, v, target) => ({ type: "step", kind, end: { t, v }, target: target || { t: "none" } });
+const pz = (lo, hi) => ({ t: "pace", lo, hi });
+const zn = z => ({ t: "zone", z });
+let WORKOUTS = [
+  { id: "w1", name: "6 × 400 m", note: "Sur la piste ou le quai. Récupération en trottinant.", phone: { state: "ok", since: "hier, 21:14" }, items: [st("warmup", "time", 600, zn(2)), { type: "repeat", count: 6, skipLast: false, steps: [st("effort", "dist", 400, pz(300, 315)), st("recovery", "time", 90)] }, st("cooldown", "time", 600)] },
+  { id: "w2", name: "Footing 45 min en zone 2", note: "", phone: { state: "wait" }, items: [st("effort", "time", 2700, zn(2))] },
+  { id: "w3", name: "Pyramide 1-2-3-2-1", note: "Récupération libre : appuyer sur Tour pour repartir.", phone: { state: "none" }, items: [st("warmup", "time", 900), st("effort", "time", 60, pz(290, 305)), st("recovery", "lap", 0), st("effort", "time", 120, pz(295, 310)), st("recovery", "lap", 0), st("effort", "time", 180, pz(300, 315)), st("recovery", "lap", 0), st("effort", "time", 120, pz(295, 310)), st("recovery", "lap", 0), st("effort", "time", 60, pz(290, 305)), st("cooldown", "time", 600)] }
+];
+const STARTERS = [
+  { name: "Footing facile 30 min", items: [st("effort", "time", 1800, zn(2))] },
+  { name: "Marche-course 8 × (2 min / 1 min)", items: [st("warmup", "time", 300), { type: "repeat", count: 8, skipLast: false, steps: [st("effort", "time", 120), st("recovery", "time", 60)] }, st("cooldown", "time", 300)] },
+  { name: "Premier fractionné 5 × 1 min", items: [st("warmup", "time", 600), { type: "repeat", count: 5, skipLast: true, steps: [st("effort", "time", 60), st("recovery", "time", 120)] }, st("cooldown", "time", 600)] }
+];
+const prof = (n, f) => Array.from({ length: n }, (_, i) => f(i / (n - 1)));
+let ROUTES = [
+  { id: "r1", name: "Boucle du canal", km: 9.4, gain: 62, loss: 62, loop: true, tr: TR.canal, ele: prof(60, t => 48 + Math.sin(t * 6.283) * 18 + Math.sin(t * 25) * 4), phone: { state: "ok", since: "hier, 21:14" }, runs: 4 },
+  { id: "r2", name: "Tour du parc", km: 5.2, gain: 24, loss: 24, loop: true, tr: TR.parc, ele: prof(60, t => 60 + Math.sin(t * 12.566) * 6), phone: { state: "none" }, runs: 11 },
+  { id: "r3", name: "Montée du belvédère", km: 3.8, gain: 120, loss: 80, loop: false, tr: TR.cote, ele: prof(60, t => 40 + (t < .68 ? t / .68 * 120 : 120 - (t - .68) / .32 * 80)), phone: { state: "wait" }, runs: 0 },
+  { id: "r4", name: "Quais sans relief (import)", km: 7.1, gain: null, loss: null, loop: false, tr: TR.quai, ele: null, phone: { state: "none" }, runs: 1 }
+];
+
+// title, km, time, trace, tags, day of November 2026, id shared by the copies of one run done together
+let ACTS = [["Fractionné 6 × 400 m", "7,8", "47:12", "parc", ["Record 400 m", "Séance"], 14], ["Tour du parc à deux", "5,2", "36:10", "parc", [], 12, "duo"], ["Boucle du canal à allure cible", "9,4", "55:38", "canal", ["Parcours", "Allure cible"], 10], ["Footing du matin", "6,2", "38:40", "quai", [], 7]];
+
+/* Household profiles: everything shown belongs to the active one, as in the current app. */
+const PROFILES = [{ id: "alex", name: "Alex", color: "#B9AFFF", sub: "214 courses" }, { id: "camille", name: "Camille", color: "#F7AFC3", sub: "58 courses · a commencé en mars" }];
+let active = "alex";
+const take = () => ({ YEARS, PROGRESS, RECORDS, LOAD, SEGMENTS, WORKOUTS, ROUTES, ACTS });
+const DB = { alex: take() };
+DB.camille = (() => {
+  const keep = take();
+  seed = 99;
+  YEARS = { 2026: makeYear(2026, 0.55).filter(e => e.d >= new Date(2026, 2, 9)), 2025: [], 2024: [] };
+  YEARS[2026].forEach(e => e.runs.forEach(r => { r.km *= 0.6; r.min *= 0.72; r.load = Math.round(r.load * 0.6); }));
+  const o = {
+    YEARS, PROGRESS: makeProgress(48).map((p, i) => i < 4 ? { ...p, pace: null, long: null, hr: null } : p), LOAD: makeLoad(),
+    RECORDS: keep.RECORDS.map((r, i) => i < 3 ? { ...r, best: r.best.slice(0, i === 2 ? 1 : 2).map(b => [Math.round(b[0] * 1.19), b[1]]), hist: r.hist.slice(-2).map(b => [Math.round(b[0] * 1.19), b[1]]) } : { ...r, best: [], hist: [] }),
+    SEGMENTS: [{ id: "parc", name: "2,1 km · boucle", km: 2.1, gain: 18, tr: TR.parc, hidden: false, efforts: eff(4, 812, new Date(2026, 6, 5)) }],
+    WORKOUTS: [],
+    ROUTES: [{ ...keep.ROUTES[1], id: "c1", phone: { state: "none" }, runs: 3 }],
+    ACTS: [["Sortie du dimanche", "4,1", "31:20", "quai", [], 15], ["Tour du parc à deux", "5,2", "36:10", "parc", [], 12, "duo"], ["Marche-course du mardi", "3,4", "27:45", "pont", [], 10]]
+  };
+  ({ YEARS, PROGRESS, RECORDS, LOAD, SEGMENTS, WORKOUTS, ROUTES, ACTS } = keep);
+  return o;
+})();
+function switchProfile(id) {
+  DB[active] = take();
+  active = id;
+  ({ YEARS, PROGRESS, RECORDS, LOAD, SEGMENTS, WORKOUTS, ROUTES, ACTS } = DB[id]);
+  Object.assign(S, { seg: null, route: null, draft: null, act: false, day: null, renaming: false, hidden: false, rec: 2 });
+  if (S.scope === id) S.scope = "mine";
+}
+
+/* ---------- state ---------- */
+const S = { scope: "all", view: "progress", tab: "stats", year: 2026, measure: "dist", vol: "week", tag: "all", day: null, rec: 2, predDemo: "ok", loadDemo: "ok", seg: null, segSort: "count", segDemo: "ok", hidden: false, planTab: "workouts", workout: null, route: null, draft: null, act: false, excluded: false, renaming: false };
+let theme = "system";
+
+/* ---------- small chart helpers ---------- */
+function line(vals, { w = 300, h = 90, color = "var(--accent)", invert = false, fmt = v => v, labels = [] } = {}) {
+  const ok = vals.filter(v => v != null); const lo = Math.min(...ok), hi = Math.max(...ok), sp = hi - lo || 1;
+  const X = i => 6 + i * (w - 12) / (vals.length - 1), Y = v => { const r = (v - lo) / sp; return 10 + (invert ? r : 1 - r) * (h - 26); };
+  let d = "", pen = false, dots = "";
+  vals.forEach((v, i) => { if (v == null) { pen = false; return; } d += `${pen ? "L" : "M"}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`; pen = true; dots += `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="3.2" fill="var(--surface-2)" stroke="${color}" stroke-width="2"><title>${labels[i] || ""} : ${fmt(v)}</title></circle>`; });
+  const gaps = vals.map((v, i) => v == null ? `<text x="${X(i)}" y="${h / 2}" text-anchor="middle">—</text>` : "").join("");
+  return `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img"><path d="${d}" fill="none" stroke="${color}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>${dots}${gaps}<text x="6" y="${h - 1}">${labels[0] || ""}</text><text x="${w - 6}" y="${h - 1}" text-anchor="end">${labels[labels.length - 1] || ""}</text></svg>`;
+}
+function bars(items) {  // items: { label, v, text, cur }
+  const max = Math.max(...items.map(i => i.v), 1);
+  return `<div class="bars">${items.map(i => { const h = Math.round(i.v / max * 150); return `<div class="b ${i.cur ? "cur" : ""} ${i.v ? "" : "zero"}" style="--h:${h}px"><em>${i.text}</em><i style="height:${h}px"></i><span>${i.label}</span></div>`; }).join("")}</div>`;
+}
+const trace = (d, color = "var(--pace-fast)", sw = 7) => `<svg viewBox="0 0 320 160" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="${d}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+function mapSvg(d, id = "") {
+  return `<svg viewBox="0 0 320 160" role="img" aria-label="Tracé"><rect width="320" height="160" fill="var(--map-land)"/><path d="M-10 120 C60 100 120 150 190 128 S300 96 330 110 V170 H-10Z" fill="var(--map-water)"/><ellipse cx="238" cy="52" rx="62" ry="34" fill="var(--map-park)"/><path d="M0 40 H320 M90 0 V160 M0 96 L320 70 M200 0 L160 160" stroke="var(--map-road)" stroke-width="5" fill="none"/><path d="${d}" fill="none" stroke="var(--surface)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="var(--pace-fast)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle id="${id}" r="6" fill="var(--surface)" stroke="var(--ink)" stroke-width="3" visibility="hidden"/></svg>`;
+}
+
+/* ---------- views ---------- */
+function vProgress() {
+  const tabs = [["stats", "Statistiques", "bars"], ["records", "Records", "trophy"], ["load", "Charge", "zap"]];
+  return `<div class="spread"><div><h1>Progression</h1><p class="muted" style="margin-top:6px">Ce que racontent vos courses, semaine après semaine.</p></div></div>
+  <div class="tabs" role="group" aria-label="Rubriques">${tabs.map(t => `<button type="button" data-act="tab" data-v="${t[0]}" aria-pressed="${S.tab === t[0]}">${ic(t[2], 17)}${t[1]}</button>`).join("")}</div>
+  ${S.tab === "stats" ? vStats() : S.tab === "records" ? vRecords() : vLoad()}`;
+}
+
+function vStats() {
+  const data = YEARS[S.year], m = S.measure;
+  const col = m === "dist" ? "var(--accent)" : m === "time" ? "var(--c-mint)" : "var(--c-peach)";
+  const max = Math.max(1, ...data.map(e => dayVal(e, m)));
+  const by = new Map(data.map(e => [e.d.toDateString(), e]));
+  const jan1 = new Date(S.year, 0, 1), lead = (jan1.getDay() + 6) % 7;
+  let cells = "".padStart(0), monthsRow = "", lastM = -1, col_i = 0;
+  for (let i = 0; i < lead; i++) cells += `<button class="out" tabindex="-1" aria-hidden="true"></button>`;
+  for (let d = new Date(jan1), n = lead; d.getFullYear() === S.year; d = new Date(d.getTime() + DAY), n++) {
+    if (n % 7 === 0 || d.getDate() === 1 && false) col_i++;
+    const e = by.get(d.toDateString());
+    const v = e ? dayVal(e, m) : 0, l = e ? Math.min(4, 1 + Math.floor(v / max * 3.999)) : 0;
+    const future = d > TODAY;
+    cells += `<button type="button" class="${l ? "l" + l : ""} ${S.day === d.toDateString() ? "on" : ""}" ${future ? "disabled style=\"opacity:.35\"" : `data-act="day" data-v="${d.toDateString()}"`} aria-label="${fdate(d)}${e ? ` : ${dec(sum(e.runs, r => r.km))} km` : " : repos"}"></button>`;
+  }
+  for (let w = 0; w < 54; w++) { const d = new Date(jan1.getTime() + (w * 7 - lead) * DAY); const mm = d.getFullYear() === S.year ? d.getMonth() : -1; monthsRow += `<span>${mm !== lastM && mm >= 0 && d.getDate() <= 7 ? MONTHS[mm] : ""}</span>`; if (mm >= 0 && d.getDate() <= 7) lastM = mm; }
+  const totKm = sum(data, e => sum(e.runs, r => r.km)), totMin = sum(data, e => sum(e.runs, r => r.min)), nRuns = sum(data, e => e.runs.length);
+  const sel = S.day && by.get(S.day);
+  const dayBox = !S.day ? `<span class="muted">${ic("info", 17)}</span><span class="muted">Survolez ou touchez un jour pour voir ses courses.</span>`
+    : sel ? `<b>${fdate(sel.d)}</b>${sel.runs.map(r => `<a href="#" class="tag lav" data-act="openact">${r.title} · ${dec(r.km)} km</a>`).join("")}<span class="muted small">${sel.runs.length > 1 ? `Total du jour : ${dec(sum(sel.runs, r => r.km))} km` : dur(sel.runs[0].min * 60)}</span>`
+    : `<b>${fdate(new Date(S.day))}</b><span class="muted">Repos.</span>`;
+
+  // volume: last 12 weeks (Monday start) or 12 months, from 2026 + 2025 data
+  const all = [...YEARS[2025], ...YEARS[2026]];
+  let vol = [];
+  if (S.vol === "week") {
+    const mon = new Date(TODAY.getTime() - ((TODAY.getDay() + 6) % 7) * DAY);
+    for (let i = 11; i >= 0; i--) { const a = new Date(mon.getTime() - i * 7 * DAY), b = new Date(a.getTime() + 7 * DAY); const km = sum(all.filter(e => e.d >= a && e.d < b), e => sum(e.runs, r => r.km)); vol.push({ label: sdate(a), v: i === 4 ? 0 : km, text: i === 4 ? "0 km" : `${dec(km)} km`, cur: i === 0 }); }
+  } else {
+    for (let i = 11; i >= 0; i--) { const a = new Date(2026, 10 - i, 1), b = new Date(2026, 11 - i, 1); const km = sum(all.filter(e => e.d >= a && e.d < b), e => sum(e.runs, r => r.km)); vol.push({ label: MONTHS[a.getMonth()], v: km, text: `${Math.round(km)} km`, cur: i === 0 }); }
+  }
+  const P = S.tag === "all" ? PROGRESS : PROGRESS.map(p => ({ ...p, pace: p.pace && p.pace + 22, long: p.long && p.long * 0.7, hr: p.hr && p.hr - 11 }));
+  const labels = P.map(p => p.label);
+  return `
+  <div class="card"><div class="card-h"><div class="row"><h2>Calendrier</h2><div class="seg" role="group" aria-label="Année">${[2024, 2025, 2026].map(y => `<button type="button" data-act="year" data-v="${y}" aria-pressed="${S.year === y}">${y}</button>`).join("")}</div></div>
+    <div class="seg" role="group" aria-label="Mesure">${[["dist", "Distance"], ["time", "Durée"], ["load", "Charge"]].map(x => `<button type="button" data-act="measure" data-v="${x[0]}" aria-pressed="${m === x[0]}">${x[1]}</button>`).join("")}</div></div>
+    <div class="card-b">
+      <div class="tiles" style="margin-bottom:18px">
+        <div class="tile t-lav"><div class="top"><span class="chip">${ic("calendar", 16)}</span>Courses</div><div class="v">${nRuns}</div><div class="s">${data.length} jours courus</div></div>
+        <div class="tile t-sky"><div class="top"><span class="chip">${ic("route", 16)}</span>Distance</div><div class="v">${Math.round(totKm)}<small>km</small></div><div class="s">en ${S.year}</div></div>
+        <div class="tile t-mint"><div class="top"><span class="chip">${ic("clock", 16)}</span>Temps</div><div class="v">${Math.floor(totMin / 60)}<small>h</small> ${pad(Math.round(totMin % 60))}</div><div class="s">en mouvement</div></div>
+        <div class="tile t-peach"><div class="top"><span class="chip">${ic("mountain", 16)}</span>Dénivelé</div><div class="v">${Math.round(totKm * 8.4)}<small>m</small></div><div class="s">D+ cumulé</div></div>
+      </div>
+      <div class="heatwrap" style="--hm:${col}"><div class="months">${monthsRow}</div><div class="heat">${cells}</div></div>
+      <div class="row" style="justify-content:space-between;margin-top:10px"><span class="small muted">${nRuns ? "Plus la case est foncée, plus la journée a compté." : "Aucune course cette année-là."}</span><span class="hlegend" style="--hm:${col}">moins <i style="background:var(--surface-2)"></i><i style="background:color-mix(in srgb,var(--hm) 28%,var(--surface-2))"></i><i style="background:color-mix(in srgb,var(--hm) 52%,var(--surface-2))"></i><i style="background:color-mix(in srgb,var(--hm) 78%,var(--surface-2))"></i><i style="background:var(--hm)"></i> plus</span></div>
+      <div class="daybox">${dayBox}</div>
+    </div></div>
+  <div class="card"><div class="card-h"><h2>Volume</h2><div class="seg" role="group" aria-label="Période">${[["week", "Semaines"], ["month", "Mois"]].map(x => `<button type="button" data-act="vol" data-v="${x[0]}" aria-pressed="${S.vol === x[0]}">${x[1]}</button>`).join("")}</div></div>
+    <div class="card-b">${bars(vol)}<p class="small muted" style="margin-top:10px">La barre hachurée est la période en cours. Les semaines commencent le lundi.</p></div></div>
+  <div class="card"><div class="card-h"><h2>Courbes de progression</h2><div class="seg" role="group" aria-label="Filtre par tag">${[["all", "Toutes les courses"], ["ef", "Endurance fondamentale"]].map(x => `<button type="button" data-act="tag" data-v="${x[0]}" aria-pressed="${S.tag === x[0]}">${x[1]}</button>`).join("")}</div></div>
+    <div class="card-b"><div class="mini3">
+      <div><div class="eyebrow">Allure moyenne</div><div class="num" style="font-size:26px;font-weight:600">${pace(P[11].pace)}<small class="muted" style="font:600 13px var(--font-body)"> /km</small></div>${line(P.map(p => p.pace), { color: "var(--accent)", invert: true, fmt: v => pace(v) + " /km", labels })}<span class="small muted">Plus haut = plus rapide</span></div>
+      <div><div class="eyebrow">Sortie la plus longue</div><div class="num" style="font-size:26px;font-weight:600">${dec(P[11].long)}<small class="muted" style="font:600 13px var(--font-body)"> km</small></div>${line(P.map(p => p.long), { color: "var(--c-sky)", fmt: v => dec(v) + " km", labels })}<span class="small muted">Par mois</span></div>
+      <div><div class="eyebrow">Fréquence cardiaque moyenne</div><div class="num" style="font-size:26px;font-weight:600">${Math.round(P[11].hr)}<small class="muted" style="font:600 13px var(--font-body)"> bpm</small></div>${line(P.map(p => p.hr), { color: "var(--c-rose)", fmt: v => Math.round(v) + " bpm", labels })}<span class="small muted">Un trou = mois sans cardio</span></div>
+    </div></div></div>`;
+}
+
+function vRecords() {
+  const r = RECORDS[S.rec];
+  const cards = RECORDS.map((x, i) => x.best.length
+    ? `<button type="button" class="rec" data-act="rec" data-v="${i}" aria-pressed="${S.rec === i}"><span class="d">${x.d}</span><span class="t">${dur(x.best[0][0])}</span><span class="o">${pace(x.best[0][0] / x.m * 1000)} /km · ${fdate(x.best[0][1])}</span><span class="o">${x.best.slice(1).map((b, j) => `${j + 2}ᵉ ${dur(b[0])}`).join(" · ") || "Un seul temps pour l'instant"}</span></button>`
+    : `<button type="button" class="rec none" data-act="rec" data-v="${i}" aria-pressed="${S.rec === i}"><span class="d">${x.d}</span><span class="t">Pas encore couru</span><span class="o">Il apparaîtra dès qu'une course atteindra cette distance.</span></button>`).join("");
+  let hist;
+  if (r.hist.length) {
+    const w = 640, h = 190, t0 = r.hist[0][1].getTime(), t1 = TODAY.getTime(), lo = Math.min(...r.hist.map(x => x[0])), hi = Math.max(...r.hist.map(x => x[0])), sp = hi - lo || 1;
+    const X = t => 10 + (t - t0) / (t1 - t0 || 1) * (w - 20), Y = v => 24 + (v - lo) / sp * (h - 60);
+    let d = "", dots = "";
+    r.hist.forEach((p, i) => { const x = X(p[1].getTime()), y = Y(p[0]); d += i ? `H${x.toFixed(1)}V${y.toFixed(1)}` : `M${x.toFixed(1)} ${y.toFixed(1)}`; dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="var(--surface)" stroke="var(--accent)" stroke-width="3"/><text x="${x.toFixed(1)}" y="${(y - 11).toFixed(1)}" text-anchor="${i === 0 ? "start" : i === r.hist.length - 1 ? "end" : "middle"}" style="fill:var(--ink);font-family:var(--font-display);font-size:13px">${dur(p[0])}</text>`; });
+    d += `H${X(t1).toFixed(1)}`;
+    hist = `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="Évolution du record"><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round"/>${dots}<text x="10" y="${h - 4}">${fdate(r.hist[0][1])}</text><text x="${w - 10}" y="${h - 4}" text-anchor="end">aujourd'hui</text></svg><p class="small muted">Chaque marche est un record battu : ${r.hist.length} ${r.hist.length > 1 ? "améliorations" : "temps"} sur ${r.d}. Plus haut = plus rapide.</p>`;
+  } else hist = `<p class="muted">Pas encore de temps sur cette distance.</p>`;
+  const basis = RECORDS[2].best[0], long = 12.4;
+  const preds = [["5 km", 5000], ["10 km", 10000], ["Semi", 21097.5], ["Marathon", 42195]].map(p => { const t = riegel(basis[0], 5000, p[1]); const ind = p[1] > long * 4000; return `<div class="pred"><span class="d">${p[0]}</span><span><span class="t">${dur(t)}</span> <span class="muted small">${pace(t / p[1] * 1000)} /km</span>${ind ? `<br><span class="tag">Indicatif</span> <span class="small muted">Aucune sortie récente n'approche cette distance (plus longue : ${dec(long)} km).</span>` : ""}</span><span class="small muted" style="text-align:right">d'après votre 5 km<br>en ${dur(basis[0])} du ${sdate(basis[1])}</span></div>`; }).join("");
+  const predBox = S.predDemo === "ok" ? `${preds}<div class="note" style="margin-top:12px">${ic("info", 18)}<span>Ce sont des estimations, calculées à partir de vos meilleurs efforts des 12 dernières semaines. Elles ne tiennent compte ni du parcours, ni de la météo, ni de votre préparation.</span></div>`
+    : `<div class="emptybox" style="box-shadow:none;background:var(--surface-2);padding:30px 20px"><div class="big">${ic("gauge", 28)}</div><h3>Pas d'effort récent</h3><p>Il faut au moins une course d'un kilomètre ou plus dans les 12 dernières semaines pour estimer vos chronos.</p></div>`;
+  return `
+  <div class="note butter">${ic("timer", 18)}<span>Les records sont mesurés en <b>temps en mouvement</b> : les pauses, manuelles ou automatiques, ne comptent pas. Ils sont cherchés partout à l'intérieur de vos courses, pas seulement sur les courses de cette distance.</span></div>
+  <div class="recs">${cards}</div>
+  <div class="grid2">
+    <div class="card"><div class="card-h"><h2>Évolution · ${r.d}</h2>${r.best.length ? `<a href="#" class="btn sm" data-act="openact">${ic("route", 16)}Voir la course du record</a>` : ""}</div><div class="card-b">${hist}</div></div>
+    <div class="card"><div class="card-h"><h2>Chronos potentiels</h2><div class="demo">État montré<div class="seg">${[["ok", "Avec efforts"], ["none", "Sans effort récent"]].map(x => `<button type="button" data-act="predDemo" data-v="${x[0]}" aria-pressed="${S.predDemo === x[0]}">${x[1]}</button>`).join("")}</div></div></div><div class="card-b">${predBox}</div></div>
+  </div>`;
+}
+
+const STATUS = [
+  { k: "Reprise", c: "t-sky", s: "Votre charge récente est bien en dessous de votre habitude. Reprenez progressivement." },
+  { k: "Léger", c: "t-mint", s: "Vous en faites un peu moins que d'habitude : bon pour récupérer, pas pour progresser." },
+  { k: "Stable", c: "t-lav", s: "Votre charge récente est en ligne avec votre habitude. Vous entretenez votre forme." },
+  { k: "En progression", c: "t-peach", s: "Vous en faites un peu plus que d'habitude, à un rythme que le corps suit." },
+  { k: "Trop, trop vite", c: "t-rose", s: "Votre charge a bondi par rapport à votre habitude. Levez le pied quelques jours." }
+];
+function vLoad() {
+  if (S.loadDemo === "new") return `${loadDemoSeg()}<div class="emptybox"><div class="big">${ic("zap", 28)}</div><h2>Pas encore assez de données</h2><p>Il faut deux semaines de courses pour comparer votre charge récente à votre habitude. Votre première course date d'il y a 5 jours.</p></div>`;
+  const days = S.loadDemo === "jump" ? LOAD.map((x, i) => i > 76 ? { ...x, v: x.v ? x.v * 2.6 : (i % 2 ? 150 : 0) } : x) : LOAD;
+  const sh = ewma(days, 7), lg = ewma(days, 28), ratio = sh[83] / lg[83];
+  const si = ratio < .5 ? 0 : ratio < .8 ? 1 : ratio <= 1.2 ? 2 : ratio <= 1.5 ? 3 : 4, stt = STATUS[si];
+  const w = 760, h = 230, max = Math.max(...days.map(x => x.v), 1), X = i => 8 + i * (w - 16) / 83, Y = v => h - 26 - v / max * (h - 44);
+  const bw = (w - 16) / 84 - 2;
+  const rects = days.map((x, i) => x.v ? `<rect x="${(X(i) - bw / 2).toFixed(1)}" y="${Y(x.v).toFixed(1)}" width="${bw.toFixed(1)}" height="${(h - 26 - Y(x.v)).toFixed(1)}" rx="3" fill="var(--p-peach)"><title>${sdate(x.d)} : charge ${Math.round(x.v)}</title></rect>` : "").join("");
+  const scale = 3.2, path = a => a.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(Math.min(max, v * scale)).toFixed(1)}`).join("");
+  const weeks = []; for (let i = 0; i < 12; i++) weeks.push({ label: sdate(days[i * 7].d), v: sum(days.slice(i * 7, i * 7 + 7), x => x.v), cur: i === 11 }); weeks.forEach(x => x.text = `Charge ${Math.round(x.v)}`);
+  const last = [...days].reverse().find(x => x.v) || days[83], typical = 62, rec = Math.max(6, Math.min(96, Math.round(12 + 24 * (last.v / typical) * Math.max(1, ratio)))), gone = S.loadDemo === "jump" ? 9 : 14, left = Math.max(0, rec - gone);
+  return `${loadDemoSeg()}
+  <div class="grid2">
+    <div class="status ${stt.c}"><span class="eyebrow">État de la charge</span><span class="v">${stt.k}</span><span>${stt.s}</span><div class="gaugebar" aria-hidden="true">${STATUS.map((_, i) => `<i class="${i === si ? "on" : ""}"></i>`).join("")}</div><span class="small muted">Charge récente (7 j) : <b class="num">${Math.round(sh[83])}</b> par jour · habitude (28 j) : <b class="num">${Math.round(lg[83])}</b> par jour</span></div>
+    <div class="card"><div class="card-b" style="display:flex;gap:20px;align-items:center;padding-top:22px"><div class="ring" style="--p:${Math.round((1 - left / rec) * 100)}"><div><span>${left ? left + " h" : ic("check", 28)}<small>${left ? "restantes" : "récupéré"}</small></span></div></div><div class="col" style="gap:6px"><span class="eyebrow">Récupération conseillée</span><b style="font:600 20px var(--font-display)">${left ? `Encore ${left} h de récupération` : "Vous avez récupéré"}</b><span class="muted small">${left ? `Récupéré ${left > 24 ? "après-demain" : "demain"} vers ${pad((9 + left) % 24)} h` : "Vous pouvez repartir quand vous voulez."} · ${rec} h conseillées après votre dernière course (${sdate(last.d)}, charge ${Math.round(last.v)}${S.loadDemo === "jump" ? "" : ", estimée"}).</span>${S.loadDemo === "jump" ? "" : `<span class="tag plain" data-tip="Sans cardio : estimée d'après la durée et le ressenti">${ic("info", 14)}Charge estimée</span>`}</div></div></div>
+  </div>
+  <div class="card"><div class="card-h"><h2>Charge au fil des jours</h2><div class="lg"><span><i style="background:var(--p-peach);height:10px;width:10px;border-radius:3px"></i>Charge du jour</span><span><i style="background:var(--accent)"></i>Récente (7 j)</span><span><i style="background:var(--ink-3)"></i>Habitude (28 j)</span></div></div>
+    <div class="card-b"><svg class="chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="Charge quotidienne, récente et habituelle">${rects}<path d="${path(lg)}" fill="none" stroke="var(--ink-3)" stroke-width="2.4" stroke-dasharray="5 5"/><path d="${path(sh)}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><text x="8" y="${h - 6}">${sdate(days[0].d)}</text><text x="${w / 2}" y="${h - 6}" text-anchor="middle">${sdate(days[42].d)}</text><text x="${w - 8}" y="${h - 6}" text-anchor="end">aujourd'hui</text></svg></div></div>
+  <div class="card"><div class="card-h"><h2>Charge par semaine</h2></div><div class="card-b">${bars(weeks)}</div></div>
+  <details><summary>${ic("chev", 18)}Comment est-ce calculé ?</summary><ul>
+    <li><b>Charge d'une course</b> : son effort relatif (minutes passées dans chaque zone cardiaque × numéro de la zone). Sans cardio, elle est estimée d'après la durée et le ressenti que vous avez noté, et marquée « estimée ».</li>
+    <li><b>Charge récente et habitude</b> : moyennes par jour sur environ 7 et 28 jours, qui donnent plus de poids aux jours récents. Leur rapport donne l'état.</li>
+    <li><b>Récupération</b> : plus longue après une séance plus dure que d'habitude ou quand la charge récente est déjà haute, entre 6 et 96 heures.</li>
+    <li>Ce sont des estimations faites uniquement à partir de vos courses enregistrées. Le sommeil, le stress, les autres sports et votre santé ne sont pas pris en compte : ce n'est pas un avis médical.</li>
+  </ul></details>`;
+}
+const loadDemoSeg = () => `<div class="demo">État montré<div class="seg">${[["ok", "Entraînement régulier"], ["jump", "Semaine trop chargée"], ["new", "Nouveau profil"]].map(x => `<button type="button" data-act="loadDemo" data-v="${x[0]}" aria-pressed="${S.loadDemo === x[0]}">${x[1]}</button>`).join("")}</div></div>`;
+
+const bestOf = s => Math.min(...s.efforts.map(e => e.t));
+function vSegments() {
+  if (S.seg) return vSegment(SEGMENTS.find(s => s.id === S.seg));
+  const demo = `<div class="demo">État montré<div class="seg">${[["ok", "Avec segments"], ["busy", "Détection en cours"], ["empty", "Aucun segment"]].map(x => `<button type="button" data-act="segDemo" data-v="${x[0]}" aria-pressed="${S.segDemo === x[0]}">${x[1]}</button>`).join("")}</div></div>`;
+  const head = `<div class="spread"><div><h1>Segments</h1><p class="muted" style="margin-top:6px">Les portions que vous courez régulièrement, et vos chronos dessus.</p></div>${demo}</div>`;
+  if (S.segDemo === "empty") return `${head}<div class="emptybox"><div class="big">${ic("flag", 28)}</div><h2>Pas encore de segment</h2><p>Les segments apparaissent tout seuls : dès que vous avez couru trois fois la même portion, dans le même sens, elle devient un segment et tous vos passages sont chronométrés.</p></div>`;
+  const list = SEGMENTS.filter(s => s.hidden === S.hidden).sort((a, b) => S.segSort === "count" ? b.efforts.length - a.efforts.length : b.efforts.at(-1).d - a.efforts.at(-1).d);
+  const rows = list.map(s => `<tr data-act="seg" data-v="${s.id}" tabindex="0"><td class="name"><span class="row" style="flex-wrap:nowrap"><span class="prow" style="padding:0;width:auto"><span class="th">${trace(s.tr, "var(--pace-fast)", 12)}</span></span>${s.name}</span></td><td>${dec(s.km, 2)} km</td><td>${s.gain} m</td><td>${s.efforts.length}</td><td>${dur(bestOf(s))}</td><td>${sdate(s.efforts.at(-1).d)}</td><td>${S.hidden ? `<button type="button" class="btn sm" data-act="restore" data-v="${s.id}">Rétablir</button>` : ic("chev", 16)}</td></tr>`).join("");
+  return `${head}
+  ${S.segDemo === "busy" ? `<div class="note butter">${ic("clock", 18)}<span>Détection en cours sur votre historique : 132 courses sur 200 analysées. Les segments et les chronos se complètent tout seuls.</span></div>` : ""}
+  <div class="card"><div class="card-h"><div class="seg" role="group" aria-label="Tri">${[["count", "Les plus courus"], ["recent", "Les plus récents"]].map(x => `<button type="button" data-act="segSort" data-v="${x[0]}" aria-pressed="${S.segSort === x[0]}">${x[1]}</button>`).join("")}</div><button type="button" class="switch" data-act="hidden" aria-pressed="${S.hidden}"><span class="tr"></span>Segments masqués (${SEGMENTS.filter(s => s.hidden).length})</button></div>
+  <div class="card-b">${list.length ? `<div class="tablebox"><table><thead><tr><th>Segment</th><th>Longueur</th><th>D+</th><th>Passages</th><th>Meilleur</th><th>Dernier</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>` : `<p class="muted">${S.hidden ? "Aucun segment masqué." : "Tous vos segments sont masqués."}</p>`}</div></div>`;
+}
+function vSegment(s) {
+  const best = bestOf(s), ranked = [...s.efforts].sort((a, b) => a.t - b.t);
+  const rows = ranked.map((e, i) => `<tr><td><span class="medal ${i < 3 ? "m" + (i + 1) : ""}">${i + 1}</span></td><td class="name"><a href="#" data-act="openact">${fdate(e.d)}</a></td><td>${dur(e.t)}</td><td>${pace(e.t / s.km)} /km</td><td>${e.hr} bpm</td><td>${e.t === best ? `<span class="best">Meilleur</span>` : "+" + dur(e.t - best)}</td></tr>`).join("");
+  const labels = s.efforts.map(e => sdate(e.d));
+  return `<a href="#" class="back" data-act="segback">${ic("back", 18)}Segments</a>
+  <div class="spread"><div style="min-width:0;flex:1">${S.renaming ? `<div class="row"><input type="text" id="rename" value="${s.name}" aria-label="Nom du segment" style="max-width:420px;font:600 22px var(--font-display)"><button type="button" class="btn primary sm" data-act="renameok">Enregistrer</button></div>` : `<h1>${s.name}</h1>`}<div class="row muted" style="margin-top:8px"><span>${ic("route", 16)} ${dec(s.km, 2)} km</span><span>${ic("mountain", 16)} ${s.gain} m D+</span><span>${ic("flag", 16)} ${s.efforts.length} passages</span></div></div>
+    <div class="row"><button type="button" class="iconbtn" data-act="rename" data-tip="Renommer" aria-label="Renommer">${ic("edit")}</button><button type="button" class="iconbtn" data-act="hide" data-v="${s.id}" data-tip="Masquer ce segment" data-tip-pos="end" aria-label="Masquer ce segment">${ic("eye-off")}</button></div></div>
+  <div class="dgrid"><div class="col">
+    <div class="mapbox">${mapSvg(s.tr)}</div>
+    <div class="card"><div class="card-h"><h2>Tous les passages</h2><span class="small muted">Temps écoulé sur le segment, classés du plus rapide au plus lent</span></div><div class="card-b"><div class="tablebox"><table><thead><tr><th>#</th><th>Date</th><th>Temps</th><th>Allure</th><th>FC moy.</th><th>Écart</th></tr></thead><tbody>${rows}</tbody></table></div></div></div>
+  </div><div class="col">
+    <div class="tile t-lav"><div class="top"><span class="chip">${ic("trophy", 16)}</span>Meilleur temps</div><div class="v">${dur(best)}</div><div class="s">${pace(best / s.km)} /km · ${fdate(ranked[0].d)}</div></div>
+    <div class="card"><div class="card-h"><h2>Au fil du temps</h2></div><div class="card-b">${line(s.efforts.map(e => e.t), { w: 320, h: 150, invert: true, fmt: dur, labels })}<p class="small muted">Dans l'ordre des dates. Plus haut = plus rapide.</p></div></div>
+    <div class="card"><div class="card-h"><h2>Profil</h2></div><div class="card-b">${line(prof(30, t => 30 + t * s.gain + Math.sin(t * 9) * 2), { w: 320, h: 100, color: "var(--c-sky)", fmt: v => Math.round(v) + " m", labels: ["0 km", dec(s.km, 2) + " km"] })}</div></div>
+  </div></div>`;
+}
+
+/* ----- sessions ----- */
+const unfold = items => items.flatMap(it => it.type === "repeat" ? Array.from({ length: it.count }, (_, i) => it.steps.filter((x, j) => !(it.skipLast && i === it.count - 1 && j === it.steps.length - 1 && x.kind === "recovery"))).flat() : [it]);
+const KIND = { warmup: "Échauffement", effort: "Effort", recovery: "Récupération", cooldown: "Retour au calme" };
+const estSec = s => s.end.t === "time" ? s.end.v : s.end.t === "dist" ? s.end.v / 1000 * (s.target.t === "pace" ? (s.target.lo + s.target.hi) / 2 : 360) : 90;
+function outline(items) { const u = unfold(items), tot = sum(u, estSec); return `<div class="outline" role="img" aria-label="Déroulé de la séance">${u.map(s => `<i class="k-${s.kind}" style="flex:${(estSec(s) / tot * 100).toFixed(2)}" title="${KIND[s.kind]} · ${endText(s)}"></i>`).join("")}</div>`; }
+const endText = s => s.end.t === "time" ? dur(s.end.v) : s.end.t === "dist" ? (s.end.v >= 1000 ? dec(s.end.v / 1000, 2).replace(/,?0+$/, "") + " km" : s.end.v + " m") : "jusqu'à Tour";
+const targetText = s => s.target.t === "pace" ? `${pace(s.target.lo)}–${pace(s.target.hi)} /km` : s.target.t === "zone" ? `Zone ${s.target.z}` : "";
+function totals(items) {
+  const u = unfold(items), open = u.some(s => s.end.t === "lap"), allTime = u.every(s => s.end.t !== "dist"), allDist = u.every(s => s.end.t === "dist");
+  const tSum = sum(u.filter(s => s.end.t === "time"), s => s.end.v), dSum = sum(u.filter(s => s.end.t === "dist"), s => s.end.v);
+  const noPace = u.some(s => s.end.t === "dist" && s.target.t !== "pace");
+  const t = allTime ? (open ? `au moins ${dur(tSum)}` : dur(tSum)) : noPace ? "inconnue" : `${open ? "au moins " : "≈ "}${dur(sum(u.filter(s => s.end.t !== "lap"), estSec))}`;
+  const d = allDist ? dec(dSum / 1000, 1) + " km" : dSum ? `au moins ${dec(dSum / 1000, 1)} km` : "inconnue";
+  return { t, d, n: u.length };
+}
+const phonePill = (o, kind, id) => o.phone.state === "ok" ? `<button type="button" class="phone ok" data-act="phone" data-k="${kind}" data-v="${id}" data-tip="Retirer du téléphone">${ic("phone", 15)}Sur le téléphone depuis ${o.phone.since}</button>`
+  : o.phone.state === "wait" ? `<button type="button" class="phone wait" data-act="phone" data-k="${kind}" data-v="${id}" data-tip="Arrivera à la prochaine synchro à la maison">${ic("clock", 15)}En attente du téléphone</button>`
+  : `<button type="button" class="phone" data-act="phone" data-k="${kind}" data-v="${id}">${ic("phone", 15)}Envoyer sur le téléphone</button>`;
+
+function vPlan() {
+  if (S.draft) return vEditor();
+  if (S.route) return vRoute(ROUTES.find(r => r.id === S.route));
+  const head = `<div class="spread"><div><h1>Planifier</h1><p class="muted" style="margin-top:6px">Préparez ici, courez avec le téléphone. Dernière synchro du téléphone : <b>hier, 21:14</b>.</p></div>${S.planTab === "workouts" ? `<button type="button" class="btn primary" data-act="neww">${ic("plus")}Nouvelle séance</button>` : `<button type="button" class="btn primary" data-act="toast" data-v="Import d'un fichier .gpx (inerte dans la maquette)">${ic("upload")}Importer un .gpx</button>`}</div>
+  <div class="tabs" role="group" aria-label="Rubriques">${[["workouts", "Séances", "timer"], ["routes", "Parcours", "route"]].map(t => `<button type="button" data-act="planTab" data-v="${t[0]}" aria-pressed="${S.planTab === t[0]}">${ic(t[2], 17)}${t[1]}</button>`).join("")}</div>`;
+  if (S.planTab === "workouts") {
+    const cards = WORKOUTS.map(w => { const t = totals(w.items); return `<div class="lib"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><h3 style="min-width:0">${w.name}</h3><span class="row" style="flex-wrap:nowrap;gap:4px"><button type="button" class="iconbtn flat sm" data-act="editw" data-v="${w.id}" data-tip="Modifier" aria-label="Modifier ${w.name}">${ic("edit", 16)}</button><button type="button" class="iconbtn flat sm" data-act="dupw" data-v="${w.id}" data-tip="Dupliquer" aria-label="Dupliquer ${w.name}">${ic("copy", 16)}</button><button type="button" class="iconbtn flat sm" data-act="delw" data-v="${w.id}" data-tip="Supprimer" data-tip-pos="end" aria-label="Supprimer ${w.name}">${ic("trash", 16)}</button></span></div>${outline(w.items)}<div class="mini"><span>Durée <b>${t.t}</b></span><span>Distance <b>${t.d}</b></span><span><b>${t.n}</b> étapes</span></div>${w.note ? `<p class="small muted">${w.note}</p>` : ""}<div>${phonePill(w, "w", w.id)}</div></div>`; }).join("");
+    const starters = STARTERS.map((s, i) => `<div class="prow"><div class="grow"><b>${s.name}</b>${outline(s.items)}</div><button type="button" class="btn sm" data-act="addstarter" data-v="${i}">${ic("plus", 16)}Ajouter</button></div>`).join("");
+    return `${head}${WORKOUTS.length ? `<div class="libs">${cards}</div>` : `<div class="emptybox"><div class="big">${ic("timer", 28)}</div><h2>Aucune séance</h2><p>Créez votre première séance, ou partez d'une des séances pour débuter ci-dessous.</p></div>`}
+    <div class="card"><div class="card-h"><h2>Pour débuter</h2><span class="small muted">Des séances prêtes à l'emploi, à ajouter puis à adapter</span></div><div class="card-b">${starters}<div class="lg" style="margin-top:12px"><span><i style="background:var(--c-mint)"></i>Échauffement</span><span><i style="background:var(--accent)"></i>Effort</span><span><i style="background:var(--c-sky)"></i>Récupération</span><span><i style="background:var(--c-peach)"></i>Retour au calme</span></div></div></div>`;
+  }
+  const cards = ROUTES.map(r => `<div class="lib"><button type="button" class="thumb" data-act="route" data-v="${r.id}" aria-label="Ouvrir ${r.name}">${trace(r.tr, "var(--i-sky)", 6)}</button><button type="button" data-act="route" data-v="${r.id}" style="text-align:left"><h3>${r.name}</h3></button><div class="mini"><span><b>${dec(r.km)}</b> km</span><span>D+ <b>${r.gain == null ? "—" : r.gain + " m"}</b></span>${r.loop ? `<span class="tag sky">Boucle</span>` : ""}</div><div>${phonePill(r, "r", r.id)}</div></div>`).join("");
+  return `${head}<div class="libs">${cards}</div><div class="note">${ic("info", 18)}<span>Un parcours peut aussi être créé depuis une de vos courses : bouton « Créer un parcours » sur la page de l'activité.</span></div>`;
+}
+
+function stepRow(s, path) {
+  return `<div class="step"><i class="bar k-${s.kind}"></i>
+    <select data-ed="kind" data-p="${path}" aria-label="Type d'étape">${Object.entries(KIND).map(k => `<option value="${k[0]}" ${s.kind === k[0] ? "selected" : ""}>${k[1]}</option>`).join("")}</select>
+    <span class="pair"><select data-ed="endt" data-p="${path}" aria-label="Fin de l'étape"><option value="time" ${s.end.t === "time" ? "selected" : ""}>Durée</option><option value="dist" ${s.end.t === "dist" ? "selected" : ""}>Distance</option><option value="lap" ${s.end.t === "lap" ? "selected" : ""}>Jusqu'à Tour</option></select>${s.end.t === "lap" ? "" : `<input type="text" data-ed="endv" data-p="${path}" value="${s.end.t === "time" ? dur(s.end.v) : s.end.v}" aria-label="${s.end.t === "time" ? "Durée (min:s)" : "Distance en mètres"}"><span class="small muted">${s.end.t === "time" ? "min:s" : "m"}</span>`}</span>
+    <span class="pair"><select data-ed="tt" data-p="${path}" aria-label="Cible"><option value="none" ${s.target.t === "none" ? "selected" : ""}>Sans cible</option><option value="pace" ${s.target.t === "pace" ? "selected" : ""}>Allure</option><option value="zone" ${s.target.t === "zone" ? "selected" : ""}>Zone cardio</option></select>${s.target.t === "pace" ? `<input type="text" data-ed="lo" data-p="${path}" value="${pace(s.target.lo)}" aria-label="Allure la plus rapide"><span class="small muted">à</span><input type="text" data-ed="hi" data-p="${path}" value="${pace(s.target.hi)}" aria-label="Allure la plus lente"><span class="small muted">/km</span>` : s.target.t === "zone" ? `<select data-ed="z" data-p="${path}" aria-label="Zone">${[1, 2, 3, 4, 5].map(z => `<option ${s.target.z === z ? "selected" : ""} value="${z}">Z${z} · ${[93, 112, 130, 149, 167][z - 1]}–${[112, 130, 149, 167, 186][z - 1]} bpm</option>`).join("")}</select>` : ""}</span>
+    <span class="acts"><button type="button" class="iconbtn flat sm" data-act="mv" data-p="${path}" data-v="-1" data-tip="Monter" aria-label="Monter">${ic("up", 16)}</button><button type="button" class="iconbtn flat sm" data-act="mv" data-p="${path}" data-v="1" data-tip="Descendre" aria-label="Descendre">${ic("chev", 16)}</button><button type="button" class="iconbtn flat sm" data-act="rm" data-p="${path}" data-tip="Retirer" data-tip-pos="end" aria-label="Retirer l'étape">${ic("x", 16)}</button></span></div>`;
+}
+function vEditor() {
+  const w = S.draft, t = totals(w.items.length ? w.items : [st("effort", "time", 0)]);
+  const body = w.items.map((it, i) => it.type === "repeat"
+    ? `<div class="repeat"><div class="head">${ic("repeat", 17)}Répéter<span class="stepper"><button type="button" data-act="cnt" data-p="${i}" data-v="-1" aria-label="Moins">${ic("minus", 15)}</button><b>${it.count}×</b><button type="button" data-act="cnt" data-p="${i}" data-v="1" aria-label="Plus">${ic("plus", 15)}</button></span><button type="button" class="switch" data-act="skip" data-p="${i}" aria-pressed="${it.skipLast}"><span class="tr"></span>Sans la dernière récupération</button><span style="flex:1"></span><button type="button" class="iconbtn sm" data-act="rm" data-p="${i}" data-tip="Retirer le bloc" data-tip-pos="end" aria-label="Retirer le bloc">${ic("x", 16)}</button></div>${it.steps.map((s, j) => stepRow(s, `${i}.${j}`)).join("")}<div><button type="button" class="btn sm" style="background:var(--surface)" data-act="addstep" data-p="${i}">${ic("plus", 15)}Étape dans le bloc</button></div></div>`
+    : stepRow(it, String(i))).join("");
+  return `<a href="#" class="back" data-act="canceled">${ic("back", 18)}Séances</a>
+  <div class="spread"><h1>${w.id ? "Modifier la séance" : "Nouvelle séance"}</h1><div class="row"><button type="button" class="btn" data-act="canceled">Annuler</button><button type="button" class="btn primary" data-act="savew">${ic("check")}Enregistrer</button></div></div>
+  <div class="dgrid"><div class="col">
+    <div class="card"><div class="card-b" style="padding-top:22px;display:flex;flex-direction:column;gap:14px"><div class="field"><label for="wname">Nom</label><input type="text" id="wname" value="${w.name}" placeholder="Par exemple : 6 × 400 m"></div><div class="field"><label for="wnote">Note (facultatif)</label><input type="text" id="wnote" value="${w.note || ""}"></div>${w.error ? `<div class="note butter">${ic("info", 18)}<span>${w.error}</span></div>` : ""}</div></div>
+    <div class="card"><div class="card-h"><h2>Étapes</h2><div class="row"><button type="button" class="btn sm" data-act="addstep" data-p="">${ic("plus", 15)}Étape</button><button type="button" class="btn sm" data-act="addrep">${ic("repeat", 15)}Bloc répété</button></div></div><div class="card-b" style="display:flex;flex-direction:column;gap:6px">${body || `<p class="muted">Aucune étape. Ajoutez-en une pour pouvoir enregistrer.</p>`}</div></div>
+  </div><div class="col">
+    <div class="card"><div class="card-h"><h2>Déroulé</h2></div><div class="card-b" style="display:flex;flex-direction:column;gap:12px">${w.items.length ? outline(w.items) : ""}<div class="tiles" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="tile t-mint"><div class="top">Durée</div><div class="v" style="font-size:22px;white-space:normal">${w.items.length ? t.t : "—"}</div></div><div class="tile t-sky"><div class="top">Distance</div><div class="v" style="font-size:22px;white-space:normal">${w.items.length ? t.d : "—"}</div></div></div><p class="small muted">« Au moins » : la séance contient une étape qui dure jusqu'à l'appui sur Tour. « Inconnue » : rien ne permet de la calculer sans inventer.</p></div></div>
+  </div></div>`;
+}
+
+function vRoute(r) {
+  const prof = r.ele ? (() => { const w = 640, h = 150, lo = Math.min(...r.ele), hi = Math.max(...r.ele), X = i => i * w / (r.ele.length - 1), Y = v => 14 + (1 - (v - lo) / (hi - lo || 1)) * (h - 40); const d = r.ele.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join(""); return `<svg class="chart" id="rprof" viewBox="0 0 ${w} ${h}" style="cursor:crosshair;touch-action:pan-y" role="img" aria-label="Profil d'altitude"><path d="${d}L${w} ${h - 22}L0 ${h - 22}Z" fill="var(--p-sky)"/><path d="${d}" fill="none" stroke="var(--c-sky)" stroke-width="2.6"/><line id="rcur" y1="8" y2="${h - 22}" stroke="var(--ink)" stroke-width="1.5" visibility="hidden"/><text x="0" y="${h - 4}">0 km</text><text x="${w}" y="${h - 4}" text-anchor="end">${dec(r.km)} km</text><text id="rlab" x="0" y="10" style="fill:var(--ink)"></text></svg>`; })() : `<p class="muted">Ce fichier ne contient pas d'altitude : dénivelé indisponible, et l'allure ajustée à la pente ne sera pas proposée sur ce parcours.</p>`;
+  return `<a href="#" class="back" data-act="routeback">${ic("back", 18)}Parcours</a>
+  <div class="spread"><div><h1>${r.name}</h1><div class="row muted" style="margin-top:8px"><span>${ic("route", 16)} ${dec(r.km)} km</span><span>${ic("mountain", 16)} ${r.gain == null ? "D+ indisponible" : `${r.gain} m D+ · ${r.loss} m D−`}</span>${r.loop ? `<span class="tag sky">Boucle</span>` : ""}</div></div>
+  <div class="row">${phonePill(r, "r", r.id)}<button type="button" class="iconbtn" data-act="toast" data-v="Parcours inversé créé : « ${r.name} (inverse) »" data-tip="Créer le parcours inverse" aria-label="Créer le parcours inverse">${ic("swap")}</button><button type="button" class="iconbtn" data-act="toast" data-v="Export .gpx (inerte dans la maquette)" data-tip="Exporter en .gpx" aria-label="Exporter en .gpx">${ic("download")}</button><button type="button" class="iconbtn" data-act="toast" data-v="Copié vers le profil de Camille" data-tip="Copier vers un autre profil" aria-label="Copier vers un autre profil">${ic("copy")}</button><button type="button" class="iconbtn" data-act="toast" data-v="Suppression : les courses faites avec ce parcours ne changent pas" data-tip="Supprimer" data-tip-pos="end" aria-label="Supprimer">${ic("trash")}</button></div></div>
+  <div class="dgrid"><div class="col"><div class="mapbox" id="rmap">${mapSvg(r.tr, "rdot")}</div><div class="card"><div class="card-h"><h2>Profil d'altitude</h2><span class="small muted">Survolez : le point suit sur la carte</span></div><div class="card-b">${prof}</div></div></div>
+  <div class="col"><div class="card"><div class="card-h"><h2>Courses faites avec ce parcours</h2></div><div class="card-b">${r.runs ? Array.from({ length: Math.min(4, r.runs) }, (_, i) => `<a href="#" class="prow" data-act="openact"><span class="grow"><b>${["Sortie du dimanche", "Canal au lever du jour", "Footing tranquille", "Sortie longue"][i]}</b><br><span class="small muted">${sdate(new Date(2026, 10 - i, 15 - i * 3))} · ${dur(r.km * (352 + i * 9))}</span></span>${ic("chev", 16)}</a>`).join("") : `<p class="muted">Pas encore couru. Envoyez-le sur le téléphone pour le suivre pendant une course.</p>`}</div></div></div></div>`;
+}
+
+/* ----- activity page additions ----- */
+function vActs() {
+  if (S.act) return vAct();
+  // The list covers the whole household whatever the active profile; the filter narrows it to one person.
+  const who = S.scope === "mine" ? active : S.scope;
+  const all = PROFILES.flatMap(p => (p.id === active ? ACTS : DB[p.id].ACTS).map(a => ({ a, owners: [p] })));
+  let items = who === "all" ? [] : all.filter(x => x.owners[0].id === who);
+  if (who === "all") for (const x of all) { const same = x.a[6] && items.find(y => y.a[6] === x.a[6]); same ? same.owners.push(x.owners[0]) : items.push({ a: x.a, owners: [...x.owners] }); }
+  items.sort((x, y) => y.a[5] - x.a[5]);
+  const av = p => `<span class="avatar xs" style="background:${p.color}" title="${p.name}">${p.name[0]}</span>`;
+  const chips = [["all", "Tout le foyer"], ["mine", "Mes activités"], ...PROFILES.filter(p => p.id !== active).map(p => [p.id, p.name])];
+  const km = sum(items, x => parseFloat(x.a[1].replace(",", ".")));
+  return `<div class="spread"><div><h1>Activités</h1><p class="muted" style="margin-top:6px">Toutes les courses du foyer, quel que soit le profil actif. Les statistiques, records et segments restent personnels.</p></div><button type="button" class="btn primary" data-act="toast" data-v="Ouvre l'écran d'import existant : le fichier va dans le profil actif">${ic("upload")}Importer</button></div>
+  <div class="row" style="justify-content:space-between"><div class="row" role="group" aria-label="Filtrer par personne">${chips.map(c => `<button type="button" class="fchip" data-act="scope" data-v="${c[0]}" aria-pressed="${S.scope === c[0]}">${c[0] === "all" ? ic("users", 16) : av(PROFILES.find(p => p.id === (c[0] === "mine" ? active : c[0])))}${c[1]}</button>`).join("")}</div><span class="muted small">${items.length} courses · <b class="num">${dec(km)} km</b> en novembre</span></div>
+  ${items.length ? `<div class="libs">${items.map(x => `<button type="button" class="lib" data-act="openact"><span class="thumb" style="background:var(--p-lav)">${trace(TR[x.a[3]], "var(--pace-fast)", 7)}<span class="owners">${x.owners.map(av).join("")}<span>${x.owners.map(p => p.name).join(" et ")}</span></span></span><h3>${x.a[0]}</h3><span class="mini"><span>${x.a[5]} nov.</span><span><b>${x.a[1]}</b> km</span><span><b>${x.a[2]}</b></span></span><span class="row">${x.a[4].map(t => `<span class="tag lav">${t}</span>`).join("")}${x.owners.length > 1 ? `<span class="tag mint">Course à deux</span>` : ""}</span></button>`).join("")}</div>` : `<div class="emptybox"><div class="big">${ic("list", 28)}</div><h2>Aucune course pour cette personne</h2><button type="button" class="btn" data-act="scope" data-v="all">Voir tout le foyer</button></div>`}
+  <div class="note">${ic("info", 18)}<span>Le filtre est retenu sur l'appareil. « Mes activités » suit le profil actif : changez de profil et la liste suit. Ouvrez « Fractionné 6 × 400 m » pour voir ce qui s'ajoute à la page d'une course.</span></div>`;
+}
+function vAct() {
+  const steps = [["Échauffement", "10:00", "1,62 km", "6:10", "Zone 2", "hit"], ...[["4:58", "hit"], ["5:02", "hit"], ["5:09", "hit"], ["4:51", "miss"], ["5:12", "hit"]].flatMap((e, i) => [[`Effort ${i + 1}/6`, dur(e[0].split(":")[0] * 24 + e[0].split(":")[1] * 0.4), "400 m", e[0], "5:00–5:15", e[1]], [`Récupération ${i + 1}/6`, "1:30", "0,19 km", "7:54", "", ""]])];
+  const rows = steps.map(s => `<tr><td class="name">${s[0]}</td><td>${s[1]}</td><td>${s[2]}</td><td>${s[3]} /km</td><td>${s[4] ? `<span class="target ${s[5]}"><i></i>${s[4]}</span>` : `<span class="muted">—</span>`}</td></tr>`).join("") + `<tr class="undone"><td class="name">Effort 6/6</td><td colspan="4" style="text-align:left;font:500 14px var(--font-body)">Non fait : course arrêtée avant</td></tr><tr class="undone"><td class="name">Retour au calme</td><td colspan="4" style="text-align:left;font:500 14px var(--font-body)">Non fait</td></tr>`;
+  const segs = [["1,2 km · vers l'est", "5:41", 1, "Meilleur", "quai"], ["800 m · vers l'ouest", "4:09", 2, "+0:07", "pont"]];
+  return `<a href="#" class="back" data-act="actback">${ic("back", 18)}Activités</a>
+  <div class="spread"><div><h1>Fractionné 6 × 400 m</h1><div class="row muted" style="margin-top:8px"><span>${ic("calendar", 16)} 8 oct. 2026</span><span>7,8 km · 47:12</span></div></div><div class="row"><button type="button" class="btn sm" data-act="toast" data-v="Parcours créé depuis cette course">${ic("route", 16)}Créer un parcours</button></div></div>
+  <div class="note">${ic("info", 18)}<span>Seuls les blocs ajoutés par ce changement sont montrés ici. La carte, le graphique, les zones, le journal et les tours restent ceux de la page déjà approuvée.</span></div>
+  <div class="card"><div class="card-h"><h2>Records dans cette course</h2><button type="button" class="switch" data-act="exclude" aria-pressed="${S.excluded}"><span class="tr"></span>Exclure des records</button></div><div class="card-b">${S.excluded ? `<div class="note butter">${ic("eye-off", 18)}<span>Cette course est exclue des records et des prédictions. Ses temps ne comptent plus ; le record précédent est rétabli.</span></div>` : `<div class="row"><span class="tile t-butter" style="flex-direction:row;align-items:center;gap:12px;padding:12px 16px"><span class="medal m1">1</span><span><b>Record sur 400 m</b><br><span class="num" style="font-size:22px;font-weight:600">1:38</span> <span class="small muted">entre 3,42 et 3,82 km</span></span></span><span class="tile t-lav" style="flex-direction:row;align-items:center;gap:12px;padding:12px 16px"><span class="medal m1">1</span><span><b>Record sur 1 km</b><br><span class="num" style="font-size:22px;font-weight:600">4:52</span> <span class="small muted">entre 3,10 et 4,10 km</span></span></span><span class="tile" style="background:var(--surface-2);flex-direction:row;align-items:center;gap:12px;padding:12px 16px"><span class="medal m3">3</span><span><b>3ᵉ temps sur 5 km</b><br><span class="num" style="font-size:22px;font-weight:600">29:02</span></span></span></div><p class="small muted" style="margin-top:10px">Survoler un record surligne sa portion sur la carte et le graphique. Le classement est celui d'aujourd'hui : il change si un temps est battu plus tard.</p>`}</div></div>
+  <div class="grid2">
+    <div class="card"><div class="card-h"><div><h2>Séance · 6 × 400 m</h2><span class="small muted">Telle qu'elle était le jour de la course</span></div><div class="lg"><span class="target hit"><i></i>Dans la cible</span><span class="target miss"><i></i>Hors cible</span></div></div><div class="card-b"><div class="tablebox"><table style="min-width:480px"><thead><tr><th>Étape</th><th>Temps</th><th>Distance</th><th>Allure</th><th>Cible</th></tr></thead><tbody>${rows}</tbody></table></div></div></div>
+    <div class="col">
+      <div class="card"><div class="card-h"><h2>Segments</h2></div><div class="card-b">${segs.map(s => `<a href="#" class="prow" data-act="seg" data-v="${s[4]}"><span class="th">${trace(TR[s[4]], "var(--pace-fast)", 12)}</span><span class="grow"><b>${s[0]}</b><br><span class="small muted">${s[2] === 1 ? "1ᵉʳ" : s[2] + "ᵉ"} de vos passages</span></span><span style="text-align:right"><b class="num" style="font-size:18px">${s[1]}</b><br>${s[3] === "Meilleur" ? `<span class="best">Meilleur temps</span>` : `<span class="small muted">${s[3]}</span>`}</span></a>`).join("")}</div></div>
+      <div class="card"><div class="card-h"><h2>Parcours et allure cible</h2></div><div class="card-b" style="display:flex;flex-direction:column;gap:10px"><a href="#" class="prow" data-act="route" data-v="r1"><span class="th">${trace(TR.canal, "var(--i-sky)", 10)}</span><span class="grow"><b>Boucle du canal</b><br><span class="small muted">Parcours suivi pendant la course</span></span>${ic("chev", 16)}</a><div class="tile t-mint"><div class="top"><span class="chip">${ic("gauge", 16)}</span>Allure cible · ajustée à la pente</div><div class="v">0:35 <small>d'avance</small></div><div class="s">Objectif 58:00 sur le parcours · arrivée en 57:25 · objectif tenu</div></div></div></div>
+    </div>
+  </div>`;
+}
+
+const vSettings = () => `<h1>Réglages</h1><div class="emptybox"><div class="big">${ic("sliders", 28)}</div><h2>Inchangés</h2><p>Profil, zones cardiaques, unités et apparence restent ceux de l'application actuelle. Rien n'est ajouté ici par ce changement.</p></div>`;
+
+/* ---------- render ---------- */
+function render() {
+  const v = { progress: vProgress, segments: vSegments, plan: vPlan, acts: vActs, settings: vSettings }[S.view]();
+  $("#main").innerHTML = v + `<footer>Prototype de direction artistique : données fictives, fonds de carte stylisés. Rien n'est enregistré ; les sélecteurs « État montré » n'existent que dans la maquette.</footer>`;
+  document.querySelectorAll(".navlink").forEach(a => a.dataset.v === S.view ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
+  document.querySelectorAll('[data-act="theme"]').forEach(b => b.setAttribute("aria-pressed", b.dataset.v === theme));
+  const me = PROFILES.find(p => p.id === active);
+  document.querySelectorAll("[data-avatar]").forEach(a => { a.textContent = me.name[0]; a.style.background = me.color; });
+  document.querySelectorAll("[data-pname]").forEach(a => (a.textContent = me.name));
+  wireRoute();
+}
+function profileSheet() {
+  $("#sheet").innerHTML = `<h2>Profils du foyer</h2><p class="muted small">Tout ce qui est affiché — activités, progression, segments, séances et parcours — appartient au profil choisi.</p>${PROFILES.map(p => `<button type="button" class="pick" data-act="pickprofile" data-v="${p.id}" aria-pressed="${p.id === active}"><span class="avatar" style="background:${p.color}">${p.name[0]}</span><span style="flex:1">${p.name}<small>${p.sub}</small></span>${p.id === active ? ic("check") : ""}</button>`).join("")}<button type="button" class="btn" data-act="closemodal" style="align-self:flex-end">Fermer</button>`;
+  $("#modal").classList.add("on");
+}
+function wireRoute() {
+  const p = $("#rprof"); if (!p) return;
+  const r = ROUTES.find(x => x.id === S.route), path = $("#rmap path:last-of-type"), dot = $("#rdot"), cur = $("#rcur"), lab = $("#rlab"), len = path.getTotalLength();
+  const move = e => { const b = p.getBoundingClientRect(), t = Math.max(0, Math.min(1, (e.clientX - b.left) / b.width)), pt = path.getPointAtLength(t * len); dot.setAttribute("cx", pt.x); dot.setAttribute("cy", pt.y); dot.setAttribute("visibility", "visible"); cur.setAttribute("x1", t * 640); cur.setAttribute("x2", t * 640); cur.setAttribute("visibility", "visible"); const i = Math.round(t * (r.ele.length - 1)); lab.textContent = `${dec(t * r.km)} km · ${Math.round(r.ele[i])} m`; lab.setAttribute("x", Math.min(520, t * 640 + 8)); };
+  p.addEventListener("pointermove", move); p.addEventListener("pointerdown", move);
+  p.addEventListener("pointerleave", () => { dot.setAttribute("visibility", "hidden"); cur.setAttribute("visibility", "hidden"); lab.textContent = ""; });
+}
+let toastT;
+function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on"), 2600); }
+const clone = o => JSON.parse(JSON.stringify(o));
+const at = p => { const [i, j] = String(p).split(".").map(Number); return j == null || isNaN(j) ? [S.draft.items, i] : [S.draft.items[i].steps, j]; };
+const parseT = s => { const m = /^(\d+):(\d{1,2})$/.exec(s.trim()); return m ? +m[1] * 60 + +m[2] : /^\d+$/.test(s.trim()) ? +s * 60 : NaN; };
+function keepNames() { if (S.draft) { const n = $("#wname"), o = $("#wnote"); if (n) S.draft.name = n.value; if (o) S.draft.note = o.value; } }
+
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-act]"); if (!el) return;
+  if (el.tagName === "A") e.preventDefault();
+  const a = el.dataset.act, v = el.dataset.v, p = el.dataset.p;
+  keepNames();
+  if (a === "seg" && !SEGMENTS.some(s => s.id === v) || a === "route" && !ROUTES.some(r => r.id === v)) { toast("Cet élément appartient à un autre profil dans la maquette"); return; }
+  switch (a) {
+    case "profiles": profileSheet(); return;
+    case "closemodal": $("#modal").classList.remove("on"); return;
+    case "pickprofile": switchProfile(v); $("#modal").classList.remove("on"); toast(`Profil actif : ${PROFILES.find(p => p.id === v).name}`); window.scrollTo(0, 0); break;
+    case "nav": Object.assign(S, { view: v, seg: null, route: null, draft: null, act: false, renaming: false }); window.scrollTo(0, 0); break;
+    case "theme": theme = v; v === "system" ? root.removeAttribute("data-theme") : root.setAttribute("data-theme", v); break;
+    case "tab": S.tab = v; break;
+    case "scope": S.scope = v; break;
+    case "year": S.year = +v; S.day = null; break;
+    case "measure": S.measure = v; break;
+    case "day": S.day = v; break;
+    case "vol": S.vol = v; break;
+    case "tag": S.tag = v; break;
+    case "rec": S.rec = +v; break;
+    case "predDemo": S.predDemo = v; break;
+    case "loadDemo": S.loadDemo = v; break;
+    case "segDemo": S.segDemo = v; break;
+    case "segSort": S.segSort = v; break;
+    case "hidden": S.hidden = !S.hidden; break;
+    case "seg": Object.assign(S, { view: "segments", seg: v, act: false, renaming: false }); window.scrollTo(0, 0); break;
+    case "segback": S.seg = null; break;
+    case "rename": S.renaming = true; break;
+    case "renameok": SEGMENTS.find(s => s.id === S.seg).name = $("#rename").value.trim() || SEGMENTS.find(s => s.id === S.seg).name; S.renaming = false; toast("Segment renommé"); break;
+    case "hide": SEGMENTS.find(s => s.id === v).hidden = true; S.seg = null; toast("Segment masqué : il ne reviendra pas tout seul"); break;
+    case "restore": e.stopPropagation(); SEGMENTS.find(s => s.id === v).hidden = false; toast("Segment rétabli, avec tous ses passages"); break;
+    case "planTab": S.planTab = v; break;
+    case "route": Object.assign(S, { view: "plan", planTab: "routes", route: v, act: false, draft: null }); window.scrollTo(0, 0); break;
+    case "routeback": S.route = null; break;
+    case "phone": { const o = (el.dataset.k === "w" ? WORKOUTS : ROUTES).find(x => x.id === v); o.phone = o.phone.state === "none" ? { state: "wait" } : { state: "none" }; toast(o.phone.state === "wait" ? "Marqué pour le téléphone : il l'aura à la prochaine synchro à la maison" : "Retiré : il quittera le téléphone à la prochaine synchro"); break; }
+    case "neww": S.draft = { id: null, name: "", note: "", items: [st("warmup", "time", 600)] }; break;
+    case "editw": S.draft = clone(WORKOUTS.find(w => w.id === v)); break;
+    case "dupw": { const w = clone(WORKOUTS.find(x => x.id === v)); w.id = "w" + Date.now(); w.name += " (copie)"; w.phone = { state: "none" }; WORKOUTS.push(w); toast("Séance dupliquée"); break; }
+    case "delw": WORKOUTS = WORKOUTS.filter(w => w.id !== v); toast("Séance supprimée : les courses déjà faites avec elle gardent leurs étapes"); break;
+    case "addstarter": WORKOUTS.push({ id: "w" + Date.now(), name: STARTERS[v].name, note: "", phone: { state: "none" }, items: clone(STARTERS[v].items) }); toast("Ajoutée à vos séances"); break;
+    case "canceled": S.draft = null; break;
+    case "addstep": (p === "" ? S.draft.items : S.draft.items[+p].steps).push(st("effort", "time", 60)); break;
+    case "addrep": S.draft.items.push({ type: "repeat", count: 4, skipLast: false, steps: [st("effort", "dist", 400, pz(300, 315)), st("recovery", "time", 90)] }); break;
+    case "rm": { const [arr, i] = at(p); arr.splice(i, 1); break; }
+    case "mv": { const [arr, i] = at(p), j = i + +v; if (j >= 0 && j < arr.length) [arr[i], arr[j]] = [arr[j], arr[i]]; break; }
+    case "cnt": { const it = S.draft.items[+p]; it.count = Math.max(2, Math.min(50, it.count + +v)); break; }
+    case "skip": S.draft.items[+p].skipLast = !S.draft.items[+p].skipLast; break;
+    case "savew": {
+      const w = S.draft;
+      if (!w.name.trim()) { w.error = "Donnez un nom à la séance."; break; }
+      if (!unfold(w.items).length) { w.error = "Une séance a besoin d'au moins une étape."; break; }
+      delete w.error;
+      if (w.id) { const i = WORKOUTS.findIndex(x => x.id === w.id); if (w.phone.state === "ok") w.phone = { state: "wait" }; WORKOUTS[i] = w; } else { w.id = "w" + Date.now(); w.phone = { state: "none" }; WORKOUTS.push(w); }
+      S.draft = null; toast("Séance enregistrée"); break;
+    }
+    case "openact": Object.assign(S, { view: "acts", act: true, seg: null, route: null, draft: null }); window.scrollTo(0, 0); break;
+    case "actback": S.act = false; break;
+    case "exclude": S.excluded = !S.excluded; break;
+    case "toast": toast(v); return;
+  }
+  render();
+});
+document.addEventListener("change", e => {
+  const el = e.target.closest("[data-ed]"); if (!el) return;
+  keepNames();
+  const [arr, i] = at(el.dataset.p), s = arr[i], k = el.dataset.ed, val = el.value;
+  if (k === "kind") s.kind = val;
+  else if (k === "endt") s.end = { t: val, v: val === "time" ? 60 : val === "dist" ? 400 : 0 };
+  else if (k === "endv") {
+    const n = s.end.t === "time" ? parseT(val) : parseInt(val, 10);
+    const ok = s.end.t === "time" ? n >= 5 && n <= 21600 : n >= 50 && n <= 100000;
+    if (ok) { s.end.v = n; delete S.draft.error; } else S.draft.error = s.end.t === "time" ? "Une durée va de 0:05 à 6 heures (format min:s)." : "Une distance va de 50 m à 100 km.";
+  }
+  else if (k === "tt") s.target = val === "pace" ? pz(300, 315) : val === "zone" ? zn(2) : { t: "none" };
+  else if (k === "lo" || k === "hi") { const n = parseT(val); if (n > 0) { s.target[k] = n; if (s.target.lo > s.target.hi) { [s.target.lo, s.target.hi] = [s.target.hi, s.target.lo]; toast("Bornes remises dans l'ordre : la plus rapide d'abord"); } } }
+  else if (k === "z") s.target.z = +val;
+  render();
+});
+document.addEventListener("mouseover", e => { const b = e.target.closest('.heat [data-act="day"]'); if (b && S.day !== b.dataset.v && matchMedia("(hover:hover)").matches) { S.day = b.dataset.v; const box = $(".daybox"); if (box) { const data = YEARS[S.year], sel = data.find(x => x.d.toDateString() === S.day); box.innerHTML = sel ? `<b>${fdate(sel.d)}</b>${sel.runs.map(r => `<a href="#" class="tag lav" data-act="openact">${r.title} · ${dec(r.km)} km</a>`).join("")}<span class="muted small">${sel.runs.length > 1 ? `Total du jour : ${dec(sum(sel.runs, r => r.km))} km` : dur(sel.runs[0].min * 60)}</span>` : `<b>${fdate(new Date(S.day))}</b><span class="muted">Repos.</span>`; } } });
+$("#modal").addEventListener("click", e => { if (e.target.id === "modal") e.target.classList.remove("on"); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") $("#modal").classList.remove("on"); });
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches("tr[data-act]")) e.target.click(); });
+render();
+})();
+</script>
+</body>
+</html>

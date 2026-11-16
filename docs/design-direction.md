@@ -144,6 +144,32 @@ On the watch (black ground): time 13.5, pace 11.0, distance 12.3, heart rate in 
 
 Abbreviations used on the phone to fit half-width fields: "FC" for heart rate, "ppm" for steps per minute.
 
+## Progress, segments and planner (change `insights-and-coaching`)
+
+**Status: approved by the owner on 2026-11-16** ("Pour le reste, j'approuve, continue"), on the second iteration of the web prototype, with one correction to the activity list (below).
+
+- Prototype source: [`prototype/insights-planner.html`](../prototype/insights-planner.html) (one self-contained page, fictional data for two household profiles).
+- Published copy: private Claude artifact "Running — prototype progression et planification".
+
+### Decisions
+
+- **No new token.** Every new screen is built on the tokens above; the pairing of one pastel per kind of information is kept (lavender pace and records, sky distance and routes, mint time and "on the phone", peach load, rose heart rate, butter notices and waiting states).
+- **Navigation**: Activités · Progression · Segments · Planifier · Réglages — five entries, so the bottom bar still fits on a phone. Import becomes a primary button on the activity list. Progression has three tabs (Statistiques, Records, Charge) and Planifier two (Séances, Parcours), as a pill-shaped tab bar on the page ground.
+- **The activity list shows the whole household**, whatever the active profile (owner's correction: the first iteration only let one switch profile). Person chips sit above the list: "Tout le foyer" (default), "Mes activités", then one chip per other member, each with the member's avatar; the choice is remembered on the device and "Mes activités" follows the active profile. Every card carries its owner's avatar and name on the thumbnail; a run copied between members is one card with both avatars and a "Course à deux" tag. Statistics, records, load, segments, sessions and routes stay those of the active profile.
+- **Calendar heatmap**: one square per day, weeks as columns starting on Monday, five intensity steps mixed from the measure's colour (accent for distance, mint for duration, peach for load) into the tonal surface; it scrolls sideways inside its card on a phone. The day detail is a tonal bar under the grid, not a floating tooltip.
+- **Bars**: rounded tops, the period in progress hatched, empty periods as a short tonal stub, value in a dark bubble on hover.
+- **Records** are cards (time in the display face at 34 px, pace and date, the next two times); the selected card takes the lavender fill and drives the step chart of the record's history. A notice states that records use moving time. Predictions name the effort they come from; an "Indicatif" butter tag carries the reason.
+- **Load**: the status is a pastel block whose colour follows the state (sky resuming, mint light, lavender steady, peach building, rose too much), with a five-segment gauge; recovery is a ring. An "estimée" tag marks loads not based on heart rate. The explanation is a tonal disclosure at the bottom of the page.
+- **Session outline**: blocks in proportion to their length, height and colour by kind (mint warm-up, accent effort tallest, sky recovery lowest, peach cool-down). The editor shows a repeat as a lavender block containing its steps.
+- **"On the phone" pill**: tonal when not sent, butter with a clock while waiting for the phone, mint with the delivery time once the phone has it.
+- **Step targets on the activity page**: a mint dot when met, a peach dot when missed; steps not run are listed in the tertiary ink.
+
+### What the prototype does not decide
+
+- The "État montré" selectors exist only in the prototype, to reach empty and special states.
+- Maps are drawn stand-ins; the real pages reuse the existing map component.
+- The dark theme was walked at 360 px only before approval; the 1440 px dark rendering is checked when the pages are built (tasks 9.5 and 10.6).
+
 ## Built page compared with the prototype (task 8.7)
 
 Captured on 2026-11-16 by `web/e2e/design.spec.ts` from the built app (a three-lap test run, default basemap) and from the prototype (its fictional run), in both themes at 360 px and 1440 px. The run differs, so figures and trace differ; layout, colours, type and components are what is compared.

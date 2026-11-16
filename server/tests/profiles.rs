@@ -173,6 +173,8 @@ async fn a_shared_run_is_copied_without_heart_rate_by_default() {
         Some(json!({ "description": "Avec Sarah", "rpe": 6, "tags": ["Tempo"] })),
     )
     .await;
+    // Load and best efforts are filled in the background: wait, so that "unchanged" below means unchanged.
+    c.deriver.idle().await;
     let original = activity(&c, id).await;
 
     let (status, v) = send(

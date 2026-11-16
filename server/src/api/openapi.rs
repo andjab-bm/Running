@@ -20,8 +20,44 @@ pub const ROUTES: &[(&str, &str, &str)] = &[
         "/profiles/{profile_id}/activities",
         "List a profile's activities, most recent first",
     ),
+    ("get", "/activities", "List the whole household's activities, most recent first"),
+    (
+        "get",
+        "/profiles/{profile_id}/stats/calendar",
+        "Runs per day of a year, with the year's totals",
+    ),
+    (
+        "get",
+        "/profiles/{profile_id}/stats/volume",
+        "Totals per week or per month, empty periods included",
+    ),
+    (
+        "get",
+        "/profiles/{profile_id}/stats/progress",
+        "Average speed, longest run and average heart rate per month",
+    ),
+    (
+        "get",
+        "/profiles/{profile_id}/load",
+        "Training load, its status and the advised recovery",
+    ),
+    (
+        "get",
+        "/profiles/{profile_id}/records",
+        "Best times over standard distances, with their history",
+    ),
+    (
+        "get",
+        "/profiles/{profile_id}/predictions",
+        "Estimated potential race times from recent efforts",
+    ),
     ("get", "/profiles/{profile_id}/tags", "Tags offered to a profile"),
     ("post", "/profiles/{profile_id}/imports", "Upload .gpx / .fit files into a profile"),
+    (
+        "get",
+        "/profiles/{profile_id}/derive-status",
+        "Background computation left for a profile (records, load, segments)",
+    ),
     ("get", "/activities/{id}", "Read an activity with splits, laps and zones"),
     ("patch", "/activities/{id}", "Edit the journal of an activity"),
     ("delete", "/activities/{id}", "Delete an activity and its original file"),
@@ -49,6 +85,16 @@ fn ok(description: &str, schema: Option<Value>) -> Value {
 
 fn nullable(t: &str) -> Value {
     json!({ "type": [t, "null"] })
+}
+
+fn tz_param() -> Value {
+    json!({ "name": "tz_offset_minutes", "in": "query", "schema": { "type": "integer", "default": 0 },
+        "description": "Minutes east of UTC at the caller; days, weeks and months are cut in that local time" })
+}
+
+fn until_param() -> Value {
+    json!({ "name": "until", "in": "query", "schema": { "type": "number" },
+        "description": "The instant taken as now (Unix seconds); defaults to the server clock" })
 }
 
 fn schemas() -> Value {
@@ -87,6 +133,8 @@ fn schemas() -> Value {
             "max_hr": nullable("number"),
             "avg_cad": nullable("number"),
             "effort": { "type": ["number", "null"], "description": "Relative effort; null without heart rate" },
+            "load": { "type": ["number", "null"], "description": "Training load: the effort, or an estimate from duration and perceived effort; null until processed" },
+            "load_estimated": { "type": "boolean", "description": "The load is not based on heart rate" },
             "rpe": { "type": ["integer", "null"], "minimum": 1, "maximum": 10 },
             "copied_from": { "type": ["integer", "null"], "description": "Activity this one was copied from" },
             "tags": { "type": "array", "items": { "type": "string" } },
@@ -154,6 +202,11 @@ fn schemas() -> Value {
                     "description": { "type": "string" },
                     "source_format": { "type": "string", "enum": ["gpx", "fit"] },
                     "has_original": { "type": "boolean" },
+                    "exclude_from_records": { "type": "boolean" },
+                    "best_efforts": { "type": "array", "description": "Empty until the background computation has processed the activity",
+                        "items": { "type": "object", "properties": {
+                            "distance": { "type": "number" }, "moving_time": { "type": "number" }, "start_offset": { "type": "number" },
+                            "rank": { "type": ["integer", "null"], "description": "1 to 3 when it is currently among the profile's three best times" } } } },
                     "metrics_version": { "type": "integer" },
                     "zones": {
                         "type": ["object", "null"],
@@ -179,7 +232,20 @@ fn schemas() -> Value {
                 "title": { "type": "string", "maxLength": 200 },
                 "description": { "type": "string" },
                 "rpe": { "type": ["integer", "null"], "minimum": 1, "maximum": 10 },
-                "tags": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 40 } }
+                "tags": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 40 } },
+                "exclude_from_records": { "type": "boolean", "description": "Leave the activity out of records and predictions" }
+            }
+        },
+        "Effort": {
+            "type": "object",
+            "description": "The fastest stretch of a standard distance inside one run, timed on moving time (pauses excluded).",
+            "properties": {
+                "moving_time": { "type": "number" },
+                "speed": { "type": "number" },
+                "activity_id": { "type": "integer" },
+                "title": { "type": "string" },
+                "start_time": { "type": "number", "description": "Start of the activity" },
+                "start_offset": { "type": "number", "description": "Metres from the start of the run to the start of the stretch" }
             }
         },
         "Streams": {
@@ -320,6 +386,176 @@ fn operation(method: &str, path: &str, summary: &str) -> Value {
                 ok(
                     "One outcome per activity found in each file; a failed file does not fail the request",
                     Some(r#ref("ImportResult")),
+                ),
+            );
+        }
+        ("get", "/activities") => {
+            params.extend([
+                json!({ "name": "profile_id", "in": "query", "schema": { "type": "integer" },
+                    "description": "Only this profile. Without it, a run copied between profiles is listed once and names its copies in shared_with" }),
+                json!({ "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } }),
+                json!({ "name": "cursor", "in": "query", "schema": { "type": "string" }, "description": "next_cursor of the previous page" }),
+                json!({ "name": "tag", "in": "query", "schema": { "type": "string" }, "description": "Tag name, matched in every profile" }),
+                json!({ "name": "from", "in": "query", "schema": { "type": "number" }, "description": "Start time ≥ this Unix time" }),
+                json!({ "name": "to", "in": "query", "schema": { "type": "number" }, "description": "Start time < this Unix time" }),
+            ]);
+            responses.insert(
+                "200".into(),
+                ok(
+                    "One page; each item carries profile_id and, without a profile filter, shared_with: [{profile_id, activity_id}]",
+                    Some(r#ref("ActivityPage")),
+                ),
+            );
+            responses.insert("404".into(), ok("No such profile", Some(r#ref("Error"))));
+        }
+        ("get", "/profiles/{profile_id}/stats/calendar") => {
+            params.extend([
+                json!({ "name": "year", "in": "query", "schema": { "type": "integer" }, "description": "Defaults to the current year" }),
+                tz_param(),
+            ]);
+            responses.insert(
+                "200".into(),
+                ok(
+                    "Only days with a run are listed",
+                    Some(json!({ "type": "object", "properties": {
+                        "year": { "type": "integer" },
+                        "days": { "type": "array", "items": { "type": "object", "properties": {
+                            "date": { "type": "string", "format": "date" },
+                            "distance": { "type": "number" }, "moving_time": { "type": "number" }, "load": { "type": "number" },
+                            "activities": { "type": "array", "items": { "type": "object", "properties": {
+                                "id": { "type": "integer" }, "title": { "type": "string" }, "distance": { "type": "number" } } } }
+                        } } },
+                        "totals": { "type": "object", "properties": {
+                            "runs": { "type": "integer" }, "active_days": { "type": "integer" },
+                            "distance": { "type": "number" }, "moving_time": { "type": "number" }, "gain": { "type": "number" } } }
+                    } })),
+                ),
+            );
+        }
+        ("get", "/profiles/{profile_id}/stats/volume") => {
+            params.extend([
+                json!({ "name": "unit", "in": "query", "schema": { "type": "string", "enum": ["week", "month"], "default": "week" },
+                    "description": "Weeks start on Monday" }),
+                json!({ "name": "count", "in": "query", "schema": { "type": "integer", "default": 12, "minimum": 1, "maximum": 60 },
+                    "description": "Number of periods, ending with the one in progress" }),
+                until_param(),
+                tz_param(),
+            ]);
+            responses.insert(
+                "200".into(),
+                ok(
+                    "Oldest first",
+                    Some(json!({ "type": "object", "properties": {
+                        "unit": { "type": "string" },
+                        "periods": { "type": "array", "items": { "type": "object", "properties": {
+                            "start": { "type": "string", "format": "date" }, "runs": { "type": "integer" },
+                            "distance": { "type": "number" }, "moving_time": { "type": "number" }, "gain": { "type": "number" },
+                            "current": { "type": "boolean", "description": "The period in progress" } } } }
+                    } })),
+                ),
+            );
+            responses.insert("400".into(), ok("Unknown unit", Some(r#ref("Error"))));
+        }
+        ("get", "/profiles/{profile_id}/stats/progress") => {
+            params.extend([
+                json!({ "name": "months", "in": "query", "schema": { "type": "integer", "default": 12, "minimum": 1, "maximum": 60 } }),
+                json!({ "name": "tag", "in": "query", "schema": { "type": "string" }, "description": "Only runs carrying this tag" }),
+                until_param(),
+                tz_param(),
+            ]);
+            responses.insert(
+                "200".into(),
+                ok(
+                    "Oldest first; a measure without data in a month is null",
+                    Some(json!({ "type": "object", "properties": {
+                        "months": { "type": "array", "items": { "type": "object", "properties": {
+                            "month": { "type": "string", "description": "YYYY-MM" }, "runs": { "type": "integer" },
+                            "avg_speed": nullable("number"), "longest": nullable("number"), "avg_hr": nullable("number") } } }
+                    } })),
+                ),
+            );
+        }
+        ("get", "/profiles/{profile_id}/load") => {
+            params.extend([
+                json!({ "name": "days", "in": "query", "schema": { "type": "integer", "default": 84, "minimum": 7, "maximum": 366 },
+                    "description": "Days returned, ending today; averages always use the whole history" }),
+                until_param(),
+                tz_param(),
+            ]);
+            responses.insert(
+                "200".into(),
+                ok(
+                    "Estimates from recorded runs only",
+                    Some(json!({ "type": "object", "properties": {
+                        "days": { "type": "array", "items": { "type": "object", "properties": {
+                            "date": { "type": "string", "format": "date" },
+                            "load": { "type": "number", "description": "0 on a rest day" },
+                            "estimated": { "type": "boolean", "description": "A run of that day has no heart rate" },
+                            "short": { "type": "number", "description": "Daily average weighted over about 7 days" },
+                            "long": { "type": "number", "description": "Daily average weighted over about 28 days" } } } },
+                        "weeks": { "type": "array", "items": { "type": "object", "properties": {
+                            "start": { "type": "string", "format": "date" }, "load": { "type": "number" }, "current": { "type": "boolean" } } } },
+                        "status": { "type": "object", "properties": {
+                            "code": { "type": "string", "enum": ["not_enough_data", "resuming", "light", "steady", "building", "too_much"] },
+                            "ratio": nullable("number"), "short": nullable("number"), "long": nullable("number"),
+                            "history_days": { "type": "integer", "description": "Days since the first run; the status needs 14" } } },
+                        "recovery": { "type": ["object", "null"], "description": "After the latest run", "properties": {
+                            "activity_id": { "type": "integer" }, "load": { "type": "number" }, "estimated": { "type": "boolean" },
+                            "hours_advised": { "type": "number", "description": "Between 6 and 96" },
+                            "hours_remaining": { "type": "number", "description": "0 once recovered" },
+                            "recovered_at": { "type": "number", "description": "Unix time" } } },
+                        "typical_load": nullable("number"),
+                        "processing": { "type": "boolean" }
+                    } })),
+                ),
+            );
+        }
+        ("get", "/profiles/{profile_id}/records") => {
+            responses.insert(
+                "200".into(),
+                ok(
+                    "One entry per standard distance (400 m, 1 km, 5 km, 10 km, half-marathon, marathon); record is null for a distance never covered",
+                    Some(json!({ "type": "object", "properties": {
+                        "distances": { "type": "array", "items": { "type": "object", "properties": {
+                            "distance": { "type": "number" },
+                            "record": { "oneOf": [r#ref("Effort"), { "type": "null" }] },
+                            "next": { "type": "array", "items": r#ref("Effort"), "description": "Second and third best times" },
+                            "history": { "type": "array", "items": r#ref("Effort"), "description": "Each run that beat the record, oldest first" } } } },
+                        "processing": { "type": "boolean", "description": "Some activities are not taken into account yet" }
+                    } })),
+                ),
+            );
+        }
+        ("get", "/profiles/{profile_id}/predictions") => {
+            params.push(until_param());
+            responses.insert(
+                "200".into(),
+                ok(
+                    "Estimates only. Empty when no effort of at least 1 km exists in the window",
+                    Some(json!({ "type": "object", "properties": {
+                        "window_weeks": { "type": "number" },
+                        "longest_recent_run": nullable("number"),
+                        "predictions": { "type": "array", "items": { "type": "object", "properties": {
+                            "distance": { "type": "number" }, "time": { "type": "number" }, "speed": { "type": "number" },
+                            "indicative": { "type": "boolean", "description": "No recent run comes close to this distance" },
+                            "basis": { "type": "object", "description": "The effort the estimate is projected from", "properties": {
+                                "distance": { "type": "number" }, "moving_time": { "type": "number" }, "activity_id": { "type": "integer" },
+                                "title": { "type": "string" }, "start_time": { "type": "number" } } } } } },
+                        "processing": { "type": "boolean" }
+                    } })),
+                ),
+            );
+        }
+        ("get", "/profiles/{profile_id}/derive-status") => {
+            responses.insert(
+                "200".into(),
+                ok(
+                    "Imports never wait for this work; figures derived from several activities appear once it is done",
+                    Some(json!({ "type": "object", "properties": {
+                        "pending_activities": { "type": "integer", "description": "Activities of the profile not processed yet" },
+                        "total_activities": { "type": "integer" },
+                        "busy": { "type": "boolean", "description": "True while anything is pending or queued" }
+                    } })),
                 ),
             );
         }

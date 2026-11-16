@@ -8,8 +8,36 @@
           },
           {
             "properties": {
+              "best_efforts": {
+                "description": "Empty until the background computation has processed the activity",
+                "items": {
+                  "properties": {
+                    "distance": {
+                      "type": "number"
+                    },
+                    "moving_time": {
+                      "type": "number"
+                    },
+                    "rank": {
+                      "description": "1 to 3 when it is currently among the profile's three best times",
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "start_offset": {
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "description": {
                 "type": "string"
+              },
+              "exclude_from_records": {
+                "type": "boolean"
               },
               "has_original": {
                 "type": "boolean"
@@ -132,6 +160,17 @@
           "id": {
             "type": "integer"
           },
+          "load": {
+            "description": "Training load: the effort, or an estimate from duration and perceived effort; null until processed",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "load_estimated": {
+            "description": "The load is not based on heart rate",
+            "type": "boolean"
+          },
           "loss": {
             "type": [
               "number",
@@ -186,6 +225,32 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Effort": {
+        "description": "The fastest stretch of a standard distance inside one run, timed on moving time (pauses excluded).",
+        "properties": {
+          "activity_id": {
+            "type": "integer"
+          },
+          "moving_time": {
+            "type": "number"
+          },
+          "speed": {
+            "type": "number"
+          },
+          "start_offset": {
+            "description": "Metres from the start of the run to the start of the stretch",
+            "type": "number"
+          },
+          "start_time": {
+            "description": "Start of the activity",
+            "type": "number"
           },
           "title": {
             "type": "string"
@@ -267,6 +332,10 @@
         "properties": {
           "description": {
             "type": "string"
+          },
+          "exclude_from_records": {
+            "description": "Leave the activity out of records and predictions",
+            "type": "boolean"
           },
           "rpe": {
             "maximum": 10,
@@ -613,6 +682,85 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/activities": {
+      "get": {
+        "parameters": [
+          {
+            "description": "Only this profile. Without it, a run copied between profiles is listed once and names its copies in shared_with",
+            "in": "query",
+            "name": "profile_id",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "next_cursor of the previous page",
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Tag name, matched in every profile",
+            "in": "query",
+            "name": "tag",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Start time ≥ this Unix time",
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "description": "Start time < this Unix time",
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityPage"
+                }
+              }
+            },
+            "description": "One page; each item carries profile_id and, without a profile filter, shared_with: [{profile_id, activity_id}]"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile"
+          }
+        },
+        "summary": "List the whole household's activities, most recent first"
+      }
+    },
     "/activities/{id}": {
       "delete": {
         "parameters": [
@@ -1553,6 +1701,56 @@
         "summary": "List a profile's activities, most recent first"
       }
     },
+    "/profiles/{profile_id}/derive-status": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "busy": {
+                      "description": "True while anything is pending or queued",
+                      "type": "boolean"
+                    },
+                    "pending_activities": {
+                      "description": "Activities of the profile not processed yet",
+                      "type": "integer"
+                    },
+                    "total_activities": {
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Imports never wait for this work; figures derived from several activities appear once it is done"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "Background computation left for a profile (records, load, segments)"
+      }
+    },
     "/profiles/{profile_id}/imports": {
       "post": {
         "parameters": [
@@ -1634,6 +1832,720 @@
           }
         },
         "summary": "Upload .gpx / .fit files into a profile"
+      }
+    },
+    "/profiles/{profile_id}/load": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Days returned, ending today; averages always use the whole history",
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "default": 84,
+              "maximum": 366,
+              "minimum": 7,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The instant taken as now (Unix seconds); defaults to the server clock",
+            "in": "query",
+            "name": "until",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "description": "Minutes east of UTC at the caller; days, weeks and months are cut in that local time",
+            "in": "query",
+            "name": "tz_offset_minutes",
+            "schema": {
+              "default": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "days": {
+                      "items": {
+                        "properties": {
+                          "date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "estimated": {
+                            "description": "A run of that day has no heart rate",
+                            "type": "boolean"
+                          },
+                          "load": {
+                            "description": "0 on a rest day",
+                            "type": "number"
+                          },
+                          "long": {
+                            "description": "Daily average weighted over about 28 days",
+                            "type": "number"
+                          },
+                          "short": {
+                            "description": "Daily average weighted over about 7 days",
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "processing": {
+                      "type": "boolean"
+                    },
+                    "recovery": {
+                      "description": "After the latest run",
+                      "properties": {
+                        "activity_id": {
+                          "type": "integer"
+                        },
+                        "estimated": {
+                          "type": "boolean"
+                        },
+                        "hours_advised": {
+                          "description": "Between 6 and 96",
+                          "type": "number"
+                        },
+                        "hours_remaining": {
+                          "description": "0 once recovered",
+                          "type": "number"
+                        },
+                        "load": {
+                          "type": "number"
+                        },
+                        "recovered_at": {
+                          "description": "Unix time",
+                          "type": "number"
+                        }
+                      },
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "status": {
+                      "properties": {
+                        "code": {
+                          "enum": [
+                            "not_enough_data",
+                            "resuming",
+                            "light",
+                            "steady",
+                            "building",
+                            "too_much"
+                          ],
+                          "type": "string"
+                        },
+                        "history_days": {
+                          "description": "Days since the first run; the status needs 14",
+                          "type": "integer"
+                        },
+                        "long": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "ratio": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "short": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "typical_load": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "weeks": {
+                      "items": {
+                        "properties": {
+                          "current": {
+                            "type": "boolean"
+                          },
+                          "load": {
+                            "type": "number"
+                          },
+                          "start": {
+                            "format": "date",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Estimates from recorded runs only"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "Training load, its status and the advised recovery"
+      }
+    },
+    "/profiles/{profile_id}/predictions": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The instant taken as now (Unix seconds); defaults to the server clock",
+            "in": "query",
+            "name": "until",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "longest_recent_run": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "predictions": {
+                      "items": {
+                        "properties": {
+                          "basis": {
+                            "description": "The effort the estimate is projected from",
+                            "properties": {
+                              "activity_id": {
+                                "type": "integer"
+                              },
+                              "distance": {
+                                "type": "number"
+                              },
+                              "moving_time": {
+                                "type": "number"
+                              },
+                              "start_time": {
+                                "type": "number"
+                              },
+                              "title": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "distance": {
+                            "type": "number"
+                          },
+                          "indicative": {
+                            "description": "No recent run comes close to this distance",
+                            "type": "boolean"
+                          },
+                          "speed": {
+                            "type": "number"
+                          },
+                          "time": {
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "processing": {
+                      "type": "boolean"
+                    },
+                    "window_weeks": {
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Estimates only. Empty when no effort of at least 1 km exists in the window"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "Estimated potential race times from recent efforts"
+      }
+    },
+    "/profiles/{profile_id}/records": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "distances": {
+                      "items": {
+                        "properties": {
+                          "distance": {
+                            "type": "number"
+                          },
+                          "history": {
+                            "description": "Each run that beat the record, oldest first",
+                            "items": {
+                              "$ref": "#/components/schemas/Effort"
+                            },
+                            "type": "array"
+                          },
+                          "next": {
+                            "description": "Second and third best times",
+                            "items": {
+                              "$ref": "#/components/schemas/Effort"
+                            },
+                            "type": "array"
+                          },
+                          "record": {
+                            "oneOf": [
+                              {
+                                "$ref": "#/components/schemas/Effort"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "processing": {
+                      "description": "Some activities are not taken into account yet",
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "One entry per standard distance (400 m, 1 km, 5 km, 10 km, half-marathon, marathon); record is null for a distance never covered"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "Best times over standard distances, with their history"
+      }
+    },
+    "/profiles/{profile_id}/stats/calendar": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Defaults to the current year",
+            "in": "query",
+            "name": "year",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Minutes east of UTC at the caller; days, weeks and months are cut in that local time",
+            "in": "query",
+            "name": "tz_offset_minutes",
+            "schema": {
+              "default": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "days": {
+                      "items": {
+                        "properties": {
+                          "activities": {
+                            "items": {
+                              "properties": {
+                                "distance": {
+                                  "type": "number"
+                                },
+                                "id": {
+                                  "type": "integer"
+                                },
+                                "title": {
+                                  "type": "string"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "date": {
+                            "format": "date",
+                            "type": "string"
+                          },
+                          "distance": {
+                            "type": "number"
+                          },
+                          "load": {
+                            "type": "number"
+                          },
+                          "moving_time": {
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "totals": {
+                      "properties": {
+                        "active_days": {
+                          "type": "integer"
+                        },
+                        "distance": {
+                          "type": "number"
+                        },
+                        "gain": {
+                          "type": "number"
+                        },
+                        "moving_time": {
+                          "type": "number"
+                        },
+                        "runs": {
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "year": {
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Only days with a run are listed"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "Runs per day of a year, with the year's totals"
+      }
+    },
+    "/profiles/{profile_id}/stats/progress": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "months",
+            "schema": {
+              "default": 12,
+              "maximum": 60,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Only runs carrying this tag",
+            "in": "query",
+            "name": "tag",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The instant taken as now (Unix seconds); defaults to the server clock",
+            "in": "query",
+            "name": "until",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "description": "Minutes east of UTC at the caller; days, weeks and months are cut in that local time",
+            "in": "query",
+            "name": "tz_offset_minutes",
+            "schema": {
+              "default": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "months": {
+                      "items": {
+                        "properties": {
+                          "avg_hr": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "avg_speed": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "longest": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "month": {
+                            "description": "YYYY-MM",
+                            "type": "string"
+                          },
+                          "runs": {
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Oldest first; a measure without data in a month is null"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "Average speed, longest run and average heart rate per month"
+      }
+    },
+    "/profiles/{profile_id}/stats/volume": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Weeks start on Monday",
+            "in": "query",
+            "name": "unit",
+            "schema": {
+              "default": "week",
+              "enum": [
+                "week",
+                "month"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of periods, ending with the one in progress",
+            "in": "query",
+            "name": "count",
+            "schema": {
+              "default": 12,
+              "maximum": 60,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The instant taken as now (Unix seconds); defaults to the server clock",
+            "in": "query",
+            "name": "until",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "description": "Minutes east of UTC at the caller; days, weeks and months are cut in that local time",
+            "in": "query",
+            "name": "tz_offset_minutes",
+            "schema": {
+              "default": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "periods": {
+                      "items": {
+                        "properties": {
+                          "current": {
+                            "description": "The period in progress",
+                            "type": "boolean"
+                          },
+                          "distance": {
+                            "type": "number"
+                          },
+                          "gain": {
+                            "type": "number"
+                          },
+                          "moving_time": {
+                            "type": "number"
+                          },
+                          "runs": {
+                            "type": "integer"
+                          },
+                          "start": {
+                            "format": "date",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "unit": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Oldest first"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Unknown unit"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "Totals per week or per month, empty periods included"
       }
     },
     "/profiles/{profile_id}/tags": {

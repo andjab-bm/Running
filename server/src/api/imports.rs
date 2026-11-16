@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use super::{ApiError, ApiResult};
 use crate::{
     AppState,
+    derive::Job,
     pipeline::{self, Processed},
     store,
 };
@@ -174,6 +175,8 @@ pub async fn import(
                 },
             )
             .await?;
+            // Records, load and segments follow in the background; the import does not wait.
+            state.deriver.enqueue(Job::Activity(id));
             results.push(Outcome {
                 file: file.clone(),
                 status: Status::Imported,

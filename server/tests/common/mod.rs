@@ -6,7 +6,13 @@ use axum::{
     http::{HeaderMap, Method, Request, StatusCode, header},
 };
 use http_body_util::BodyExt;
-use running_server::{AppState, app, config::Config, db, pipeline};
+use running_server::{
+    AppState, app,
+    config::Config,
+    db,
+    derive::{Deriver, Worker},
+    pipeline,
+};
 use serde_json::Value;
 use sqlx::SqlitePool;
 use tower::ServiceExt;
@@ -16,6 +22,7 @@ pub struct Ctx {
     pub db: SqlitePool,
     pub dir: tempfile::TempDir,
     pub profile: i64,
+    pub deriver: Deriver,
 }
 
 pub async fn ctx() -> Ctx {
@@ -24,12 +31,36 @@ pub async fn ctx() -> Ctx {
     config.data_dir = dir.path().to_path_buf();
     let db = db::open(&config.data_dir).await.unwrap();
     let profile = add_profile(&db, "Alex").await;
+    let state = AppState::new(db.clone(), config);
     Ctx {
-        app: app(AppState::new(db.clone(), config)),
+        deriver: state.deriver.clone(),
+        app: app(state),
         db,
         dir,
         profile,
     }
+}
+
+/// Like [`ctx`], but the derive worker is handed back instead of started,
+/// so a test can look at the state requests leave before any background work.
+pub async fn ctx_held() -> (Ctx, Worker) {
+    let dir = tempfile::tempdir().unwrap();
+    let mut config = Config::from_lookup(|_| None).unwrap();
+    config.data_dir = dir.path().to_path_buf();
+    let db = db::open(&config.data_dir).await.unwrap();
+    let profile = add_profile(&db, "Alex").await;
+    let (deriver, worker) = Deriver::channel();
+    let state = AppState::with_deriver(db.clone(), config, deriver.clone());
+    (
+        Ctx {
+            deriver,
+            app: app(state),
+            db,
+            dir,
+            profile,
+        },
+        worker,
+    )
 }
 
 pub async fn add_profile(db: &SqlitePool, name: &str) -> i64 {
@@ -43,6 +74,11 @@ pub async fn add_profile(db: &SqlitePool, name: &str) -> i64 {
 
 /// A GPX run heading north at 3 m/s, one point every 5 s, optionally with a constant heart rate.
 pub fn gpx(start: &str, minutes: u32, name: Option<&str>, hr: Option<u32>) -> Vec<u8> {
+    gpx_at(start, minutes, 3.0, name, hr)
+}
+
+/// Like [`gpx`], at a chosen speed in m/s.
+pub fn gpx_at(start: &str, minutes: u32, speed: f64, name: Option<&str>, hr: Option<u32>) -> Vec<u8> {
     let t0 = pipeline::time::parse_rfc3339(start).unwrap();
     let mut s =
         String::from("<?xml version=\"1.0\"?>\n<gpx version=\"1.1\" creator=\"test\" xmlns=\"http://www.topografix.com/GPX/1/1\"><trk>");
@@ -52,7 +88,7 @@ pub fn gpx(start: &str, minutes: u32, name: Option<&str>, hr: Option<u32>) -> Ve
     s.push_str("<trkseg>");
     for i in 0..=(minutes * 12) {
         let t = pipeline::time::format_rfc3339(t0 + f64::from(i) * 5.0);
-        let lat = 48.0 + f64::from(i) * 15.0 / 111_194.93;
+        let lat = 48.0 + f64::from(i) * speed * 5.0 / 111_194.93;
         s.push_str(&format!("<trkpt lat=\"{lat:.7}\" lon=\"2.0\"><ele>40</ele><time>{t}</time>"));
         if let Some(h) = hr {
             s.push_str(&format!("<extensions><hr>{h}</hr></extensions>"));

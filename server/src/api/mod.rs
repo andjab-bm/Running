@@ -2,8 +2,11 @@
 mod activities;
 pub mod guard;
 mod imports;
+mod load;
 pub mod openapi;
 mod profiles;
+mod records;
+mod stats;
 
 use axum::{
     Json, Router,
@@ -34,9 +37,17 @@ pub fn router() -> Router<AppState> {
                 .patch(profiles::update)
                 .delete(profiles::delete),
         )
+        .route("/profiles/{profile_id}/derive-status", get(profiles::derive_status))
         .route("/activities/{id}/copy", post(profiles::copy))
         .route("/activities/{id}/move", post(profiles::move_to))
         .route("/profiles/{profile_id}/activities", get(activities::list))
+        .route("/activities", get(activities::household))
+        .route("/profiles/{profile_id}/stats/calendar", get(stats::calendar))
+        .route("/profiles/{profile_id}/stats/volume", get(stats::volume))
+        .route("/profiles/{profile_id}/stats/progress", get(stats::progress))
+        .route("/profiles/{profile_id}/load", get(load::load))
+        .route("/profiles/{profile_id}/records", get(records::records))
+        .route("/profiles/{profile_id}/predictions", get(records::predictions))
         .route("/profiles/{profile_id}/tags", get(activities::tags))
         .route(
             "/activities/{id}",

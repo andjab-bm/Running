@@ -2,7 +2,9 @@
 //!
 //! Everything here is pure computation with no I/O, so it can be tested on
 //! in-memory data and re-run whenever algorithms or profile settings change.
+pub mod efforts;
 pub mod gpx;
+pub mod load;
 pub mod metrics;
 pub mod parse;
 pub mod time;

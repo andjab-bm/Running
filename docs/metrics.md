@@ -69,6 +69,69 @@ Charts use at most `LOW_RES_POINTS` (2 000) points per series. The points are ev
 
 The web app smooths the pace curve further for display (a mean over about 100 m); summary figures, splits and laps never use the reduced or smoothed series.
 
+## 9. Figures computed after import
+
+Records, load and segments need more than one activity, or more time than an import should take. They are computed in the background by one worker (`server/src/derive/`): a request commits its own change, then hands the worker a job. An activity whose `derived_version` is older than `DERIVED_VERSION` (currently 1) is waiting for it; that is also how history is caught up after an upgrade. `GET /profiles/{id}/derive-status` says how much is left.
+
+## 10. Best efforts and records
+
+For each run the fastest stretch of 400 m, 1 km, 5 km, 10 km, a half-marathon (21 097.5 m) and a marathon (42 195 m) is searched wherever it lies in the run (`STANDARD_DISTANCES`).
+
+- **Timed on moving time.** Both the distance and the time of a stretch are summed over moving intervals only: a pause, manual or automatic, adds no time, and ground covered while the timer was stopped adds no distance. A 5 km stretch covered in 28:40 on the clock with a 40-second pause is a 28:00 effort, and a run of exactly the distance gives the run's own moving time.
+- **Search.** The moving distance and moving time are piecewise linear, so the fastest window starts or ends on a sample; both families are swept once, interpolating the other end inside its interval.
+- **Position errors.** An interval faster than `MAX_EFFORT_SPEED_MPS` (12.5 m/s, a sprinter's top speed) counts for nothing, and a window faster than the world record for its distance (`WORLD_RECORD_S`: 43 s, 2:11, 12:35, 26:11, 57:00, 2:00:00) is discarded. What remains wrong can be excluded by hand ("exclure des records" on the activity).
+- **Records** are not stored: they are the fastest efforts among the profile's activities that are not excluded, read on request, one effort per run. Deleting, moving or excluding a run therefore promotes the next best time at once, and an activity's rank is always today's.
+- **History** lists, in date order, each run that beat every earlier one.
+
+## 11. Race predictions
+
+Riegel's formula projects a time from one distance to another:
+
+```
+T2 = T1 × (D2 / D1)^1.06          RIEGEL_EXPONENT = 1.06
+```
+
+- Only efforts of the last `PREDICTION_WINDOW_WEEKS` (12) and at least `PREDICTION_MIN_EFFORT_M` (1 km) long are used.
+- For each race distance (5 km, 10 km, half-marathon, marathon — `PREDICTED_DISTANCES`) every qualifying effort is projected and the fastest projection is kept, together with the effort it comes from. An effort at the race distance projects to itself, so a prediction is never slower than a result achieved in the window.
+- A prediction for a distance more than `INDICATIVE_DISTANCE_RATIO` (4) times the longest run of the window is marked indicative.
+
+These are estimates of potential, not forecasts: the formula knows nothing about the course, the weather or the training behind the effort, and it flatters runners whose endurance has not caught up with their speed — which is why long distances are flagged.
+
+## 12. Training load and recovery
+
+**Load of a run** (`activities.load`, stored by the worker):
+
+- with heart rate, the relative effort of section 7;
+- otherwise, with a perceived effort: `moving minutes × RPE × SRPE_FACTOR` (0.35), which puts an hour at RPE 5 near an hour around zone 2;
+- otherwise `moving minutes × DEFAULT_INTENSITY` (2.0).
+
+The last two are marked estimated. Entering a perceived effort later, or changing the profile's heart-rate zones, recomputes the load.
+
+**Daily series.** One value per local day from the first run to today, rest days at zero; it is aggregated on request, with the day cut by the caller's time-zone offset.
+
+**Short-term and long-term load** are exponentially weighted daily averages with time constants `SHORT_TERM_DAYS` (7) and `LONG_TERM_DAYS` (28): each day, `avg += (load − avg) × (1 − e^(−1/τ))`. The averages are corrected for their start (divided by `1 − e^(−n/τ)` after `n` days), so a habit held for two weeks is already read at its level instead of creeping up from zero.
+
+**Status** from the ratio short / long, once there are `MIN_HISTORY_DAYS` (14) days of history:
+
+| Ratio | Status |
+|---|---|
+| under `RATIO_RESUMING` (0.5) | resuming |
+| under `RATIO_LIGHT` (0.8) | light |
+| up to `RATIO_STEADY` (1.2) | steady |
+| up to `RATIO_BUILDING` (1.5) | building |
+| above | too much, too soon |
+
+**Recovery** after a run, in hours:
+
+```
+advised = clamp(RECOVERY_BASE_H + RECOVERY_PER_TYPICAL_H × (load / typical) × max(1, ratio), RECOVERY_MIN_H, RECOVERY_MAX_H)
+        + RECOVERY_CARRY × hours still owed from the previous run        (12, 24, 6, 96, 0.5; capped at 96)
+```
+
+`typical` is the median load of the runs of the last `TYPICAL_WINDOW_WEEKS` (6) and `ratio` the short / long ratio on the day of the run. A usual run in a steady period gives 36 hours. The time remaining is the advised time minus the hours since the end of the run.
+
+All of this is built from recorded runs alone. Sleep, stress, other sports and health are not known to it, and the heart-rate effort it starts from depends on the maximum heart rate set in the profile.
+
 ## Test data
 
 - **Synthetic runs** built in `server/tests/pipeline.rs` cover each scenario of the `activity-metrics` spec (pauses, climbs, splits, laps, zones, effort, cadence, downsampling) and GPX reading, rejection and export.

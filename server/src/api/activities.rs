@@ -13,6 +13,7 @@ use sqlx::{Row, sqlite::SqliteRow};
 use super::{ApiError, ApiResult};
 use crate::{
     AppState,
+    derive::{self, Job},
     pipeline::{
         gpx::{self, ExportPoint},
         time,
@@ -31,7 +32,7 @@ const MAX_TAG_LEN: usize = 40;
 
 const SUMMARY_COLUMNS: &str = "a.id, a.profile_id, a.title, a.description, a.rpe, a.start_time, a.sport, a.source_format, a.file_hash,
     a.copied_from, a.metrics_version, a.distance, a.elapsed_time, a.moving_time, a.speed, a.gap_speed, a.gain, a.loss,
-    a.avg_hr, a.max_hr, a.avg_cad, a.effort, a.zone_seconds, a.preview,
+    a.avg_hr, a.max_hr, a.avg_cad, a.effort, a.zone_seconds, a.preview, a.exclude_from_records, a.load, a.load_estimated,
     (SELECT json_group_array(name) FROM (SELECT t.name FROM activity_tags x JOIN tags t ON t.id = x.tag_id
         WHERE x.activity_id = a.id ORDER BY t.name)) AS tags";
 
@@ -58,6 +59,8 @@ fn summary_json(r: &SqliteRow) -> Value {
         "max_hr": r.get::<Option<f64>, _>("max_hr"),
         "avg_cad": r.get::<Option<f64>, _>("avg_cad"),
         "effort": r.get::<Option<f64>, _>("effort"),
+        "load": r.get::<Option<f64>, _>("load"),
+        "load_estimated": r.get::<i64, _>("load_estimated") != 0,
         "rpe": r.get::<Option<i64>, _>("rpe"),
         "copied_from": r.get::<Option<i64>, _>("copied_from"),
         "tags": parse_json(r.get("tags")),
@@ -74,6 +77,8 @@ pub struct ListQuery {
     pub from: Option<f64>,
     /// Exclusive upper bound on the start time (Unix seconds).
     pub to: Option<f64>,
+    /// Household list only: restrict to one profile.
+    pub profile_id: Option<i64>,
 }
 
 /// `GET /profiles/{profile_id}/activities`: most recent first, in pages.
@@ -81,6 +86,24 @@ pub async fn list(State(state): State<AppState>, Path(profile_id): Path<i64>, Qu
     if store::profile_settings(&state.db, profile_id).await?.is_none() {
         return Err(ApiError::not_found("This profile"));
     }
+    page(&state, Some(profile_id), false, q).await
+}
+
+/// `GET /activities`: the whole household, most recent first, in pages.
+///
+/// Without `profile_id`, a run copied between profiles is listed once: the copy is left
+/// out while its original exists, and the original names the copies in `shared_with`.
+pub async fn household(State(state): State<AppState>, Query(q): Query<ListQuery>) -> ApiResult<Json<Value>> {
+    if let Some(p) = q.profile_id
+        && store::profile_settings(&state.db, p).await?.is_none()
+    {
+        return Err(ApiError::not_found("This profile"));
+    }
+    let profile = q.profile_id;
+    page(&state, profile, profile.is_none(), q).await
+}
+
+async fn page(state: &AppState, profile_id: Option<i64>, collapse_copies: bool, q: ListQuery) -> ApiResult<Json<Value>> {
     let limit = q.limit.unwrap_or(DEFAULT_PAGE).clamp(1, MAX_PAGE);
     let cursor: Option<(f64, i64)> = match q.cursor.as_deref() {
         None | Some("") => None,
@@ -93,8 +116,12 @@ pub async fn list(State(state): State<AppState>, Path(profile_id): Path<i64>, Qu
     let tag = q.tag.as_deref().map(str::trim).filter(|t| !t.is_empty());
     // Only constants are interpolated; every value is bound.
     let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
-        "SELECT {SUMMARY_COLUMNS} FROM activities a
-          WHERE a.profile_id = ?1
+        "SELECT {SUMMARY_COLUMNS},
+                (SELECT json_group_array(json_object('profile_id', c.profile_id, 'activity_id', c.id))
+                   FROM activities c WHERE ?8 AND c.copied_from = a.id) AS shared_with
+           FROM activities a
+          WHERE (?1 IS NULL OR a.profile_id = ?1)
+            AND (NOT ?8 OR a.copied_from IS NULL OR NOT EXISTS (SELECT 1 FROM activities o WHERE o.id = a.copied_from))
             AND (?2 IS NULL OR (a.start_time, a.id) < (?2, ?3))
             AND (?4 IS NULL OR a.start_time >= ?4)
             AND (?5 IS NULL OR a.start_time < ?5)
@@ -110,6 +137,7 @@ pub async fn list(State(state): State<AppState>, Path(profile_id): Path<i64>, Qu
     .bind(q.to)
     .bind(tag)
     .bind(limit + 1)
+    .bind(collapse_copies)
     .fetch_all(&state.db)
     .await?;
     let more = rows.len() as i64 > limit;
@@ -120,9 +148,17 @@ pub async fn list(State(state): State<AppState>, Path(profile_id): Path<i64>, Qu
                 .map(|r| format!("{}:{}", r.get::<f64, _>("start_time"), r.get::<i64, _>("id")))
         })
         .flatten();
-    Ok(Json(
-        json!({ "items": page.iter().map(summary_json).collect::<Vec<_>>(), "next_cursor": next_cursor }),
-    ))
+    let items: Vec<Value> = page
+        .iter()
+        .map(|r| {
+            let mut item = summary_json(r);
+            if collapse_copies {
+                item["shared_with"] = parse_json(r.get("shared_with"));
+            }
+            item
+        })
+        .collect();
+    Ok(Json(json!({ "items": items, "next_cursor": next_cursor })))
 }
 
 async fn segments(state: &AppState, id: i64, kind: &'static str) -> anyhow::Result<Vec<Value>> {
@@ -178,6 +214,7 @@ async fn detail_json(state: &AppState, id: i64) -> ApiResult<Value> {
         // `uses_default_hr_max` lets the page invite the athlete to set their own value.
         json!({ "seconds": zone_seconds, "bounds": bounds, "uses_default_hr_max": hr_max.is_none() })
     };
+    let excluded = row.get::<i64, _>("exclude_from_records") != 0;
     let extra = json!({
         "description": row.get::<String, _>("description"),
         "source_format": row.get::<String, _>("source_format"),
@@ -186,6 +223,9 @@ async fn detail_json(state: &AppState, id: i64) -> ApiResult<Value> {
         "zones": zones,
         "splits": segments(state, id, "split").await?,
         "laps": segments(state, id, "lap").await?,
+        "exclude_from_records": excluded,
+        // Fastest stretches of the standard distances; `rank` is set for the profile's three best times.
+        "best_efforts": super::records::activity_efforts(state, id, profile_id, excluded).await?,
     });
     if let (Some(a), Some(b)) = (v.as_object_mut(), extra.as_object()) {
         a.extend(b.clone());
@@ -255,6 +295,8 @@ pub struct Journal {
     #[serde(default, deserialize_with = "nullable")]
     pub rpe: Option<Option<i64>>,
     pub tags: Option<Vec<String>>,
+    /// Leaves the activity out of records and predictions (a bike ride, a faulty trace).
+    pub exclude_from_records: Option<bool>,
 }
 
 fn invalid(message: impl Into<String>) -> ApiError {
@@ -329,6 +371,14 @@ pub async fn update(State(state): State<AppState>, Path(id): Path<i64>, Json(j):
             .execute(&mut *tx)
             .await?;
     }
+    if let Some(x) = j.exclude_from_records {
+        // Records are read from the stored efforts on request: nothing to recompute.
+        sqlx::query("UPDATE activities SET exclude_from_records = ? WHERE id = ?")
+            .bind(x)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
     if let Some(tags) = &tags {
         sqlx::query("DELETE FROM activity_tags WHERE activity_id = ?")
             .bind(id)
@@ -352,12 +402,25 @@ pub async fn update(State(state): State<AppState>, Path(id): Path<i64>, Json(j):
         }
     }
     tx.commit().await?;
+    if j.rpe.is_some() {
+        // The training load of a run without heart rate is estimated from the perceived effort.
+        derive::invalidate_activity(&state.db, id).await?;
+        state.deriver.enqueue(Job::Activity(id));
+    }
     Ok(Json(detail_json(&state, id).await?))
 }
 
 /// `DELETE /activities/{id}`: removes the activity, its journal and, if unused, its original file.
 pub async fn delete(State(state): State<AppState>, Path(id): Path<i64>) -> ApiResult<StatusCode> {
+    let profile: Option<i64> = sqlx::query("SELECT profile_id FROM activities WHERE id = ?")
+        .bind(id)
+        .fetch_optional(&state.db)
+        .await?
+        .map(|r| r.get(0));
     if store::delete_activity(&state.db, &state.config.data_dir, id).await? {
+        if let Some(p) = profile {
+            state.deriver.enqueue(Job::Profile(p));
+        }
         Ok(StatusCode::NO_CONTENT)
     } else {
         Err(ApiError::not_found("This activity"))
