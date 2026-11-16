@@ -14,7 +14,7 @@
 - [x] 2.2 Create the `server/` Rust crate with axum, tokio and sqlx (SQLite) and a `/api/v1/health` route; verify `cargo run` answers the health request with status and version
 - [x] 2.3 Create the `web/` SvelteKit app with the static adapter and import the approved tokens into `web/src/lib/tokens.css`; verify `npm run build` produces a static bundle
 - [x] 2.4 Serve the built web bundle from the Rust server with SPA fallback; verify the app shell loads from the server's port and unknown client routes return the shell
-- [ ] 2.5 Add formatting, lint and test commands (`cargo fmt`, `clippy`, `cargo test`, web lint and unit test runner) with a CI workflow; verify the workflow passes on a clean checkout
+- [x] 2.5 Add formatting, lint and test commands (`cargo fmt`, `clippy`, `cargo test`, web lint and unit test runner) with a CI workflow; verify the workflow passes on a clean checkout
 - [x] 2.6 Write `docs/architecture.md` describing the watch → phone → server architecture from `design.md` Decision 1; verify it is linked from `README.md`
 
 ## 3. Parsing and metrics pipeline
@@ -77,11 +77,11 @@ Browser checks in groups 7 and 8 were first done by hand against a server loaded
 
 ## 9. Packaging and deployment
 
-The files of this group are written (`deploy/Dockerfile`, `deploy/compose.yaml`, `deploy/.env.example`, `docs/deployment.md`, and an `image` job in CI building both architectures), and `docker compose config` accepts the compose file with and without a `.env`. The image itself could not be built on the development machine on 2026-11-16: Docker Desktop failed to resolve the registry's download host. The CI `image` job builds it for both architectures on pull requests and publishes it to `ghcr.io` from `main`; the tasks stay open until that job has passed and the image has been started once.
+Verified on 2026-11-16 with the image the CI built from `main` (`ghcr.io/andjab-bm/running:latest`, run 43859950046): `docker buildx imagetools inspect` lists `linux/amd64` and `linux/arm64`; started on an AMD64 machine through `deploy/compose.yaml` with an empty `.env`, it answers the health route, serves the app shell, runs as user 65532, is reported healthy, keeps a profile across `down` / `up`, and stops in under 3 s. The backup and restore commands of `docs/deployment.md` (9.4) have not been run: they are left for the Raspberry Pi install.
 
-- [ ] 9.1 Write the multi-stage `deploy/Dockerfile` (web build, Rust build with embedded assets, minimal non-root runtime with `/data` volume and healthcheck); verify the image builds and runs locally on AMD64
-- [ ] 9.2 Add multi-arch build (`linux/arm64`, `linux/amd64`) with cross-compilation for ARM64; verify `docker buildx imagetools inspect` lists both platforms
-- [ ] 9.3 Add `deploy/compose.yaml` and `.env.example` covering port, data directory, upload size and map style with working defaults; verify `docker compose up` starts with an empty `.env`
+- [x] 9.1 Write the multi-stage `deploy/Dockerfile` (web build, Rust build with embedded assets, minimal non-root runtime with `/data` volume and healthcheck); verify the image builds and runs locally on AMD64
+- [x] 9.2 Add multi-arch build (`linux/arm64`, `linux/amd64`) with cross-compilation for ARM64; verify `docker buildx imagetools inspect` lists both platforms
+- [x] 9.3 Add `deploy/compose.yaml` and `.env.example` covering port, data directory, upload size and map style with working defaults; verify `docker compose up` starts with an empty `.env`
 - [ ] 9.4 Write `docs/deployment.md` (Raspberry Pi install, first-run profile creation, a prominent warning that there is no authentication and the port must never be exposed to the internet, backup/restore of the data directory, upgrades, self-hosted PMTiles tiles, remote access via VPN or authenticating reverse proxy); verify the documented commands run as written on a clean machine
 
 ## 10. Integration checks

@@ -20,7 +20,7 @@ Tasks that need a real run (the former group 10) were moved to [`tasks-field.md`
 
 - [x] 2.1 Read current documentation (Context7) for the Android Gradle plugin, Kotlin, Compose, Compose for Wear OS, Room, WorkManager, DataStore, OkHttp, kotlinx.serialization, Play services location and wearable, and Wear Health Services, and pin versions in `android/gradle/libs.versions.toml`; verify every library named in `design.md` has a pinned version and any deviation from the design is noted in `docs/android.md`
 - [x] 2.2 Create the `android/` Gradle project with modules `core` (pure Kotlin), `phone` and `wear` sharing one application id; verify `./gradlew :core:test :phone:assembleDebug :wear:assembleDebug` succeeds and both apps launch to an empty screen in emulators
-- [ ] 2.3 Add an Android job to `.github/workflows/ci.yml` running `core` and `phone` unit tests and lint, and uploading both debug APKs as artefacts; verify the job passes on a clean checkout
+- [x] 2.3 Add an Android job to `.github/workflows/ci.yml` running `core` and `phone` unit tests and lint, and uploading both debug APKs as artefacts; verify the job passes on a clean checkout
 - [x] 2.4 Write `docs/android.md` (toolchain, build commands, installing on the phone and on the watch over Wi-Fi debugging, signing note) and link it from `README.md`; verify the documented build commands run as written
 
 ## 3. Session engine (core)
