@@ -27,7 +27,8 @@
 - [x] 3.6 Implement HR zone distribution and relative effort from a zone definition; verify unit tests assert percentages sum to 100 %, linearity in duration and the unavailable case
 - [x] 3.7 Implement index-aligned stream downsampling to at most 2 000 points; verify a unit test on a synthetic 4-hour activity checks the bound and the preserved endpoints
 - [x] 3.8 Document the algorithms and their constants in `docs/metrics.md`; verify every constant named in the code appears in the document
-- [ ] 3.9 Obtain a FIT recording with heart rate and several laps (for example from the watch), add it to `testdata/`, and extend the real-file test to assert lap count and average heart rate against the file's own lap and session messages; verify the test passes on that file
+
+Task 3.9 (a real FIT recording with heart rate and several laps, and the test asserting its lap count and average heart rate) needs a run recorded with the phone and the watch: it was moved to [`android-recording/tasks-field.md`](../android-recording/tasks-field.md) on 2026-11-16 at the owner's request.
 
 ## 4. Storage and import
 
@@ -55,7 +56,7 @@
 
 ## 7. Web app shell, theming and library
 
-Browser checks in groups 7 and 8 were done by hand against a server loaded with real exports; there is no automated end-to-end browser suite yet (see task 8.8).
+Browser checks in groups 7 and 8 were first done by hand against a server loaded with real exports; since task 8.8 they are also covered by the Playwright suite in `web/e2e/`.
 
 - [x] 7.1 Build the app shell (navigation, first-run profile creation, profile switcher with remembered active profile, API client with SI-to-display unit and time zone formatting helpers); verify unit tests for the pace, distance, elevation and duration formatters in both unit systems
 - [x] 7.2 Implement Light/Dark/System theming with tokens, persistence and the pre-paint inline script; verify in the browser that it confirms no theme flash on reload and live switching on system change
@@ -71,10 +72,12 @@ Browser checks in groups 7 and 8 were done by hand against a server loaded with 
 - [x] 8.4 Build the splits/laps tables with pace bars, table switch and row-to-map/profile highlighting; verify in the browser that it on a multi-lap fixture switches tables and highlights a row
 - [x] 8.5 Build the HR zone chart with relative effort and the default-zone notice; verify in the browser that it checks five labelled bars and the notice on an unconfigured profile
 - [x] 8.6 Build in-place journal editing (title, description, RPE, tags) and the export/original/copy-to-profile/move-to-profile/delete actions with confirmation; verify in the browser that it edits, saves, exports, copies an activity to a second profile (checking it appears there without heart rate) and deletes the original
-- [ ] 8.7 Compare the built page with the approved prototype in both themes at 360 px and 1440 px and fix deviations; verify side-by-side screenshots are attached to `docs/design-direction.md` and contrast checks pass at 4.5:1
-- [ ] 8.8 Add an automated browser test suite (Playwright) covering first start, import, list filters, the activity page (hover synchronisation, measure switch, journal, copy/move/delete) and settings, and run it in CI; verify the suite passes against a seeded server
+- [x] 8.7 Compare the built page with the approved prototype in both themes at 360 px and 1440 px and fix deviations; verify side-by-side screenshots are attached to `docs/design-direction.md` and contrast checks pass at 4.5:1
+- [x] 8.8 Add an automated browser test suite (Playwright) covering first start, import, list filters, the activity page (hover synchronisation, measure switch, journal, copy/move/delete) and settings, and run it in CI; verify the suite passes against a seeded server
 
 ## 9. Packaging and deployment
+
+The files of this group are written (`deploy/Dockerfile`, `deploy/compose.yaml`, `deploy/.env.example`, `docs/deployment.md`, and an `image` job in CI building both architectures), and `docker compose config` accepts the compose file with and without a `.env`. The image itself could not be built on the development machine on 2026-11-16: Docker Desktop failed to resolve the registry's download host. The CI `image` job builds it for both architectures on pull requests and publishes it to `ghcr.io` from `main`; the tasks stay open until that job has passed and the image has been started once.
 
 - [ ] 9.1 Write the multi-stage `deploy/Dockerfile` (web build, Rust build with embedded assets, minimal non-root runtime with `/data` volume and healthcheck); verify the image builds and runs locally on AMD64
 - [ ] 9.2 Add multi-arch build (`linux/arm64`, `linux/amd64`) with cross-compilation for ARM64; verify `docker buildx imagetools inspect` lists both platforms

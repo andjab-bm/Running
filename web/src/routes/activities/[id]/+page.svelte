@@ -62,7 +62,8 @@
 			}
 			if (act.laps.length < 2) table = 'split';
 		} catch (e) {
-			if (e instanceof ApiError && e.status === 404) missing = true;
+			// An id that is not even a number (a mistyped address) is a run that does not exist either.
+			if (e instanceof ApiError && (e.status === 404 || e.status === 400)) missing = true;
 			else error = errorText(e);
 		}
 	}

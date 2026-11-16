@@ -5,17 +5,17 @@ How the watch, the phone and the home server fit together, and what this reposit
 ## The whole system
 
 ```
-Galaxy Watch 4 — Wear OS app (Kotlin)                 planned
+Galaxy Watch 4 — Wear OS app (Kotlin)                 built (android/wear)
   heart rate, start/pause/lap/stop, vibration cues
         │  Wearable Data Layer over Bluetooth
         ▼
-Pixel 8 — native Android app (Kotlin, Compose)        planned
-  records GPS, guides the session, stores runs locally,
+Pixel 8 — native Android app (Kotlin, Compose)        built (android/phone)
+  records GPS, stores runs locally,
   writes one .fit file per run
         │  plain HTTP upload on the home Wi-Fi,
         │  naming the target profile
         ▼
-Raspberry Pi — this repository                        in progress
+Raspberry Pi — server and web app                     built (server/, web/)
   one container: Rust server + SQLite + web app
 ```
 
@@ -26,20 +26,29 @@ Raspberry Pi — this repository                        in progress
 - **Profiles instead of users.** A household has a few athlete profiles; each run belongs to one. A run done together can be copied to the other person's profile, without the recorder's heart rate by default.
 - **Health Connect is not used.** It would route data through Samsung Health and restricts route access.
 
-## The server (this repository)
+## The repository
 
 ```
-prototype/   approved design prototype (static page)
+prototype/   approved design prototypes (static pages)
 server/      Rust crate: HTTP API, processing pipeline, storage
 web/         SvelteKit single-page app
-deploy/      Dockerfile and compose file            (task group 9)
-docs/        this file, design direction, API and deployment guides
-testdata/    GPX and FIT fixtures                   (task group 3)
+android/     phone and watch apps (one Gradle project)
+  core/      pure Kotlin: session engine, FIT encoder, watch protocol, design tokens
+  phone/     Android app: recording service, local storage, sync, interface
+  wear/      Wear OS app: heart rate, controls, metrics
+deploy/      Dockerfile, compose file, .env.example
+docs/        this file, design direction, API, Android and deployment guides
+testdata/    real FIT exports (private, not committed)
 ```
 
+The phone and watch apps are described in [android.md](android.md); installing the server at home is described in [deployment.md](deployment.md). The live coaching mentioned in the original brief (voice and vibration cues) is not built yet.
+
+## The server
+
 - **One process, one port.** The Rust binary serves the REST API under `/api/v1` and the web app everywhere else. The web app is built to static files and embedded in the binary, so nothing but the binary runs on the Pi. Unknown non-API paths return the app shell (`200.html`) so client-side routes survive a reload; unknown API paths return a JSON 404.
-- **One data directory.** `DATA_DIR` holds the SQLite database (`running.db`, WAL mode) and, later, the original uploaded files. Backing up that directory backs up everything.
+- **One data directory.** `DATA_DIR` holds the SQLite database (`running.db`, WAL mode) and the original uploaded files (`originals/`). Backing up that directory backs up everything.
 - **Configuration by environment variable**, all optional: `PORT` (8080), `DATA_DIR` (`./data`), `MAX_UPLOAD_MB` (50), `MAP_STYLE_URL` (a public OpenStreetMap-based style; empty disables the basemap).
+- **One container.** `deploy/Dockerfile` builds the web app, compiles the server with the web app embedded (cross-compiled for ARM64 or AMD64) and ships the binary alone in a minimal image that runs as an unprivileged user with `/data` as its volume. `running-server healthcheck` is the container's health probe, and the server shuts down cleanly on the termination signal.
 
 ### Developing
 
@@ -54,6 +63,8 @@ cd web && npm install && npm run dev
 To run the way it ships, build the web app first, then the server: `cd web && npm run build`, then `cd server && cargo run`, and open http://localhost:8080.
 
 Checks: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test` in `server/`; `npm run lint`, `npm test`, `npm run build` in `web/`. CI runs the same commands.
+
+Browser tests (Playwright) drive the built web app against the real server on an empty data directory: `npm run build`, then `npm run test:e2e` in `web/` (the first time, `npx playwright install chromium`). `e2e/app.spec.ts` walks through first start, import, list filters, the activity page (chart and map linked by hover, measure switch, journal, copy, move, delete) and settings; `e2e/design.spec.ts` checks text contrast (4.5:1) on every screen in both themes at 360 px and 1440 px, and rewrites the comparison screenshots of `docs/screenshots/` when run with `UPDATE_SCREENSHOTS=1 E2E_BASEMAP=1`. CI runs them in the `e2e` job, and the `image` job builds the container image for both architectures.
 
 ## Libraries and pinned versions
 

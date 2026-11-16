@@ -299,7 +299,8 @@
 	}
 	.themes button[aria-pressed='true'] {
 		background: var(--accent-soft);
-		color: var(--accent);
+		/* The lavender ink: the accent itself reaches only 4.44:1 on this fill in the light theme. */
+		color: var(--i-lav);
 	}
 	.pv {
 		height: 58px;

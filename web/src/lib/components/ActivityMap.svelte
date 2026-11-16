@@ -68,6 +68,38 @@
 		return ['interpolate', ['linear'], ['line-progress'], ...stops];
 	}
 
+	/** Host of the default public styles: only those are recoloured, a style chosen by the owner is left as it is. */
+	const DEFAULT_STYLE_HOST = 'https://tiles.openfreemap.org/';
+
+	/**
+	 * Recolours the default basemap with the approved `--map-*` tokens, so it sits in the palette
+	 * of the page in both themes. Layers are recognised by the OpenMapTiles layer they draw.
+	 */
+	function tint(m: MlMap) {
+		const css = getComputedStyle(document.documentElement);
+		const token = (name: string) => css.getPropertyValue(name).trim();
+		const [park, water, road, label] = [token('--map-park'), token('--map-water'), token('--map-road'), token('--map-label')];
+		if (!park || !water || !road || !label) return;
+		for (const layer of m.getStyle().layers) {
+			const source = (layer as { 'source-layer'?: string })['source-layer'] ?? '';
+			try {
+				if (layer.type === 'background') m.setPaintProperty(layer.id, 'background-color', land);
+				else if (layer.type === 'fill') {
+					const fill = source === 'water' ? water : source === 'park' || source === 'landcover' ? park : land;
+					m.setPaintProperty(layer.id, 'fill-color', fill);
+					m.setPaintProperty(layer.id, 'fill-outline-color', fill);
+				} else if (layer.type === 'line') {
+					m.setPaintProperty(layer.id, 'line-color', source === 'waterway' ? water : source === 'boundary' ? label : road);
+				} else if (layer.type === 'symbol') {
+					m.setPaintProperty(layer.id, 'text-color', label);
+					m.setPaintProperty(layer.id, 'text-halo-color', land);
+				}
+			} catch {
+				// A layer that does not take the property keeps its own colour.
+			}
+		}
+	}
+
 	function dot(color: string, ring: string, size: number) {
 		const d = document.createElement('div');
 		d.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;background:${color};border:3.5px solid ${ring};box-sizing:border-box;pointer-events:none`;
@@ -77,13 +109,21 @@
 	// (Re)create the map when the basemap or its palette changes.
 	$effect(() => {
 		if (!el || pts.length < 2) return;
-		const style = styleUrl || { version: 8 as const, sources: {}, layers: [{ id: 'bg', type: 'background' as const, paint: { 'background-color': land } }] };
+		const plain = { version: 8 as const, sources: {}, layers: [{ id: 'bg', type: 'background' as const, paint: { 'background-color': land } }] };
+		// A map whose style cannot be fetched never finishes loading and would show no trace at all:
+		// ask for the style first and fall back to the plain background when its host does not answer.
+		const usable = styleUrl
+			? fetch(styleUrl).then(
+					(r) => (r.ok ? styleUrl : plain),
+					() => plain
+				)
+			: Promise.resolve(plain);
 		const [ring, accent] = [casing, highlight];
 		let dead = false;
 		let resizer: ResizeObserver | null = null;
 		ready = false;
 
-		import('maplibre-gl').then((mod) => {
+		Promise.all([import('maplibre-gl'), usable]).then(([mod, style]) => {
 			if (dead || !el) return;
 			// The package exposes its API as named exports, or under `default` depending on the bundler.
 			const ml = ('Map' in mod ? mod : (mod as unknown as { default: typeof mod }).default) as typeof import('maplibre-gl');
@@ -97,6 +137,7 @@
 
 			m.on('load', () => {
 				if (dead) return;
+				if (typeof style === 'string' && style.startsWith(DEFAULT_STYLE_HOST)) tint(m);
 				m.addSource('trace', { type: 'geojson', lineMetrics: true, data: line() });
 				m.addSource('sel', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
 				const round = { 'line-cap': 'round' as const, 'line-join': 'round' as const };

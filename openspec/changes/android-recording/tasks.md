@@ -4,6 +4,10 @@ Tasks marked **(device)** need the owner's Pixel 8 and/or Galaxy Watch 4; everyt
 
 The current development machine (2 cores, 6 GB of memory) cannot run the emulator next to a build, so the checks worded "in the emulator" are done on the owner's Pixel 8 instead, following the checklist in `docs/android.md`. Code for 5.2–5.5, 6.1–6.6, 7.2, 7.3, 7.5, 8.1, 8.3, 8.4 and 9.3–9.6 is written and compiles; those tasks stay open until checked on the phone. The sync logic itself (7.1, 7.4) is covered by unit tests and by a run of the client against a real local server.
 
+Checked by the owner on the Pixel 8 and the Galaxy Watch 4 (2026-11-16): 5.3–5.5, 6.2–6.6 and 9.3–9.5. Still to check on the devices: 5.2, 6.1, 7.2, 7.3, 7.5, 8.1, 8.3, 8.4, 9.1 and 9.6.
+
+Tasks that need a real run (the former group 10) were moved to [`tasks-field.md`](tasks-field.md) on 2026-11-16 at the owner's request; they are not counted in this file's progress.
+
 ## 1. Phone and watch prototype (approval gate)
 
 - [x] 1.1 Build `prototype/mobile-recording.html` as one self-contained page on the approved tokens, with a phone frame and a round watch frame, a Light/Dark switch and a simulated run that ticks; verify it opens from the file system with no build step and no console errors
@@ -15,7 +19,7 @@ The current development machine (2 cores, 6 GB of memory) cannot run the emulato
 ## 2. Android project scaffolding
 
 - [x] 2.1 Read current documentation (Context7) for the Android Gradle plugin, Kotlin, Compose, Compose for Wear OS, Room, WorkManager, DataStore, OkHttp, kotlinx.serialization, Play services location and wearable, and Wear Health Services, and pin versions in `android/gradle/libs.versions.toml`; verify every library named in `design.md` has a pinned version and any deviation from the design is noted in `docs/android.md`
-- [ ] 2.2 Create the `android/` Gradle project with modules `core` (pure Kotlin), `phone` and `wear` sharing one application id; verify `./gradlew :core:test :phone:assembleDebug :wear:assembleDebug` succeeds and both apps launch to an empty screen in emulators
+- [x] 2.2 Create the `android/` Gradle project with modules `core` (pure Kotlin), `phone` and `wear` sharing one application id; verify `./gradlew :core:test :phone:assembleDebug :wear:assembleDebug` succeeds and both apps launch to an empty screen in emulators
 - [ ] 2.3 Add an Android job to `.github/workflows/ci.yml` running `core` and `phone` unit tests and lint, and uploading both debug APKs as artefacts; verify the job passes on a clean checkout
 - [x] 2.4 Write `docs/android.md` (toolchain, build commands, installing on the phone and on the watch over Wi-Fi debugging, signing note) and link it from `README.md`; verify the documented build commands run as written
 
@@ -32,25 +36,25 @@ The current development machine (2 cores, 6 GB of memory) cannot run the emulato
 - [x] 4.1 Implement the FIT encoder (`file_id`, timer events, records, laps, session, activity, CRC) with heart rate joined by nearest timestamp; verify unit tests check the header, CRC and message counts of a scripted run
 - [x] 4.2 Generate `server/tests/fixtures/android-recorder.fit` from a scripted run (three laps, one manual pause, one auto-pause, heart rate, cadence) with a `core` test that fails when the committed file differs from the encoder's output; verify the test passes and the fixture is committed
 - [x] 4.3 Add a server integration test importing that fixture; verify it asserts three laps, moving time excluding both pauses, distance within 1 %, and average heart rate and cadence within 1 % of the scripted values, and a second fixture without heart rate reports it unavailable
-- [ ] 4.4 Validate one generated file with a third-party FIT decoder; verify the result (tool, version, outcome) is recorded in `docs/android.md`
+- [x] 4.4 Validate one generated file with a third-party FIT decoder; verify the result (tool, version, outcome) is recorded in `docs/android.md`
 
 ## 5. Recording on the phone
 
 - [x] 5.1 Create the Room database (runs, samples, heart-rate samples, laps, timer events, cached server activities) and the settings store; verify a migration/schema test and a DAO round-trip test pass
 - [ ] 5.2 Implement the permission flow (precise location, notifications, activity recognition) with explanations; verify in the emulator the permission-refused scenario of `run-recording`
-- [ ] 5.3 Implement the location foreground service started from the ready screen, feeding fused location, barometer and step-detector readings to the engine and flushing samples every 5 s; verify with emulator route playback that a run records with the screen off and the notification shows its state
-- [ ] 5.4 Implement saving: write the FIT file at stop, store the summary and journal fields, discard with confirmation, and the short-run default; verify in the emulator the save, discard and very-short-run scenarios, and that the saved file imports into a local server
-- [ ] 5.5 Implement the resume-or-end prompt for an interrupted run; verify by killing the app process mid-run in the emulator that both choices behave as specified and at most 10 s of samples are missing
+- [x] 5.3 Implement the location foreground service started from the ready screen, feeding fused location, barometer and step-detector readings to the engine and flushing samples every 5 s; verify with emulator route playback that a run records with the screen off and the notification shows its state
+- [x] 5.4 Implement saving: write the FIT file at stop, store the summary and journal fields, discard with confirmation, and the short-run default; verify in the emulator the save, discard and very-short-run scenarios, and that the saved file imports into a local server
+- [x] 5.5 Implement the resume-or-end prompt for an interrupted run; verify by killing the app process mid-run in the emulator that both choices behave as specified and at most 10 s of samples are missing
 
 ## 6. Phone interface
 
 - [ ] 6.1 Implement the Compose theme from the approved tokens (colours, type, shapes, Light/Dark/System, bundled fonts) with the test comparing `core` tokens to `web/src/lib/tokens.css`; verify the test passes and the theme scenarios of `mobile-theming` in the emulator
-- [ ] 6.2 Build the ready screen and the main metrics screen with its approved default layout (average pace with per-kilometre bars, cadence, heart rate, combined total time / distance / mini-map area drawing the trace so far), zone colour, placeholders and units; verify in the emulator the default-layout, pace-bars, mini-map, no-heart-rate, imperial and zone scenarios of `live-run-screens` (heart rate injected through a debug control)
-- [ ] 6.3 Build the current-lap screen, the pause/lap/stop controls with hold-to-stop, and the paused and auto-paused states; verify the lap-screen, accidental-stop and auto-paused scenarios
-- [ ] 6.4 Build the touch lock, keep-screen-on setting, display over the lock screen and the run notification; verify the rain, unlock, waking-the-phone and notification scenarios
-- [ ] 6.5 Build the field-selection setting (combined field offered for the bottom slot only); verify a replaced field is used on the next run and survives an app restart
-- [ ] 6.6 Build the end-of-run summary screen; verify a saved run shows its title, effort and note in the history
-- [ ] 6.7 Check live-screen contrast in both themes; verify every figure reaches 7:1 and the measured ratios are added to `docs/design-direction.md`
+- [x] 6.2 Build the ready screen and the main metrics screen with its approved default layout (average pace with per-kilometre bars, cadence, heart rate, combined total time / distance / mini-map area drawing the trace so far), zone colour, placeholders and units; verify in the emulator the default-layout, pace-bars, mini-map, no-heart-rate, imperial and zone scenarios of `live-run-screens` (heart rate injected through a debug control)
+- [x] 6.3 Build the current-lap screen, the pause/lap/stop controls with hold-to-stop, and the paused and auto-paused states; verify the lap-screen, accidental-stop and auto-paused scenarios
+- [x] 6.4 Build the touch lock, keep-screen-on setting, display over the lock screen and the run notification; verify the rain, unlock, waking-the-phone and notification scenarios
+- [x] 6.5 Build the field-selection setting (combined field offered for the bottom slot only); verify a replaced field is used on the next run and survives an app restart
+- [x] 6.6 Build the end-of-run summary screen; verify a saved run shows its title, effort and note in the history
+- [x] 6.7 Check live-screen contrast in both themes; verify every figure reaches 7:1 and the measured ratios are added to `docs/design-direction.md`
 
 ## 7. Sync
 
@@ -71,21 +75,18 @@ The current development machine (2 cores, 6 GB of memory) cannot run the emulato
 
 - [ ] 9.1 **(device)** Read current Health Services documentation (Context7), then check on the Galaxy Watch 4 which exercise capabilities and heart-rate batching modes it declares; verify the findings and the chosen configuration are recorded in `docs/android.md`
 - [x] 9.2 Implement the watch protocol in `core` (state, heart-rate batch, command, acknowledgement messages; unsent-batch buffer with its cap); verify unit tests for encoding round trips, re-sending after a dropout and the buffer cap
-- [ ] 9.3 Implement the phone side of the link (capability, message listener, heart-rate storage by timestamp, state push rate following the watch's screen state, command handling with acknowledgement); verify with paired phone and watch emulators that commands change the session and injected heart rate reaches the live screen
-- [ ] 9.4 Implement heart-rate capture on the watch (exercise with heart rate only, foreground service, ongoing activity, permission flow, end-of-session and 10-minute timeout); verify with the Health Services synthetic data provider in the emulator that samples reach the phone and capture stops when the run stops
-- [ ] 9.5 Build the watch interface (join states, metrics page (time on top, pace large in the centre, distance and heart rate below), controls page with hold-to-stop, paused, finished, unreachable, ambient) per the approved prototype; verify every scenario of `watch-companion` except battery in paired emulators, and no clipping on a round 396 px screen
+- [x] 9.3 Implement the phone side of the link (capability, message listener, heart-rate storage by timestamp, state push rate following the watch's screen state, command handling with acknowledgement); verify with paired phone and watch emulators that commands change the session and injected heart rate reaches the live screen
+- [x] 9.4 Implement heart-rate capture on the watch (exercise with heart rate only, foreground service, ongoing activity, permission flow, end-of-session and 10-minute timeout); verify with the Health Services synthetic data provider in the emulator that samples reach the phone and capture stops when the run stops
+- [x] 9.5 Build the watch interface (join states, metrics page (time on top, pace large in the centre, distance and heart rate below), controls page with hold-to-stop, paused, finished, unreachable, ambient) per the approved prototype; verify every scenario of `watch-companion` except battery in paired emulators, and no clipping on a round 396 px screen
 - [ ] 9.6 Document watch installation, joining a run and the Samsung Health interaction in `docs/android.md`; verify the install steps work as written on the watch
 
 ## 10. Field checks on the owner's devices
 
-- [ ] 10.1 **(device)** Record a run of at least one hour with the phone screen off and the watch joined, with laps, a manual pause and a stop at a crossing; verify the trace is continuous, heart rate covers the whole run, and distance is within 2 % of a known route length
-- [ ] 10.2 **(device)** Come home with the app closed; verify the run appears on the server within 15 minutes with the same laps and pauses, a distance within 1 % of the phone's, and the effort and note entered on the phone
-- [ ] 10.3 **(device)** Measure watch battery over the one-hour run and walk away from the phone for two minutes during a run; verify the drop is 12 points or fewer, heart rate is present over the dropout, and both figures are recorded in `docs/android.md`
-- [ ] 10.4 **(device)** Observe the phone's network traffic during a run and the following sync; verify the app connects only to the configured server
-- [ ] 10.5 Copy the field-test FIT file into `testdata/` with its key figures in `testdata/README.md` (this is the file wanted by `running-foundations` task 3.9); verify the server's real-file test passes on it
-- [ ] 10.6 Update `docs/architecture.md` (phone and watch built, module layout) and run `openspec validate android-recording --strict`; verify every spec scenario has been checked on the devices or by an automated test
+Tasks 10.1 to 10.5 and the scenario walk of 10.6 need a real run: see [`tasks-field.md`](tasks-field.md).
+
+- [x] 10.6 Update `docs/architecture.md` (phone and watch built, module layout) and run `openspec validate android-recording --strict`; verify the validation passes
 
 ## Workflow follow-up
 
-- Archive this change once the owner has used the apps on a few real runs.
+- Archive this change once `tasks-field.md` is done and the owner has used the apps on a few real runs.
 - Propose the next change (`live-coaching` or `training-insights`, at the owner's choice).
