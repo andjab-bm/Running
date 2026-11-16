@@ -1,0 +1,25 @@
+# Starts the running tracker: API and web app in one container, data in one volume.
+#
+#   docker compose up -d          (from this directory)
+#
+# Every setting has a working default; copy .env.example to .env to change one.
+# There is no sign-in: keep this port on the home network, never forward it from the internet.
+services:
+  running:
+    image: ${IMAGE:-running:local}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-50}
+      # Passed only when set in .env or the shell; an empty value disables the map background.
+      MAP_STYLE_URL:
+      MAP_STYLE_URL_DARK:
+    volumes:
+      - ${DATA_VOLUME:-running-data}:/data
+
+volumes:
+  running-data:

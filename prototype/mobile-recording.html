@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Running — prototype mobile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Same tokens as web/src/lib/tokens.css (approved direction). The phone follows the theme switch;
+   the watch is always dark on true black. */
+:root{
+  --bg:#F4F3F9; --surface:#FFFFFF; --surface-2:#EFEEF7; --surface-3:#E6E4F2;
+  --ink:#1E1B2E; --ink-2:#54506B; --ink-3:#6A6682;
+  --accent:#6252DE; --accent-soft:#E7E3FC; --on-accent:#FFFFFF;
+  --p-lav:#E7E3FC; --p-mint:#D6F3E5; --p-peach:#FFE4D3; --p-sky:#D8EAFB; --p-butter:#FBF1C9; --p-rose:#FCDFE7;
+  --i-lav:#5446C9; --i-mint:#1B7550; --i-peach:#A94F1C; --i-sky:#1D639F; --i-butter:#7D6000; --i-rose:#A82C5A;
+  --z1:#A3ABC8; --z2:#7DB7F0; --z3:#6FD0A3; --z4:#FFAE70; --z5:#F58AA5;
+  --shadow:0 12px 32px rgba(70,58,140,.07); --pop:0 16px 48px rgba(40,30,90,.18);
+  --font-display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --font-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r-xl:28px; --r-lg:20px; --r-md:14px;
+  --zone-ink:#1E1B2E; /* ink used on zone colours in both themes */
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121118; --surface:#1B1A25; --surface-2:#252431; --surface-3:#302F3F;
+    --ink:#F2F0FA; --ink-2:#BDB9D1; --ink-3:#9F9BB6;
+    --accent:#A99BFF; --accent-soft:#2D2A4B; --on-accent:#15122B;
+    --p-lav:#2C2949; --p-mint:#1C372E; --p-peach:#3F2D20; --p-sky:#1C2F44; --p-butter:#38321A; --p-rose:#40222E;
+    --i-lav:#BDB2FF; --i-mint:#8FE0BB; --i-peach:#FFC39C; --i-sky:#9CCBF7; --i-butter:#EFD877; --i-rose:#F7AFC3;
+    --shadow:none; --pop:0 16px 48px rgba(0,0,0,.5); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121118; --surface:#1B1A25; --surface-2:#252431; --surface-3:#302F3F;
+  --ink:#F2F0FA; --ink-2:#BDB9D1; --ink-3:#9F9BB6;
+  --accent:#A99BFF; --accent-soft:#2D2A4B; --on-accent:#15122B;
+  --p-lav:#2C2949; --p-mint:#1C372E; --p-peach:#3F2D20; --p-sky:#1C2F44; --p-butter:#38321A; --p-rose:#40222E;
+  --i-lav:#BDB2FF; --i-mint:#8FE0BB; --i-peach:#FFC39C; --i-sky:#9CCBF7; --i-butter:#EFD877; --i-rose:#F7AFC3;
+  --shadow:none; --pop:0 16px 48px rgba(0,0,0,.5); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:28px;font-weight:600;line-height:1.1}
+h2{font-size:20px;font-weight:600}
+h3{font-size:16px;font-weight:600}
+p{margin:0}
+.num{font-family:var(--font-display);font-variant-numeric:tabular-nums}
+.ic{flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.muted{color:var(--ink-2)}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.row{display:flex;align-items:center;gap:10px}
+.grow{flex:1;min-width:0}
+
+/* ---------- review page ---------- */
+.page{display:grid;grid-template-columns:minmax(260px,330px) auto auto;gap:36px;align-items:start;justify-content:center;padding:28px 28px 56px;max-width:1400px;margin:0 auto}
+.panel{display:flex;flex-direction:column;gap:16px;position:sticky;top:20px}
+.brand{font:700 22px var(--font-display);display:flex;align-items:center;gap:10px}
+.brand-mark{width:36px;height:36px;border-radius:12px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center}
+.card{background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow);padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:999px;padding:4px;gap:2px}
+.seg button{padding:6px 14px;border-radius:999px;color:var(--ink-2);font-size:13.5px;font-weight:600;min-height:32px;display:inline-flex;align-items:center;gap:6px;transition:background .15s,color .15s}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:6px 12px;border-radius:999px;background:var(--surface-2);font-size:13px;font-weight:600;color:var(--ink-2);transition:background .15s,color .15s}
+.chip:hover{background:var(--accent-soft);color:var(--accent)}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;font-weight:600;font-size:14px;padding:4px 0}
+.switch small{display:block;font-weight:500;color:var(--ink-3);font-size:12.5px;line-height:1.3}
+.switch i{flex:none;width:44px;height:26px;border-radius:999px;background:var(--surface-3);position:relative;transition:background .15s}
+.switch i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.switch[aria-checked="true"] i{background:var(--accent)}
+.switch[aria-checked="true"] i::after{transform:translateX(18px)}
+.switch:disabled{opacity:.45;cursor:not-allowed}
+.device{display:flex;flex-direction:column;align-items:center;gap:12px}
+.device>.eyebrow{align-self:flex-start}
+
+/* ---------- phone ---------- */
+.phone{width:436px;border-radius:52px;padding:12px;background:#0d0c12;box-shadow:var(--pop)}
+.screen{position:relative;width:412px;height:860px;border-radius:40px;overflow:hidden;background:var(--bg);display:flex;flex-direction:column}
+.status{flex:none;height:34px;display:flex;align-items:center;justify-content:space-between;padding:6px 26px 0;font:600 13px var(--font-body);color:var(--ink-2)}
+.view{flex:1;min-height:0;display:flex;flex-direction:column}
+.scroll{flex:1;min-height:0;overflow-y:auto;padding:10px 18px 22px;display:flex;flex-direction:column;gap:14px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.tabs{flex:none;display:flex;gap:4px;padding:8px 14px 14px;background:var(--surface)}
+.tabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;border-radius:var(--r-md);font-size:12px;font-weight:600;color:var(--ink-3);transition:background .15s,color .15s}
+.tabs button:hover{background:var(--surface-2)}
+.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
+.pcard{background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow);padding:16px 18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:999px;font-weight:600;background:var(--surface-2);min-height:48px;transition:background .15s,transform .15s}
+.btn:hover{background:var(--surface-3)}
+.btn.primary{background:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{background:var(--accent);transform:translateY(-1px)}
+.btn.danger{background:var(--p-rose);color:var(--i-rose)}
+.btn.block{width:100%}
+.iconbtn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--surface);color:var(--ink-2);box-shadow:var(--shadow);transition:background .15s,color .15s}
+.iconbtn:hover{background:var(--accent-soft);color:var(--accent)}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--p-butter);color:var(--i-butter);white-space:nowrap}
+.tag.mint{background:var(--p-mint);color:var(--i-mint)}.tag.rose{background:var(--p-rose);color:var(--i-rose)}.tag.sky{background:var(--p-sky);color:var(--i-sky)}.tag.lav{background:var(--p-lav);color:var(--i-lav)}.tag.plain{background:var(--surface-2);color:var(--ink-2)}
+
+/* ready */
+.ready{flex:1;display:flex;flex-direction:column;padding:14px 22px 20px;gap:14px}
+.ready h1{margin-top:6px}
+.stat{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow)}
+.stat .dot{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:var(--surface-2);color:var(--ink-3);flex:none}
+.stat.ok .dot{background:var(--p-mint);color:var(--i-mint)}
+.stat.wait .dot{background:var(--p-butter);color:var(--i-butter)}
+.stat b{display:block;font-weight:600;line-height:1.25}
+.stat small{color:var(--ink-2);font-size:13px;line-height:1.3;display:block}
+.go{align-self:center;width:148px;height:148px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font:700 22px var(--font-display);box-shadow:0 14px 34px rgba(98,82,222,.35);transition:transform .15s}
+.go:hover{transform:scale(1.04)}
+.go span{display:flex;flex-direction:column;align-items:center;gap:2px}
+.pulse{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+
+/* live */
+.live{flex:1;min-height:0;display:flex;flex-direction:column}
+.livebar{flex:none;display:flex;align-items:center;gap:8px;padding:6px 18px 8px}
+.state{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;font-weight:700;font-size:13px;background:var(--p-mint);color:var(--i-mint)}
+.state::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.state.pause{background:var(--p-butter);color:var(--i-butter)}
+.minis{margin-left:auto;display:flex;gap:10px;color:var(--ink-3)}
+.minis .on{color:var(--i-mint)}.minis .off{opacity:.4}
+.pages{flex:1;min-height:0;overflow:hidden;touch-action:pan-y}
+.track{display:flex;width:200%;height:100%;transition:transform .28s ease}
+.track>section{width:50%;padding:0 14px;display:flex;flex-direction:column;gap:10px}
+.tile{border-radius:var(--r-xl);padding:12px 18px;display:flex;flex-direction:column;justify-content:center;min-width:0;background:var(--surface);transition:background .3s,opacity .2s}
+.tile .lbl{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2)}
+.tile .v{font:600 54px/1.02 var(--font-display);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink)}
+.tile .v small{font:600 16px var(--font-body);color:var(--ink-2);margin-left:6px}
+.tile.hero{flex:1.25}.tile.hero .v{font-size:92px}
+.tile.wide{flex:1}.tile.wide .v{font-size:72px}
+.tile.hero:has(.kmbars){flex:1.7;justify-content:flex-start;padding-top:14px}
+.tile.hero:has(.kmbars) .v{font-size:76px}
+.kmbars{flex:1;min-height:0;display:flex;align-items:stretch;gap:6px;margin-top:8px}
+.kmbars>span{flex:1;max-width:44px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;min-width:0}
+.kmbars b{font:600 11px var(--font-display);font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.kmbars i{width:100%;border-radius:8px 8px 4px 4px;background:var(--accent);transition:height .3s}
+.kmbars .cur i{background:var(--i-lav);opacity:.4}
+.kmbars em{font:600 11px var(--font-body);color:var(--ink-2)}
+.kmhint{align-self:flex-end;font-size:13px;color:var(--ink-2)}
+.tile.combo{flex-direction:row;align-items:stretch;gap:14px;flex:1.15}
+.tile.combo .cvals{display:flex;flex-direction:column;justify-content:center;min-width:0}
+.tile.combo .v{font-size:44px}
+.minimap{flex:1;min-width:0;position:relative;border-radius:var(--r-lg);background:var(--surface);opacity:.92;display:grid;place-items:center;overflow:hidden}
+.minimap svg{width:100%;height:100%}
+.minimap path{fill:none;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
+.minimap .bg{stroke:var(--surface-3);stroke-dasharray:1 7}
+.minimap .fg{stroke:var(--accent);stroke-dasharray:0 100}
+.minimap em{position:absolute;right:8px;bottom:6px;font:600 11px var(--font-body);color:var(--ink-3)}
+.duo{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:0}
+.t-mint{background:var(--p-mint)}.t-mint .lbl{color:var(--i-mint)}
+.t-sky{background:var(--p-sky)}.t-sky .lbl{color:var(--i-sky)}
+.t-lav{background:var(--p-lav)}.t-lav .lbl{color:var(--i-lav)}
+.t-rose{background:var(--p-rose)}.t-rose .lbl{color:var(--i-rose)}
+.t-butter{background:var(--p-butter)}.t-butter .lbl{color:var(--i-butter)}
+.tile[data-zone]{color:var(--zone-ink)}
+.tile[data-zone] .lbl,.tile[data-zone] .v,.tile[data-zone] .v small{color:var(--zone-ink)}
+.tile[data-zone="1"]{background:var(--z1)}.tile[data-zone="2"]{background:var(--z2)}.tile[data-zone="3"]{background:var(--z3)}.tile[data-zone="4"]{background:var(--z4)}.tile[data-zone="5"]{background:var(--z5)}
+.zbadge{margin-left:auto;padding:2px 10px;border-radius:999px;background:rgba(30,27,46,.14);font:700 14px var(--font-display);letter-spacing:0}
+.zbar{display:flex;gap:4px;margin-top:6px}
+.zbar i{flex:1;height:6px;border-radius:3px;background:rgba(30,27,46,.16)}
+.zbar i.on{background:var(--zone-ink)}
+.dim .tile{opacity:.62}
+.laprow{display:flex;justify-content:space-between;align-items:baseline;padding:9px 12px;border-radius:var(--r-md);font-size:14px}
+.laprow:nth-child(odd){background:var(--surface-2)}
+.laprow b{font:600 16px var(--font-display);font-variant-numeric:tabular-nums}
+.dots{flex:none;display:flex;justify-content:center;gap:8px;padding:10px 0 2px}
+.dots button{width:26px;height:16px;display:grid;place-items:center}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--surface-3);transition:all .2s}
+.dots [aria-pressed="true"] i{width:22px;border-radius:4px;background:var(--accent)}
+.controls{flex:none;display:flex;align-items:center;justify-content:center;gap:26px;padding:8px 18px 22px;min-height:132px}
+.rbtn{position:relative;width:76px;height:76px;border-radius:50%;background:var(--surface);box-shadow:var(--shadow);display:grid;place-items:center;color:var(--ink);transition:transform .12s,background .15s;touch-action:none;user-select:none}
+.rbtn:hover{background:var(--surface-3)}
+.rbtn:active{transform:scale(.96)}
+.rbtn.big{width:104px;height:104px;background:var(--accent);color:var(--on-accent);box-shadow:0 12px 28px rgba(98,82,222,.32)}
+.rbtn.stop{background:var(--p-rose);color:var(--i-rose)}
+.rbtn em{position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);font:600 12px var(--font-body);color:var(--ink-2);white-space:nowrap}
+.ring{position:absolute;inset:-5px;width:calc(100% + 10px);height:calc(100% + 10px);transform:rotate(-90deg);pointer-events:none}
+.ring circle{fill:none;stroke:currentColor;stroke-width:4;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100;opacity:0}
+.holding .ring circle{opacity:1;stroke-dashoffset:0;transition:stroke-dashoffset 1.1s linear}
+.banner{margin:0 14px 8px;padding:10px 14px;border-radius:var(--r-md);background:var(--p-butter);color:var(--i-butter);font-weight:600;font-size:14px;display:flex;gap:8px;align-items:center}
+.unlock{position:relative;display:flex;align-items:center;gap:10px;padding:16px 26px;border-radius:999px;background:var(--surface);box-shadow:var(--shadow);font-weight:600;overflow:hidden;touch-action:none;user-select:none}
+.unlock::before{content:"";position:absolute;inset:0;background:var(--accent-soft);transform:scaleX(0);transform-origin:left}
+.unlock.holding::before{transform:scaleX(1);transition:transform 1.1s linear}
+.unlock>*{position:relative}
+.shield{position:absolute;inset:34px 0 132px;z-index:5}
+.toast{position:absolute;left:50%;bottom:150px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-weight:600;font-size:13px;z-index:30;white-space:nowrap;pointer-events:none;animation:fade 1.6s forwards}
+@keyframes fade{0%,70%{opacity:1}100%{opacity:0}}
+
+/* summary, history, run, settings */
+.field{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.field input,.field textarea,.field select{background:var(--surface-2);border:0;border-radius:var(--r-md);padding:12px 14px;font-size:15px;font-weight:500;color:var(--ink);width:100%}
+.field textarea{resize:none;height:76px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mt{border-radius:var(--r-lg);padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.mt .lbl{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.mt .v{font:600 26px/1.1 var(--font-display);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mt .v small{font:600 13px var(--font-body);color:var(--ink-2);margin-left:4px}
+.rpe{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.rpe button{height:38px;border-radius:12px;background:var(--surface-2);font:600 15px var(--font-display);color:var(--ink-2);transition:background .15s,color .15s}
+.rpe button:hover{background:var(--surface-3)}
+.rpe button[aria-pressed="true"]{background:var(--p-peach);color:var(--i-peach)}
+.item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow);text-align:left;width:100%;transition:transform .15s,background .15s}
+.item:hover{transform:translateY(-2px);background:var(--surface)}
+.thumb{width:54px;height:54px;border-radius:16px;background:var(--surface-2);flex:none;color:var(--accent)}
+.item b{display:block;font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item small{display:block;color:var(--ink-2);font-size:13px;line-height:1.35}
+.totals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.trace{width:100%;height:190px;border-radius:var(--r-lg);background:var(--surface-2);color:var(--accent)}
+.sheetwrap{position:absolute;inset:0;background:rgba(18,17,24,.45);z-index:40;display:flex;align-items:flex-end}
+.sheet{width:100%;background:var(--surface);border-radius:var(--r-xl) var(--r-xl) 0 0;padding:22px 22px 26px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--pop)}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.radio{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r-md);width:100%;text-align:left;font-weight:600;transition:background .15s}
+.radio:hover{background:var(--surface-2)}
+.radio[aria-checked="true"]{background:var(--accent-soft);color:var(--accent)}
+.avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font:600 14px var(--font-display);color:#1E1B2E;flex:none}
+
+/* ---------- watch (always dark) ---------- */
+.watch{--w:396px;padding:14px;border-radius:50%;background:#1c1b22;box-shadow:var(--pop)}
+.wscreen{position:relative;width:var(--w);height:var(--w);border-radius:50%;overflow:hidden;background:#000;color:#fff;container-type:size;font-family:var(--font-display);user-select:none;touch-action:pan-y}
+.wv{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:14cqw;gap:2cqw}
+.wv p{font:600 5.4cqw/1.3 var(--font-body);color:#BDB9D1}
+.wv h4{margin:0;font:600 8cqw/1.1 var(--font-display)}
+.wico{width:16cqw;height:16cqw;color:#A99BFF}
+.wbtn{position:relative;width:24cqw;height:24cqw;border-radius:50%;background:#1f1e29;color:#fff;display:grid;place-items:center;touch-action:none}
+.wbtn svg.ic{width:10cqw;height:10cqw}
+.wbtn.main{width:32cqw;height:32cqw;background:#A99BFF;color:#15122B}
+.wbtn.main svg.ic{width:13cqw;height:13cqw}
+.wbtn.stop{background:#40222E;color:#F7AFC3}
+.wbtn .ring{inset:-1.2cqw;width:calc(100% + 2.4cqw);height:calc(100% + 2.4cqw)}
+.wlabel{font:600 4.4cqw var(--font-body);color:#9F9BB6}
+.wface .t{font:600 26cqw/1 var(--font-display);font-variant-numeric:tabular-nums}
+.wface .d{font:600 5cqw var(--font-body);color:#9F9BB6}
+.wapp{margin-top:5cqw;display:flex;flex-direction:column;align-items:center;gap:1.5cqw}
+.wapp i{width:19cqw;height:19cqw;border-radius:50%;background:#A99BFF;color:#15122B;display:grid;place-items:center}
+.wapp i svg{width:10cqw;height:10cqw}
+.wring{position:absolute;inset:0;width:100%;height:100%}
+.wring path{fill:none;stroke:#23222c;stroke-width:3;stroke-linecap:round}
+.wm{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5cqw;padding-bottom:3cqw}
+.wm .top{font:600 10cqw/1 var(--font-display);color:#8FE0BB;font-variant-numeric:tabular-nums}
+.wm .sub small{font:600 4.2cqw var(--font-body);color:#9F9BB6;margin-left:1cqw}
+.wm .time{font:600 27cqw/1 var(--font-display);font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:#BDB2FF}
+.wm .sub{display:flex;align-items:baseline;gap:7cqw;font:600 11cqw/1 var(--font-display);font-variant-numeric:tabular-nums}
+.wm .dist{color:#9CCBF7}
+.wm .st{font:700 4.4cqw var(--font-body);letter-spacing:.1em;color:#EFD877;height:6cqw}
+.wctl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:4cqw}
+.wctl>div{display:flex;flex-direction:column;align-items:center;gap:2cqw}
+.wdots{position:absolute;bottom:5cqw;left:0;right:0;display:flex;justify-content:center;gap:2cqw}
+.wdots button{width:5cqw;height:5cqw;display:grid;place-items:center}
+.wdots i{width:2cqw;height:2cqw;border-radius:50%;background:#44424f}
+.wdots [aria-pressed="true"] i{background:#fff}
+.wmsg{position:absolute;top:13cqw;left:0;right:0;text-align:center;font:700 4.6cqw var(--font-body);color:#8FE0BB;animation:fade 1.4s forwards}
+.wmsg.bad{color:#F7AFC3}
+.ambient .wm *{color:#8c8a96 !important}
+.ambient .wm .time{font-weight:500}
+.ambient .wring,.ambient .wdots{display:none}
+
+@media (max-width:1240px){.page{grid-template-columns:auto auto}.panel{grid-column:1/-1;position:static;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start}}
+@media (max-width:920px){.page{grid-template-columns:minmax(0,1fr);padding:18px 14px 40px;gap:24px}}
+@media (max-width:480px){
+  .page{padding:14px 0 32px}.panel{padding:0 14px}
+  .phone{width:100%;padding:0;border-radius:0;background:none;box-shadow:none}
+  .screen{width:100%;border-radius:0;height:820px}
+  .device>.eyebrow{padding-left:14px}
+  .watch{--w:min(396px,calc(100vw - 48px)) !important}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-logo" viewBox="0 0 24 24"><path d="M3 17c4 0 4-10 9-10s4 10 9 10"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+<symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+<symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/></symbol>
+<symbol id="i-gauge" viewBox="0 0 24 24"><path d="M12 14l4-4M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></symbol>
+<symbol id="i-steps" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+<symbol id="i-mountain" viewBox="0 0 24 24"><path d="M8 3l4 8 5-5 5 15H2L8 3z"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8V4z"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 4v16M16 4v16"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 22V4M5 4h13l-2.5 4L18 12H5"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+<symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2.5"/></symbol>
+<symbol id="i-watch" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><path d="M9 6.6L9.6 3h4.8l.6 3.6M9 17.4l.6 3.6h4.8l.6-3.6M12 9.8V12l1.4 1"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+<symbol id="i-cloud" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6M3.5 9a9 9 0 0 1 14.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+</defs></svg>
+
+<div class="page">
+  <aside class="panel">
+    <div class="card">
+      <div class="brand"><span class="brand-mark"><svg class="ic" width="20" height="20"><use href="#i-logo"/></svg></span>Running</div>
+      <p class="muted">Prototype des applications téléphone et montre. La course est simulée : démarre-la sur le téléphone, ouvre l'app sur la montre, puis essaie pause, tour, verrouillage et fin de course.</p>
+      <div class="seg" role="group" aria-label="Thème" id="themeseg">
+        <button data-act="theme" data-v="light"><svg class="ic" width="16" height="16"><use href="#i-sun"/></svg>Clair</button>
+        <button data-act="theme" data-v="dark"><svg class="ic" width="16" height="16"><use href="#i-moon"/></svg>Sombre</button>
+        <button data-act="theme" data-v="system"><svg class="ic" width="16" height="16"><use href="#i-monitor"/></svg>Système</button>
+      </div>
+    </div>
+    <div class="card">
+      <span class="eyebrow">Simulation</span>
+      <div class="row"><span class="grow" style="font-weight:600;font-size:14px">Vitesse du temps</span>
+        <div class="seg" role="group" aria-label="Vitesse" id="speedseg">
+          <button data-act="speed" data-v="1">×1</button><button data-act="speed" data-v="10">×10</button><button data-act="speed" data-v="60">×60</button>
+        </div></div>
+      <button class="switch" role="switch" data-act="still" id="sw-still"><span>Arrêt au feu rouge<small>Le coureur s'immobilise : pause automatique</small></span><i></i></button>
+      <button class="switch" role="switch" data-act="home" id="sw-home"><span>Wi-Fi de la maison<small>Le serveur répond : envoi automatique</small></span><i></i></button>
+      <button class="switch" role="switch" data-act="link" id="sw-link"><span>Téléphone hors de portée<small>Coupure du lien avec la montre</small></span><i></i></button>
+      <button class="switch" role="switch" data-act="ambient" id="sw-amb"><span>Montre en veille<small>Écran atténué (mode ambiant)</small></span><i></i></button>
+    </div>
+    <div class="card">
+      <span class="eyebrow">Aller à un écran</span>
+      <div class="chips" id="jump">
+        <button class="chip" data-act="jump" data-v="ready">Prêt</button>
+        <button class="chip" data-act="jump" data-v="run">Course</button>
+        <button class="chip" data-act="jump" data-v="lap">Tour</button>
+        <button class="chip" data-act="jump" data-v="lock">Verrouillé</button>
+        <button class="chip" data-act="jump" data-v="pause">Pause</button>
+        <button class="chip" data-act="jump" data-v="auto">Pause auto</button>
+        <button class="chip" data-act="jump" data-v="summary">Résumé</button>
+        <button class="chip" data-act="jump" data-v="hist">Historique</button>
+        <button class="chip" data-act="jump" data-v="runpage">Sortie</button>
+        <button class="chip" data-act="jump" data-v="set">Réglages</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="device">
+    <span class="eyebrow">Téléphone · Pixel 8</span>
+    <div class="phone"><div class="screen" id="phone"></div></div>
+  </div>
+
+  <div class="device">
+    <div class="row" style="align-self:stretch;justify-content:space-between">
+      <span class="eyebrow">Montre · Galaxy Watch 4</span>
+      <div class="seg" role="group" aria-label="Taille de la montre" id="sizeseg">
+        <button data-act="wsize" data-v="396">40 mm</button><button data-act="wsize" data-v="450">44 mm</button>
+      </div>
+    </div>
+    <div class="watch" id="watchframe"><div class="wscreen" id="watch"></div></div>
+    <p class="muted" style="max-width:380px;text-align:center;font-size:13px">La montre n'enregistre rien seule : elle rejoint la course préparée sur le téléphone, envoie la fréquence cardiaque et sert de télécommande.</p>
+  </div>
+</div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const ic = (n, s = 22) => `<svg class="ic" width="${s}" height="${s}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const ring = '<svg class="ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15.9" pathLength="100"/></svg>';
+
+/* ---------- formatting ---------- */
+const p2 = n => String(n).padStart(2, '0');
+const fTime = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}:${p2(m)}:${p2(s % 60)}` : `${m}:${p2(s % 60)}`; };
+const fPace = s => (s && isFinite(s) && s < 1200) ? `${Math.floor(s / 60)}:${p2(Math.round(s) % 60)}` : '—';
+const fKm = m => (m / 1000).toFixed(2).replace('.', ',');
+const zoneOf = hr => hr == null ? 0 : hr < 113 ? 1 : hr < 132 ? 2 : hr < 151 ? 3 : hr < 170 ? 4 : 5;
+
+/* ---------- state ---------- */
+const S = {
+  tab: 'run', phase: 'ready', page: 0, locked: false,
+  t: 0, mov: 0, dist: 0, gain: 0, hr: null, pace: null, cad: null, hrSum: 0, hrN: 0,
+  laps: [], lapD0: 0, lapM0: 0,
+  still: false, stillFor: 0, moveFor: 0, gps: 0,
+  wopen: false, link: true, ambient: false, wpage: 0, home: false, speed: 1,
+  kms: [], kmM0: 0, edit: null,
+  fields: ['avgpace', 'cad', 'hr', 'combo'], autopause: true, keepOn: true, profile: 'Andjab',
+  openRun: null, period: 'week', sheet: null, draft: { title: '', rpe: 0, note: '' },
+  hist: [
+    { id: 6, title: 'Sortie du soir', date: 'mar. 10 nov. · 18:35', dist: 8420, mov: 3063, gain: 64, hr: 151, state: 'synced', rpe: 5, note: '', week: 1, month: 1, seed: 3, laps: [[3000, 1101], [3000, 1085], [2420, 877]] },
+    { id: 5, title: 'Fractionné 6 × 400 m', date: 'dim. 8 nov. · 09:12', dist: 6130, mov: 2110, gain: 22, hr: 163, state: 'failed', reason: 'Le serveur a refusé le fichier : taille maximale dépassée.', rpe: 8, note: 'Dernières répétitions difficiles.', week: 0, month: 1, seed: 7, laps: [[2000, 730], [400, 98], [400, 101], [400, 99], [2930, 1082]] },
+    { id: 4, title: 'Sortie matinale', date: 'jeu. 5 nov. · 07:04', dist: 5020, mov: 1856, gain: 31, hr: 144, state: 'synced', rpe: 4, note: '', week: 0, month: 1, seed: 11, laps: [[5020, 1856]] },
+    { id: 3, title: 'Sortie longue au canal', date: 'dim. 1 nov. · 10:20', dist: 14060, mov: 5340, gain: 96, hr: 149, state: 'synced', rpe: 6, note: 'Bonnes sensations.', week: 0, month: 1, seed: 5, laps: [[5000, 1890], [5000, 1905], [4060, 1545]] },
+    { id: 2, title: 'Footing importé (Strava)', date: 'mer. 28 oct. · 18:02', dist: 7200, mov: 2700, gain: 40, hr: null, state: 'server', week: 0, month: 0, seed: 9, laps: [] },
+  ],
+};
+const today = { id: 7, title: '', date: "aujourd'hui · 18:42", week: 1, month: 1, seed: 2 };
+const FIELDS = {
+  time: { l: 'Temps', i: 'clock', c: 'mint', v: () => fTime(S.mov) },
+  elapsed: { l: 'Temps total', i: 'clock', c: 'mint', v: () => fTime(S.t) },
+  dist: { l: 'Distance', i: 'route', c: 'sky', u: 'km', v: () => fKm(S.dist) },
+  pace: { l: 'Allure', i: 'gauge', c: 'lav', u: '/km', v: () => fPace(S.pace) },
+  avgpace: { l: 'Allure moy.', i: 'gauge', c: 'lav', u: '/km', v: () => fPace(S.dist > 20 ? S.mov / (S.dist / 1000) : null) },
+  lappace: { l: 'Allure tour', i: 'flag', c: 'lav', u: '/km', v: () => fPace(lapNow().d > 20 ? lapNow().m / (lapNow().d / 1000) : null) },
+  hr: { l: 'FC', i: 'heart', c: 'rose', u: 'bpm', v: () => hrNow() ?? '—' },
+  cad: { l: 'Cadence', i: 'steps', c: 'mint', u: 'ppm', v: () => S.cad ?? '—' },
+  gain: { l: 'Dénivelé +', i: 'mountain', c: 'sky', u: 'm', v: () => Math.round(S.gain) },
+  combo: { l: 'Temps total, distance et mini-carte', i: 'route', c: 'sky', wideOnly: true, v: () => '' },
+  clock: { l: 'Heure', i: 'clock', c: 'butter', v: () => { const m = 18 * 60 + 42 + Math.floor(S.t / 60); return `${Math.floor(m / 60) % 24}:${p2(m % 60)}`; } },
+};
+const lapNow = () => ({ d: S.dist - S.lapD0, m: S.mov - S.lapM0 });
+const hrNow = () => (S.wopen && S.link && S.hr != null) ? Math.round(S.hr) : null;
+const active = () => ['run', 'pause', 'auto'].includes(S.phase);
+const session = () => active() || (S.phase === 'ready' && S.tab === 'run');
+
+/* ---------- simulation ---------- */
+function step() {
+  if (S.phase === 'ready' && S.tab === 'run') S.gps++;
+  if (active()) S.t++;
+  if (S.phase === 'run') {
+    if (S.still) {
+      S.stillFor++; S.pace = null; S.cad = null;
+      if (S.autopause && S.stillFor >= 5) { S.phase = 'auto'; S.moveFor = 0; dirty = true; }
+      else if (!S.autopause) S.mov++;
+    } else {
+      S.stillFor = 0; S.mov++;
+      S.pace = 356 + 22 * Math.sin(S.mov / 47) + 9 * Math.sin(S.mov / 11);
+      S.dist += 1000 / S.pace;
+      if (Math.floor(S.dist / 1000) > S.kms.length) { S.kms.push(S.mov - S.kmM0); S.kmM0 = S.mov; }
+      S.gain += Math.max(0, Math.sin(S.mov / 90)) * 0.12;
+      S.cad = 168 + Math.round(4 * Math.sin(S.mov / 23));
+    }
+  } else if (S.phase === 'auto') {
+    if (!S.still && ++S.moveFor >= 3) { S.phase = 'run'; S.stillFor = 0; dirty = true; }
+  }
+  if (S.wopen) {
+    const moving = S.phase === 'run' && !S.still;
+    const target = moving ? 152 + 11 * Math.sin(S.mov / 70) - 50 * Math.exp(-S.mov / 150) : 96;
+    S.hr = S.hr == null ? 74 : S.hr + (target - S.hr) * 0.06;
+    if (S.phase === 'run') { S.hrSum += S.hr; S.hrN++; }
+  }
+  if (S.home) for (const r of S.hist) if (r.state === 'pending' && ++r.syncT >= 3) { r.state = 'synced'; dirty = true; }
+}
+let dirty = false;
+setInterval(() => {
+  const gpsBefore = S.gps >= 3;
+  for (let i = 0; i < S.speed; i++) step();
+  if ((S.gps >= 3) !== gpsBefore) dirty = true;
+  if (dirty) { dirty = false; if (!S.sheet && !isTyping()) render(); else renderWatch(); }
+  update();
+}, 1000);
+const isTyping = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+function fastForward(n, laps = []) { for (let i = 1; i <= n; i++) { step(); if (laps.includes(i)) lap(); } }
+function reset() { Object.assign(S, { phase: 'ready', page: 0, locked: false, t: 0, mov: 0, dist: 0, gain: 0, pace: null, cad: null, hrSum: 0, hrN: 0, laps: [], lapD0: 0, lapM0: 0, kms: [], kmM0: 0, still: false, stillFor: 0, moveFor: 0, gps: 0, wpage: 0, draft: { title: '', rpe: 0, note: '' } }); }
+function lap() { const l = lapNow(); S.laps.push([l.d, l.m]); S.lapD0 = S.dist; S.lapM0 = S.mov; }
+
+/* ---------- phone rendering ---------- */
+const mini = (k, v, u, c) => `<div class="mt t-${c}"><span class="lbl" style="color:var(--i-${c})">${k}</span><span class="v">${v}${u ? `<small>${u}</small>` : ''}</span></div>`;
+function tracePath(seed, w, h) {
+  let d = '';
+  for (let i = 0; i <= 80; i++) {
+    const a = i / 80 * Math.PI * 2;
+    const r = 0.32 + 0.09 * Math.sin(a * 3 + seed) + 0.05 * Math.cos(a * 5 + seed * 2);
+    const x = w / 2 + Math.cos(a) * r * w * (1 + 0.15 * Math.sin(seed)), y = h / 2 + Math.sin(a) * r * h;
+    d += (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+  }
+  return d;
+}
+const traceSvg = (seed, cls, sw) => `<svg class="${cls}" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="${tracePath(seed, 100, 100)}" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const syncTag = r => ({
+  synced: `<span class="tag mint">${ic('check', 13)}Synchronisée</span>`,
+  pending: `<span class="tag">${ic('clock', 13)}En attente</span>`,
+  failed: `<span class="tag rose">${ic('alert', 13)}Échec</span>`,
+  server: `<span class="tag plain">${ic('cloud', 13)}Serveur</span>`,
+}[r.state]);
+const tile = (key, cls) => {
+  const f = FIELDS[key];
+  if (key === 'combo') return `<div class="tile ${cls} combo t-sky" data-f="combo">
+    <div class="cvals"><span class="lbl">${ic('clock', 16)}Temps total</span><span class="v"><span data-b="elapsed"></span></span>
+      <span class="lbl" style="margin-top:6px">${ic('route', 16)}Distance</span><span class="v"><span data-b="dist"></span><small>km</small></span></div>
+    <div class="minimap" aria-label="Mini-carte (emplacement réservé)"><svg viewBox="0 0 100 100" aria-hidden="true"><path class="bg" d="${tracePath(2, 100, 100)}"/><path class="fg" pathLength="100" d="${tracePath(2, 100, 100)}"/></svg><em>Mini-carte</em></div></div>`;
+  return `<div class="tile ${cls} t-${f.c}" data-f="${key}"><span class="lbl">${ic(f.i, 16)}${f.l}${key === 'hr' ? '<span class="zbadge" data-b="zone"></span>' : ''}</span>
+    <span class="v"><span data-b="${key}"></span>${f.u ? `<small>${f.u}</small>` : ''}</span>${key === 'hr' ? '<div class="zbar">' + '<i></i>'.repeat(5) + '</div>' : ''}${key === 'avgpace' && cls === 'hero' ? '<div class="kmbars" data-kmbars></div>' : ''}</div>`;
+};
+function kmBars() {
+  const cur = S.dist - S.kms.length * 1000 > 30 ? (S.mov - S.kmM0) / ((S.dist - S.kms.length * 1000) / 1000) : null;
+  const all = S.kms.map((p, i) => ({ p, n: i + 1 })).concat(cur ? [{ p: cur, n: S.kms.length + 1, cur: true }] : []).slice(-8);
+  if (!all.length) return '<span class="kmhint">Allure de chaque kilomètre</span>';
+  const lo = Math.min(...all.map(b => b.p)) - 8, hi = Math.max(...all.map(b => b.p)) + 8;
+  return all.map(b => `<span class="${b.cur ? 'cur' : ''}"><b>${fPace(b.p)}</b><i style="height:${Math.round(30 + 70 * (hi - b.p) / (hi - lo))}%"></i><em>${b.n}</em></span>`).join('');
+}
+
+function vReady() {
+  const ok = S.gps >= 3, w = S.wopen && S.link;
+  return `<div class="ready">
+    <div><span class="eyebrow">${S.profile} · profil actif</span><h1>Prêt à courir</h1></div>
+    <div class="stat ${ok ? 'ok' : 'wait'}"><span class="dot ${ok ? '' : 'pulse'}">${ic('pin')}</span><span class="grow"><b>${ok ? 'Position trouvée' : 'Recherche de la position…'}</b><small>${ok ? 'Précision ± 6 m' : 'Reste à découvert quelques secondes'}</small></span></div>
+    <div class="stat ${w ? 'ok' : ''}"><span class="dot">${ic('watch')}</span><span class="grow"><b>${w ? 'Montre connectée' : 'Montre non connectée'}</b><small>${w ? '<span data-b="hr"></span> bpm · fréquence cardiaque active' : "Ouvre l'app sur la montre pour la fréquence cardiaque"}</small></span></div>
+    <div class="stat"><span class="dot">${ic('pause')}</span><span class="grow"><b>Pause automatique ${S.autopause ? 'activée' : 'désactivée'}</b><small>Écran principal : ${S.fields.map(k => FIELDS[k].l.toLowerCase()).join(', ')}</small></span></div>
+    <div class="grow"></div>
+    <button class="go" data-act="start" aria-label="Démarrer la course"><span>${ic('play', 34)}Démarrer</span></button>
+    <p class="muted" style="text-align:center;font-size:13px;min-height:40px">${ok ? 'Tu peux aussi démarrer depuis la montre.' : 'Tu peux démarrer maintenant : la distance sera comptée dès que la position sera trouvée.'}</p>
+  </div>`;
+}
+function vLive() {
+  const paused = S.phase !== 'run', f = S.fields;
+  const prev = S.laps.at(-1);
+  const controls = S.locked
+    ? `<button class="unlock" data-hold="unlock">${ic('lock', 20)}<span>Maintenir pour déverrouiller</span></button>`
+    : paused
+      ? `<button class="rbtn stop" data-hold="stop" aria-label="Terminer la course (maintenir)">${ring}${ic('stop', 28)}<em>Maintenir</em></button>
+         <button class="rbtn big" data-act="resume" aria-label="Reprendre">${ic('play', 40)}</button>
+         <button class="rbtn" data-act="lock" aria-label="Verrouiller l'écran">${ic('lock', 26)}<em>Verrouiller</em></button>`
+      : `<button class="rbtn" data-act="lap" aria-label="Marquer un tour">${ic('flag', 28)}<em>Tour</em></button>
+         <button class="rbtn big" data-act="pause" aria-label="Mettre en pause">${ic('pause', 40)}</button>
+         <button class="rbtn" data-act="lock" aria-label="Verrouiller l'écran">${ic('lock', 26)}<em>Verrouiller</em></button>`;
+  return `<div class="live ${paused ? 'dim' : ''}">
+    <div class="livebar">
+      <span class="state ${paused ? 'pause' : ''}">${S.phase === 'run' ? 'En course' : S.phase === 'auto' ? 'Pause auto' : 'En pause'}</span>
+      ${S.locked ? `<span class="tag plain">${ic('lock', 13)}Verrouillé</span>` : ''}
+      <span class="minis"><span class="on" title="Position précise">${ic('pin', 18)}</span><span class="${S.wopen && S.link ? 'on' : 'off'}" title="Montre">${ic('watch', 18)}</span></span>
+    </div>
+    ${S.phase === 'auto' ? `<div class="banner">${ic('pause', 18)}Pause automatique · reprise dès que tu repars</div>` : ''}
+    ${S.phase === 'pause' ? `<div class="banner">${ic('pause', 18)}En pause · le temps total continue</div>` : ''}
+    <div class="pages" id="pages"><div class="track" style="transform:translateX(-${S.page * 50}%)">
+      <section>${tile(f[0], 'hero')}<div class="duo">${tile(f[1], '')}${tile(f[2], '')}</div>${tile(f[3], 'wide')}</section>
+      <section>
+        <div class="tile hero t-lav"><span class="lbl">${ic('flag', 16)}Tour ${S.laps.length + 1}</span><span class="v"><span data-b="laptime"></span></span></div>
+        <div class="duo">
+          <div class="tile t-sky"><span class="lbl">Distance</span><span class="v"><span data-b="lapdist"></span><small>km</small></span></div>
+          <div class="tile t-lav"><span class="lbl">Allure tour</span><span class="v"><span data-b="lappace"></span><small>/km</small></span></div>
+        </div>
+        <div class="tile wide" style="justify-content:flex-start;padding-top:14px;gap:4px;overflow:hidden">
+          <span class="lbl">${prev ? 'Tours précédents' : 'Aucun tour marqué'}</span>
+          ${S.laps.slice(-3).reverse().map((l, i) => `<div class="laprow"><span>Tour ${S.laps.length - i}</span><b>${fTime(l[1])}</b><b>${fPace(l[1] / (l[0] / 1000))} /km</b></div>`).join('') || '<p class="muted" style="font-size:14px">Appuie sur Tour pour découper ta sortie.</p>'}
+        </div>
+      </section>
+    </div></div>
+    <div class="dots"><button data-act="page" data-v="0" aria-label="Métriques" aria-pressed="${S.page === 0}"><i></i></button><button data-act="page" data-v="1" aria-label="Tour en cours" aria-pressed="${S.page === 1}"><i></i></button></div>
+    <div class="controls">${controls}</div>
+    ${S.locked ? '<div class="shield" data-act="shield"></div>' : ''}
+  </div>`;
+}
+function vSummary() {
+  const d = S.draft, hr = S.hrN ? Math.round(S.hrSum / S.hrN) : null, short = S.mov < 10 || S.dist < 20;
+  return `<div class="scroll">
+    <div><span class="eyebrow">Course terminée</span><h1>${fKm(S.dist)} km</h1></div>
+    ${short ? `<div class="banner" style="margin:0">${ic('alert', 18)}Sortie très courte : elle sera sans doute à supprimer.</div>` : ''}
+    <div class="grid2">${mini('Temps', fTime(S.mov), '', 'mint')}${mini('Allure moy.', fPace(S.dist > 20 ? S.mov / (S.dist / 1000) : null), '/km', 'lav')}${mini('Dénivelé +', Math.round(S.gain), 'm', 'sky')}${mini('FC moy.', hr ?? '—', hr ? 'bpm' : '', 'rose')}</div>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:12px">
+      <label class="field">Titre<input id="d-title" placeholder="Sortie du soir" value="${d.title}"></label>
+      <div class="field">Ressenti de l'effort ${d.rpe ? `· ${d.rpe}/10` : ''}<div class="rpe">${Array.from({ length: 10 }, (_, i) => `<button data-act="rpe" data-v="${i + 1}" aria-pressed="${d.rpe === i + 1}">${i + 1}</button>`).join('')}</div></div>
+      <label class="field">Note<textarea id="d-note" placeholder="Sensations, météo, parcours…">${d.note}</textarea></label>
+    </div>
+    <div class="pcard"><h3 style="margin-bottom:8px">Tours</h3>${S.laps.map((l, i) => `<div class="laprow"><span>Tour ${i + 1} · ${fKm(l[0])} km</span><b>${fTime(l[1])}</b><b>${fPace(l[1] / (l[0] / 1000))} /km</b></div>`).join('')}</div>
+    <button class="btn primary block" data-act="save">${ic('check', 20)}Enregistrer</button>
+    <button class="btn danger block" data-act="ask-discard">${ic('trash', 18)}Supprimer cette sortie</button>
+  </div>`;
+}
+function vHist() {
+  const set = S.hist.filter(r => r[S.period]);
+  const km = set.reduce((a, r) => a + r.dist, 0), tm = set.reduce((a, r) => a + r.mov, 0);
+  const pending = S.hist.filter(r => r.state === 'pending').length;
+  return `<div class="scroll">
+    <div class="row"><h1 class="grow">Historique</h1><button class="iconbtn" data-act="sync" aria-label="Synchroniser maintenant">${ic('refresh', 20)}</button></div>
+    <p class="muted" style="font-size:13px;margin-top:-8px">${S.home ? 'Serveur joignable' : 'Serveur injoignable · hors de la maison'}${pending ? ` · ${pending} sortie${pending > 1 ? 's' : ''} en attente` : ''}</p>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:12px">
+      <div class="seg" role="group" aria-label="Période" style="align-self:flex-start"><button data-act="period" data-v="week" aria-pressed="${S.period === 'week'}">Cette semaine</button><button data-act="period" data-v="month" aria-pressed="${S.period === 'month'}">Ce mois</button></div>
+      <div class="totals">${mini('Sorties', set.length, '', 'butter')}${mini('Distance', (km / 1000).toFixed(1).replace('.', ','), 'km', 'sky')}${mini('Temps', fTime(tm), '', 'mint')}</div>
+    </div>
+    ${S.hist.map(r => `<button class="item" data-act="open" data-v="${r.id}">${traceSvg(r.seed, 'thumb', 5)}<span class="grow"><b>${r.title || 'Sortie du soir'}</b><small>${r.date}</small><small class="num">${fKm(r.dist)} km · ${fTime(r.mov)} · ${fPace(r.mov / (r.dist / 1000))} /km</small><span style="display:block;margin-top:5px">${syncTag(r)}</span></span>${ic('back', 18).replace('class="ic"', 'class="ic" style="transform:rotate(180deg);color:var(--ink-3)"')}</button>`).join('')}
+  </div>`;
+}
+function vRun() {
+  const r = S.hist.find(x => x.id === S.openRun), local = r.state !== 'server';
+  return `<div class="scroll">
+    <div class="row"><button class="iconbtn" data-act="back" aria-label="Retour">${ic('back', 20)}</button><span class="grow"></span>${syncTag(r)}${local ? `<button class="iconbtn" data-act="edit" aria-label="Modifier le titre, le ressenti et la note">${ic('edit', 19)}</button>` : ''}</div>
+    <div><span class="eyebrow">${r.date}</span><h1>${r.title || 'Sortie du soir'}</h1></div>
+    ${r.state === 'failed' ? `<div class="pcard" style="background:var(--p-rose);box-shadow:none;display:flex;flex-direction:column;gap:10px"><p style="color:var(--i-rose);font-weight:600">${r.reason}</p><button class="btn" data-act="retry" style="background:var(--surface);align-self:flex-start">${ic('refresh', 18)}Réessayer</button></div>` : ''}
+    ${r.state === 'server' ? `<p class="muted" style="font-size:13px">Cette sortie n'a pas été enregistrée sur ce téléphone : seul son résumé est disponible ici.</p>` : traceSvg(r.seed, 'trace', 2.2)}
+    <div class="grid2">${mini('Distance', fKm(r.dist), 'km', 'sky')}${mini('Temps', fTime(r.mov), '', 'mint')}${mini('Allure moy.', fPace(r.mov / (r.dist / 1000)), '/km', 'lav')}${mini('Dénivelé +', r.gain, 'm', 'sky')}${mini('FC moy.', r.hr ?? '—', r.hr ? 'bpm' : '', 'rose')}${local ? mini('Ressenti', r.rpe ? r.rpe + '/10' : '—', '', 'peach') : ''}</div>
+    ${local && r.note ? `<div class="pcard"><span class="eyebrow">Note</span><p>${r.note}</p></div>` : ''}
+    ${local ? `<div class="pcard"><h3 style="margin-bottom:8px">Tours</h3>${r.laps.map((l, i) => `<div class="laprow"><span>Tour ${i + 1} · ${fKm(l[0])} km</span><b>${fTime(l[1])}</b><b>${fPace(l[1] / (l[0] / 1000))} /km</b></div>`).join('')}</div>
+    <button class="btn block" data-act="share">${ic('share', 18)}Partager le fichier .fit</button>
+    <button class="btn danger block" data-act="ask-delete">${ic('trash', 18)}Supprimer du téléphone</button>` : ''}
+  </div>`;
+}
+function vSet() {
+  const th = localTheme();
+  const sw = (act, on, t, s) => `<button class="switch" role="switch" data-act="${act}" aria-checked="${on}"><span>${t}<small>${s}</small></span><i></i></button>`;
+  const slots = ['Grand champ du haut', 'Milieu gauche', 'Milieu droite', 'Champ du bas'];
+  return `<div class="scroll">
+    <h1>Réglages</h1>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:12px">
+      <div class="row"><h3 class="grow">Serveur à la maison</h3><span class="tag ${S.home ? 'mint' : 'plain'}">${S.home ? 'Connecté · v0.1.0' : 'Injoignable'}</span></div>
+      <label class="field">Adresse<input value="http://192.168.1.20:8080" inputmode="url"></label>
+      <p class="muted" style="font-size:13px">Les sorties ne sont envoyées qu'à cette adresse, en Wi-Fi, jamais ailleurs.</p>
+    </div>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:6px">
+      <h3>Profil</h3>
+      ${[['Andjab', '#B9AFFF'], ['Sarah', '#F7AFC3']].map(([n, c]) => `<button class="radio" role="radio" data-act="profile" data-v="${n}" aria-checked="${S.profile === n}"><span class="avatar" style="background:${c}">${n[0]}</span><span class="grow">${n}</span>${S.profile === n ? ic('check', 18) : ''}</button>`).join('')}
+      <p class="muted" style="font-size:13px">Unités et zones cardiaques viennent du profil choisi sur le serveur.</p>
+    </div>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:10px">
+      <h3>Écran principal</h3>
+      ${slots.map((s, i) => `<label class="field">${s}<select data-slot="${i}">${Object.entries(FIELDS).filter(([, f]) => !f.wideOnly || i === 3).map(([k, f]) => `<option value="${k}" ${S.fields[i] === k ? 'selected' : ''}>${f.l}</option>`).join('')}</select></label>`).join('')}
+    </div>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:8px">
+      <h3>Pendant la course</h3>
+      ${sw('autopause', S.autopause, 'Pause automatique', "Met en pause à l'arrêt, reprend au mouvement")}
+      ${sw('keepon', S.keepOn, "Garder l'écran allumé", "L'écran ne s'éteint pas pendant une course")}
+    </div>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:10px">
+      <h3>Apparence</h3>
+      <div class="seg" role="group" aria-label="Apparence" style="align-self:flex-start">${[['light', 'Clair'], ['dark', 'Sombre'], ['system', 'Système']].map(([v, l]) => `<button data-act="theme" data-v="${v}" aria-pressed="${th === v}">${l}</button>`).join('')}</div>
+    </div>
+  </div>`;
+}
+function vSheet() {
+  const s = S.sheet; if (!s) return '';
+  const r = S.hist.find(x => x.id === S.openRun);
+  if (s === 'edit') { const d = S.edit; return `<div class="sheetwrap" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-label="Modifier la sortie"><h2>Modifier la sortie</h2>
+    <label class="field">Titre<input id="e-title" placeholder="Sortie du soir" value="${d.title}"></label>
+    <div class="field">Ressenti de l'effort ${d.rpe ? `· ${d.rpe}/10` : ''}<div class="rpe">${Array.from({ length: 10 }, (_, i) => `<button data-act="erpe" data-v="${i + 1}" aria-pressed="${d.rpe === i + 1}">${i + 1}</button>`).join('')}</div></div>
+    <label class="field">Note<textarea id="e-note" placeholder="Sensations, météo, parcours…">${d.note}</textarea></label>
+    ${r.state === 'synced' ? '<p class="muted" style="font-size:13px">La modification sera aussi envoyée au serveur à la prochaine synchronisation.</p>' : ''}
+    <button class="btn primary block" data-act="edit-save">${ic('check', 20)}Enregistrer</button><button class="btn block" data-act="close">Annuler</button></div></div>`; }
+  const body = {
+    discard: ['Supprimer cette sortie ?', "Elle sera effacée du téléphone et ne sera jamais envoyée au serveur.", 'do-discard', 'Supprimer'],
+    delete: r && r.state === 'synced'
+      ? ['Supprimer du téléphone ?', "Les données enregistrées seront retirées de ce téléphone. La sortie reste sur le serveur.", 'do-delete', 'Supprimer du téléphone']
+      : ['Supprimer cette sortie ?', "Elle n'a pas encore été envoyée au serveur : elle sera définitivement perdue.", 'do-delete', 'Supprimer définitivement'],
+    share: ['Partager le fichier', `sortie-${r ? r.id : ''}.fit · prêt à être enregistré ou envoyé vers une autre application.`, 'close', 'Fermer'],
+  }[s];
+  return `<div class="sheetwrap" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-label="${body[0]}"><h2>${body[0]}</h2><p class="muted">${body[1]}</p>
+    <button class="btn ${s === 'share' ? 'primary' : 'danger'} block" data-act="${body[2]}">${body[3]}</button>${s === 'share' ? '' : '<button class="btn block" data-act="close">Annuler</button>'}</div></div>`;
+}
+function renderPhone() {
+  const inRun = S.tab === 'run' && S.phase !== 'ready';
+  const view = S.tab === 'run' ? (S.phase === 'ready' ? vReady() : S.phase === 'summary' ? vSummary() : vLive())
+    : S.tab === 'hist' ? (S.openRun ? vRun() : vHist()) : vSet();
+  const tabs = [['run', 'play', 'Courir'], ['hist', 'list', 'Historique'], ['set', 'sliders', 'Réglages']];
+  $('#phone').innerHTML = `<div class="status"><span class="num" data-b="clock"></span><span class="row" style="gap:6px">${ic('pin', 13)}<span>82 %</span></span></div>
+    <div class="view">${view}</div>
+    ${inRun ? '' : `<nav class="tabs" aria-label="Navigation">${tabs.map(([k, i, l]) => `<button data-act="tab" data-v="${k}" ${S.tab === k ? 'aria-current="page"' : ''}>${ic(i, 22)}${l}</button>`).join('')}</nav>`}
+    ${vSheet()}`;
+}
+
+/* ---------- watch rendering ---------- */
+function arcs() {
+  const seg = (i) => { const a0 = (140 + i * 54) * Math.PI / 180, a1 = (140 + i * 54 + 44) * Math.PI / 180, r = 46.5; return `<path data-z="${i + 1}" d="M${50 + r * Math.cos(a0)} ${50 + r * Math.sin(a0)}A${r} ${r} 0 0 1 ${50 + r * Math.cos(a1)} ${50 + r * Math.sin(a1)}"/>`; };
+  return `<svg class="wring" viewBox="0 0 100 100" aria-hidden="true">${[0, 1, 2, 3, 4].map(seg).join('')}</svg>`;
+}
+function renderWatch() {
+  const w = $('#watch'); let h;
+  w.classList.toggle('ambient', S.ambient && S.wopen && active());
+  if (!S.wopen) h = `<div class="wv wface"><span class="d">jeu. 12 nov.</span><span class="t" data-b="clock"></span><button class="wapp" data-act="wopen" aria-label="Ouvrir l'app Running"><i>${ic('logo')}</i><span class="wlabel">Ouvrir Running</span></button></div>`;
+  else if (!S.link) h = `<div class="wv">${ic('phone').replace('class="ic"', 'class="ic wico" style="color:#F7AFC3"')}<h4>Téléphone injoignable</h4><p>${active() ? 'La fréquence cardiaque continue et sera transmise au retour du lien.' : 'Rapproche-toi du téléphone.'}</p></div>`;
+  else if (S.phase === 'summary') h = `<div class="wv">${ic('check').replace('class="ic"', 'class="ic wico" style="color:#8FE0BB"')}<h4>Course terminée</h4><p class="num">${fKm(S.dist)} km · ${fTime(S.mov)}</p></div>`;
+  else if (!session()) h = `<div class="wv">${ic('phone').replace('class="ic"', 'class="ic wico"')}<h4>Prépare la course</h4><p>Ouvre l'écran « Courir » sur le téléphone.</p></div>`;
+  else if (S.phase === 'ready') h = `<div class="wv" style="gap:3cqw"><p style="color:#F7AFC3" class="num">${ic('heart', 14)} <span data-b="hr"></span> bpm</p><button class="wbtn main" data-act="w-start" aria-label="Démarrer">${ic('play')}</button><span class="wlabel">Prêt · démarrer</span></div>`;
+  else {
+    const paused = S.phase !== 'run';
+    h = S.wpage === 0 || S.ambient
+      ? `${arcs()}<div class="wm"><span class="st">${S.phase === 'pause' ? 'PAUSE' : S.phase === 'auto' ? 'PAUSE AUTO' : ''}</span><span class="top" data-b="time"></span><span class="time"><span data-b="pace"></span></span><span class="sub"><span class="dist"><span data-b="dist"></span><small>km</small></span><span class="hr" data-b="hr"></span></span></div>`
+      : `<div class="wctl"><div><button class="wbtn" data-act="w-lap" aria-label="Tour" ${paused ? 'disabled style="opacity:.35"' : ''}>${ic('flag')}</button><span class="wlabel">Tour</span></div>
+          <div><button class="wbtn main" data-act="${paused ? 'w-resume' : 'w-pause'}" aria-label="${paused ? 'Reprendre' : 'Pause'}">${ic(paused ? 'play' : 'pause')}</button><span class="wlabel">${paused ? 'Reprendre' : 'Pause'}</span></div>
+          <div><button class="wbtn stop" data-hold="wstop" aria-label="Terminer (maintenir)">${ring}${ic('stop')}</button><span class="wlabel">Maintenir</span></div></div>`;
+    if (!S.ambient) h += `<div class="wdots"><button data-act="wpage" data-v="0" aria-label="Métriques" aria-pressed="${S.wpage === 0}"><i></i></button><button data-act="wpage" data-v="1" aria-label="Contrôles" aria-pressed="${S.wpage === 1}"><i></i></button></div>`;
+  }
+  w.innerHTML = h;
+}
+
+/* ---------- live values ---------- */
+function update() {
+  const l = lapNow(), z = zoneOf(hrNow());
+  const vals = { laptime: fTime(l.m), lapdist: fKm(l.d), zone: z ? 'Z' + z : '' };
+  for (const k in FIELDS) vals[k] = FIELDS[k].v();
+  for (const el of $$('[data-b]')) { const v = String(vals[el.dataset.b] ?? ''); if (el.textContent !== v) el.textContent = v; }
+  for (const c of $$('[data-kmbars]')) { const h = kmBars(); if (c.innerHTML !== h) c.innerHTML = h; }
+  for (const p of $$('.minimap .fg')) p.style.strokeDasharray = `${Math.min(100, S.dist / 80)} 100`;
+  for (const t of $$('.tile[data-f="hr"]')) {
+    if (z) t.dataset.zone = z; else delete t.dataset.zone;
+    $$('.zbar i', t).forEach((b, i) => b.classList.toggle('on', i + 1 === z));
+  }
+  const zc = ['', '#A3ABC8', '#7DB7F0', '#6FD0A3', '#FFAE70', '#F58AA5'];
+  for (const p of $$('.wring path')) p.style.stroke = +p.dataset.z === z ? zc[z] : '';
+  for (const e of $$('#watch .hr')) e.style.color = z ? zc[z] : '#9F9BB6';
+}
+function render() { renderPhone(); renderWatch(); syncPanel(); update(); }
+function syncPanel() {
+  const sw = (id, on, dis) => { const e = $(id); e.setAttribute('aria-checked', on); e.disabled = !!dis; };
+  sw('#sw-still', S.still, !['run', 'auto'].includes(S.phase));
+  sw('#sw-home', S.home); sw('#sw-link', !S.link); sw('#sw-amb', S.ambient);
+  $$('#speedseg button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.v === S.speed));
+  $$('#themeseg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === localTheme()));
+  $$('#sizeseg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === wsize));
+}
+function toast(msg) { $('#phone .toast')?.remove(); $('#phone').insertAdjacentHTML('beforeend', `<div class="toast">${msg}</div>`); }
+function wmsg(msg, bad) { $('#watch .wmsg')?.remove(); $('#watch').insertAdjacentHTML('beforeend', `<div class="wmsg ${bad ? 'bad' : ''}">${msg}</div>`); }
+
+/* ---------- theme ---------- */
+let themeChoice = 'system';
+try { themeChoice = localStorage.getItem('proto-theme') || 'system'; } catch (e) {}
+const localTheme = () => themeChoice;
+function setTheme(v) {
+  themeChoice = v;
+  if (v === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = v;
+  try { localStorage.setItem('proto-theme', v); } catch (e) {}
+}
+setTheme(themeChoice);
+let wsize = '396';
+
+/* ---------- actions ---------- */
+function keepDraft() { const t = $('#d-title'), n = $('#d-note'); if (t) S.draft.title = t.value; if (n) S.draft.note = n.value; }
+function keepEdit() { const t = $('#e-title'), n = $('#e-note'); if (t) S.edit.title = t.value; if (n) S.edit.note = n.value; }
+function stopRun() { lap(); S.phase = 'summary'; S.locked = false; S.still = false; }
+const A = {
+  theme: v => setTheme(v),
+  speed: v => { S.speed = +v; },
+  still: () => { S.still = !S.still; S.stillFor = 0; S.moveFor = 0; },
+  home: () => { S.home = !S.home; },
+  link: () => { S.link = !S.link; },
+  ambient: () => { S.ambient = !S.ambient; },
+  wsize: v => { wsize = v; $('#watchframe').style.setProperty('--w', v + 'px'); },
+  tab: v => { S.tab = v; S.openRun = null; if (v === 'run' && S.phase === 'ready') S.gps = 0; },
+  start: () => { S.phase = 'run'; S.page = 0; },
+  pause: () => { S.phase = 'pause'; },
+  resume: () => { S.phase = 'run'; S.still = false; S.stillFor = 0; },
+  lap: () => { lap(); setTimeout(() => toast(`Tour ${S.laps.length} · ${fTime(S.laps.at(-1)[1])}`)); },
+  lock: () => { S.locked = true; },
+  shield: () => { toast('Écran verrouillé'); return false; },
+  page: v => { S.page = +v; },
+  rpe: v => { keepDraft(); S.draft.rpe = S.draft.rpe === +v ? 0 : +v; },
+  save: () => {
+    keepDraft();
+    S.hist.unshift({ ...today, id: Date.now(), title: S.draft.title, dist: S.dist, mov: S.mov, gain: Math.round(S.gain), hr: S.hrN ? Math.round(S.hrSum / S.hrN) : null, state: 'pending', syncT: 0, rpe: S.draft.rpe, note: S.draft.note, laps: S.laps.slice() });
+    reset(); S.tab = 'hist'; S.openRun = null;
+  },
+  'ask-discard': () => { keepDraft(); S.sheet = 'discard'; },
+  'do-discard': () => { S.sheet = null; reset(); },
+  'ask-delete': () => { S.sheet = 'delete'; },
+  'do-delete': () => { S.hist = S.hist.filter(r => r.id !== S.openRun); S.openRun = null; S.sheet = null; },
+  share: () => { S.sheet = 'share'; },
+  edit: () => { const r = S.hist.find(x => x.id === S.openRun); S.edit = { title: r.title, rpe: r.rpe || 0, note: r.note || '' }; S.sheet = 'edit'; },
+  erpe: v => { keepEdit(); S.edit.rpe = S.edit.rpe === +v ? 0 : +v; },
+  'edit-save': () => {
+    keepEdit(); const r = S.hist.find(x => x.id === S.openRun);
+    Object.assign(r, S.edit); S.sheet = null;
+    if (r.state === 'synced') { r.state = 'pending'; r.syncT = 0; }
+    setTimeout(() => toast('Sortie modifiée'));
+  },
+  close: (v, e) => { if (e.target.closest('.sheet') && !e.target.closest('[data-act="close"].btn')) return false; S.sheet = null; },
+  open: v => { S.openRun = +v; },
+  back: () => { S.openRun = null; },
+  period: v => { S.period = v; },
+  sync: () => { setTimeout(() => toast(S.home ? 'Synchronisation en cours…' : 'Serveur injoignable')); if (S.home) S.hist.forEach(r => { if (r.state === 'pending') r.syncT = 2; }); },
+  retry: () => { const r = S.hist.find(x => x.id === S.openRun); if (S.home) { r.state = 'pending'; r.syncT = 1; } else setTimeout(() => toast('Serveur injoignable')); },
+  profile: v => { S.profile = v; },
+  autopause: () => { S.autopause = !S.autopause; },
+  keepon: () => { S.keepOn = !S.keepOn; },
+  wopen: () => { S.wopen = true; S.wpage = 0; },
+  wpage: v => { S.wpage = +v; },
+  'w-start': () => wcmd(() => { S.phase = 'run'; S.page = 0; S.tab = 'run'; }),
+  'w-pause': () => wcmd(() => { S.phase = 'pause'; }),
+  'w-resume': () => wcmd(() => { S.phase = 'run'; S.still = false; }),
+  'w-lap': () => wcmd(() => { lap(); }, () => `Tour ${S.laps.length}`),
+  jump: v => {
+    S.sheet = null; S.openRun = null;
+    if (['hist', 'set'].includes(v)) { if (active() || S.phase === 'summary') reset(); S.tab = v; return; }
+    if (v === 'runpage') { if (active() || S.phase === 'summary') reset(); S.tab = 'hist'; S.openRun = S.hist.find(r => r.state !== 'server').id; return; }
+    S.tab = 'run';
+    if (v === 'ready') { reset(); return; }
+    if (!active() || S.dist < 100) { reset(); S.wopen = true; S.link = true; S.phase = 'run'; fastForward(1512, [540, 1085]); }
+    S.locked = false; S.still = false; S.phase = 'run'; S.page = 0;
+    if (v === 'lap') S.page = 1;
+    if (v === 'lock') S.locked = true;
+    if (v === 'pause') S.phase = 'pause';
+    if (v === 'auto') { S.still = true; S.phase = 'auto'; }
+    if (v === 'summary') stopRun();
+  },
+};
+function wcmd(fn, label) {
+  if (!S.link) { setTimeout(() => wmsg('Non appliqué', true)); return false; }
+  fn(); setTimeout(() => wmsg('✓ ' + (label ? label() : 'Appliqué')));
+}
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
+  if (S.locked && el.closest('#phone') && !['shield'].includes(el.dataset.act)) return;
+  if (A[el.dataset.act](el.dataset.v, e) !== false) render();
+});
+document.addEventListener('change', e => { if (e.target.dataset.slot != null) { S.fields[+e.target.dataset.slot] = e.target.value; } });
+
+/* hold-to-confirm: stop, unlock, watch stop */
+let holdT = null;
+const HOLD = { stop: () => { stopRun(); }, unlock: () => { S.locked = false; }, wstop: () => { if (!S.link) { wmsg('Non appliqué', true); return false; } stopRun(); S.tab = 'run'; } };
+function holdStart(el) { holdEnd(); el.classList.add('holding'); holdT = setTimeout(() => { el.classList.remove('holding'); holdT = null; if (HOLD[el.dataset.hold]() !== false) render(); }, 1100); }
+function holdEnd() { if (holdT) { clearTimeout(holdT); holdT = null; } $$('.holding').forEach(x => x.classList.remove('holding')); }
+document.addEventListener('pointerdown', e => { const el = e.target.closest('[data-hold]'); if (el) { e.preventDefault(); holdStart(el); } });
+['pointerup', 'pointercancel', 'pointerleave'].forEach(t => document.addEventListener(t, holdEnd, true));
+document.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat && e.target.dataset?.hold) { e.preventDefault(); holdStart(e.target); } });
+document.addEventListener('keyup', e => { if (e.target.dataset?.hold) holdEnd(); });
+
+/* swipe between pages (phone live screens, watch pages) */
+let sx = null, sEl = null;
+document.addEventListener('pointerdown', e => { sEl = e.target.closest('#pages, #watch'); sx = sEl ? e.clientX : null; });
+document.addEventListener('pointerup', e => {
+  if (sx == null) return; const dx = e.clientX - sx; sx = null;
+  if (Math.abs(dx) < 40) return;
+  if (sEl.id === 'pages' && !S.locked) { S.page = dx < 0 ? 1 : 0; render(); }
+  if (sEl.id === 'watch' && S.wopen && active() && S.link && !S.ambient) { S.wpage = dx < 0 ? 1 : 0; render(); }
+});
+render();
+</script>
+</body>
+</html>

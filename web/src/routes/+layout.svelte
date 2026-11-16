@@ -325,6 +325,8 @@
 		.navlink[aria-current='page'] {
 			box-shadow: none;
 			background: var(--accent-soft);
+			/* The lavender ink: the accent itself reaches only 4.44:1 on this fill in the light theme. */
+			color: var(--i-lav);
 		}
 		.topbar {
 			display: flex;

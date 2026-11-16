@@ -19,7 +19,9 @@ export default defineConfig({
 	worker: { format: 'es' },
 	server: {
 		// During `npm run dev`, API calls go to the Rust server started with `cargo run`.
-		proxy: { '/api': 'http://localhost:8080' }
+		// The string shorthand would set changeOrigin and rewrite Host to :8080, so the
+		// server's same-site guard would see Origin :5173 ≠ Host :8080 and refuse writes.
+		proxy: { '/api': { target: 'http://localhost:8080', changeOrigin: false } }
 	},
 	test: {
 		include: ['src/**/*.test.ts'],
