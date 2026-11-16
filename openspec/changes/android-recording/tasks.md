@@ -2,7 +2,7 @@
 
 Tasks marked **(device)** need the owner's Pixel 8 and/or Galaxy Watch 4; everything else can be done on a development machine with the Android emulator.
 
-The current development machine (2 cores, 6 GB of memory) cannot run the emulator next to a build, so the checks worded "in the emulator" are done on the owner's Pixel 8 instead, following the checklist in `docs/android.md`. Code for 5.2–5.5, 6.1–6.6, 7.2, 7.3, 7.5, 8.1, 8.3 and 8.4 is written and compiles; those tasks stay open until checked on the phone. The sync logic itself (7.1, 7.4) is covered by unit tests and by a run of the client against a real local server.
+The current development machine (2 cores, 6 GB of memory) cannot run the emulator next to a build, so the checks worded "in the emulator" are done on the owner's Pixel 8 instead, following the checklist in `docs/android.md`. Code for 5.2–5.5, 6.1–6.6, 7.2, 7.3, 7.5, 8.1, 8.3, 8.4 and 9.3–9.6 is written and compiles; those tasks stay open until checked on the phone. The sync logic itself (7.1, 7.4) is covered by unit tests and by a run of the client against a real local server.
 
 ## 1. Phone and watch prototype (approval gate)
 
@@ -70,7 +70,7 @@ The current development machine (2 cores, 6 GB of memory) cannot run the emulato
 ## 9. Watch companion
 
 - [ ] 9.1 **(device)** Read current Health Services documentation (Context7), then check on the Galaxy Watch 4 which exercise capabilities and heart-rate batching modes it declares; verify the findings and the chosen configuration are recorded in `docs/android.md`
-- [ ] 9.2 Implement the watch protocol in `core` (state, heart-rate batch, command, acknowledgement messages; unsent-batch buffer with its cap); verify unit tests for encoding round trips, re-sending after a dropout and the buffer cap
+- [x] 9.2 Implement the watch protocol in `core` (state, heart-rate batch, command, acknowledgement messages; unsent-batch buffer with its cap); verify unit tests for encoding round trips, re-sending after a dropout and the buffer cap
 - [ ] 9.3 Implement the phone side of the link (capability, message listener, heart-rate storage by timestamp, state push rate following the watch's screen state, command handling with acknowledgement); verify with paired phone and watch emulators that commands change the session and injected heart rate reaches the live screen
 - [ ] 9.4 Implement heart-rate capture on the watch (exercise with heart rate only, foreground service, ongoing activity, permission flow, end-of-session and 10-minute timeout); verify with the Health Services synthetic data provider in the emulator that samples reach the phone and capture stops when the run stops
 - [ ] 9.5 Build the watch interface (join states, metrics page (time on top, pace large in the centre, distance and heart rate below), controls page with hold-to-stop, paused, finished, unreachable, ambient) per the approved prototype; verify every scenario of `watch-companion` except battery in paired emulators, and no clipping on a round 396 px screen

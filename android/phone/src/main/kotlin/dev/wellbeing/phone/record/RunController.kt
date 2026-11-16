@@ -116,9 +116,9 @@ object RunController {
         _snapshot.value = null
     }
 
-    fun command(c: Command) {
+    fun command(c: Command): Signal {
         val t = now()
-        dispatch(
+        return dispatch(
             when (c) {
                 Command.START -> Event.Start(t)
                 Command.PAUSE -> Event.Pause(t)
@@ -130,10 +130,10 @@ object RunController {
     }
 
     /** Feeds a sensor reading or a command to the engine and logs it if a run is in progress. */
-    fun dispatch(e: Event) {
-        val eng = engine ?: return
+    fun dispatch(e: Event): Signal {
+        val eng = engine ?: return Signal.NONE
         val before = eng.phase
-        if (before == Phase.STOPPED) return
+        if (before == Phase.STOPPED) return Signal.NONE
         val signal = eng.on(e)
         if (before != Phase.READY || e is Event.Start) EventCodec.encode(e)?.let(pendingEvents::add)
         if (signal != Signal.NONE) {
@@ -142,6 +142,7 @@ object RunController {
             if (signal == Signal.STOPPED) finish()
         }
         if (signal != Signal.NONE || e !is Event.Location) tick()
+        return signal
     }
 
     fun onHeartRate(t: Long, bpm: Int) {

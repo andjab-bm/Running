@@ -14,6 +14,7 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         RunController.init(this)
+        dev.wellbeing.phone.watch.WatchLink.init(this)
     }
 }
 

@@ -1,4 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Well-being</string>
+    <string name="notif_channel">Course en cours</string>
+    <string name="notif_title">Course en cours</string>
+    <string name="notif_text">Fréquence cardiaque envoyée au téléphone</string>
+    <string name="unreachable_title">Téléphone injoignable</string>
+    <string name="unreachable_idle">Rapproche-toi du téléphone.</string>
+    <string name="unreachable_run">La fréquence cardiaque continue et sera transmise au retour du lien.</string>
+    <string name="none_title">Prépare la course</string>
+    <string name="none_body">Ouvre l\'écran « Courir » sur le téléphone.</string>
+    <string name="ready">Prêt · démarrer</string>
+    <string name="finished_title">Course terminée</string>
+    <string name="paused">PAUSE</string>
+    <string name="auto_paused">PAUSE AUTO</string>
+    <string name="act_start">Démarrer</string>
+    <string name="act_lap">Tour</string>
+    <string name="act_pause">Pause</string>
+    <string name="act_resume">Reprendre</string>
+    <string name="act_stop">Terminer (maintenir)</string>
+    <string name="hold">Maintenir</string>
+    <string name="applied">✓ Appliqué</string>
+    <string name="not_applied">Non appliqué</string>
+    <string name="perm_body">Autorise l\'accès aux capteurs pour envoyer ta fréquence cardiaque au téléphone.</string>
+    <string name="perm_grant">Autoriser</string>
+    <string name="bpm">bpm</string>
 </resources>

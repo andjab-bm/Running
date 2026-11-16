@@ -71,7 +71,8 @@ Versions were taken from Google Maven, Maven Central and services.gradle.org on 
 | kotlinx.coroutines | 1.11.0 | concurrency |
 | Play services location | 21.4.0 | fused location (on-device) |
 | Play services wearable | 20.0.1 | phone ↔ watch Data Layer |
-| Wear Compose (material3, foundation) | 1.7.1 | watch interface |
+| Compose foundation (from the BOM) | — | watch interface |
+| androidx.wear | 1.4.0 | ambient mode on the watch |
 | wear-ongoing | 1.1.0 | ongoing-activity indicator on the watch |
 | Health Services client | 1.1.0 | heart rate on the watch |
 | JUnit | 4.13.2 (Android modules), JUnit Platform via `kotlin-test` (`core`) | tests |
@@ -79,6 +80,7 @@ Versions were taken from Google Maven, Maven Central and services.gradle.org on 
 ### Deviations from the design document
 
 - **Target SDK is 36, compile SDK 37.** The apps compile against the newest platform but keep the behaviour of the previous release until the Android 17 behaviour changes have been checked on the owner's phone.
+- **The watch interface uses plain Compose, not Wear Compose Material.** Its few screens are text, three round buttons and an arc; drawing them directly keeps the app small and exactly as approved on the prototype. The Wear Compose libraries stay pinned in the catalog but are not linked.
 - **No `org.jetbrains.kotlin.android` plugin.** Android Gradle plugin 9 compiles Kotlin itself; only `core` applies a Kotlin plugin.
 
 ## Installing on the devices
@@ -201,3 +203,35 @@ WELLBEING_TEST_SERVER=http://127.0.0.1:8090 ./gradlew :phone:testDebugUnitTest -
 ```
 
 Checklist additions on the phone: connect to the server and pick a profile (step 2–3 above); save a run at home and see it turn "Synchronisée" and appear in the web app with its effort and note; save one on mobile data and see it stay "En attente" until the phone is back on the home Wi-Fi; activities imported through the web appear in Historique with the "Serveur" tag.
+
+## The watch app
+
+The watch never records by itself. It joins the run prepared on the phone, measures heart rate, shows four figures and sends commands.
+
+**Using it**
+
+1. On the phone, open **Courir** (the ready screen). This is what creates the session.
+2. On the watch, open **Well-being**. The first time, accept the sensor permission. The watch shows "Prêt" with your heart rate and a start button; the phone's ready screen shows "Montre connectée".
+3. Start from either device. During the run the watch shows time, pace (large), distance and heart rate, with the zone lit on the rim. Swipe left for Tour, Pause/Reprendre and Terminer (hold).
+4. The app must be opened by hand for each run: Android does not let a watch app start measuring from the background.
+
+A short vibration means the phone applied the command; a double vibration and "Non appliqué" mean it did not (phone out of reach).
+
+**How it works**
+
+- `WatchSession` finds the phone through the `wellbeing_phone` capability and exchanges the messages defined in `core`'s `WatchProtocol`: `hello` and `bye`, `state` (phone → watch), `hr` (batches of timestamped samples), `cmd` and `ack`.
+- While the app is on screen it says hello every three seconds; the phone answers with the state. No state for five seconds shows "Téléphone injoignable". While the screen is dimmed the phone sends the state once a minute, and the dimmed screen shows the four figures in grey.
+- `HrService` runs a Health Services exercise with heart rate as its only data type and GPS off, asking for five-second batching where the watch supports it. Starting it ends any exercise tracked by another app, such as Samsung Health — only one exercise can run at a time on the watch.
+- Heart rate that cannot be delivered waits in memory (up to thirty minutes) and goes out when the link returns; each sample carries the time it was measured, so it lands at the right place in the run.
+- Measuring stops when the run is stopped or discarded on the phone, or after ten minutes without the phone. Nothing about the run is kept on the watch.
+
+**Checklist on the watch** (with the phone app installed and a run prepared)
+
+1. Opening the watch app with nothing prepared on the phone shows "Prépare la course". (`watch-companion`: nothing prepared)
+2. With the ready screen open on the phone, the watch shows "Prêt" and a heart rate; the phone shows "Montre connectée". (session prepared on the phone)
+3. Start from the watch: the run starts on the phone and the watch vibrates. (start from the wrist)
+4. Lap, pause and resume from the watch are applied on the phone within a second. (lap from the wrist, paused)
+5. Lower the wrist for a few minutes, then look: figures are current within two seconds. After saving, the run has heart rate throughout. (wrist down, glance)
+6. Leave the phone and walk away for two minutes: the watch shows "Téléphone injoignable"; back in range, the saved run still has heart rate for those two minutes. (two-minute dropout)
+7. Stop on the phone: the watch shows "Course terminée" and its heart-rate notification disappears within about ten seconds. (stop on the phone)
+8. Note the watch battery before and after a one-hour run: the drop should be twelve points or fewer. (light on resources)
