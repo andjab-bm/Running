@@ -1,0 +1,2 @@
+{ "name": "Footing 45 min", "note": "", "expect_steps": 1, "steps": [
+  { "type": "step", "kind": "effort", "end": { "type": "time", "value": 2700 }, "target": { "type": "hr_zone", "zone": 2 } } ] }

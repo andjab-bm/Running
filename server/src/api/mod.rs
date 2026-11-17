@@ -4,16 +4,20 @@ pub mod guard;
 mod imports;
 mod load;
 pub mod openapi;
+mod plan;
 mod profiles;
 mod records;
+mod routes;
+mod segments;
 mod stats;
+mod workouts;
 
 use axum::{
     Json, Router,
     extract::{DefaultBodyLimit, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::{get, post, put},
 };
 use serde_json::{Value, json};
 
@@ -45,6 +49,27 @@ pub fn router() -> Router<AppState> {
         .route("/profiles/{profile_id}/stats/calendar", get(stats::calendar))
         .route("/profiles/{profile_id}/stats/volume", get(stats::volume))
         .route("/profiles/{profile_id}/stats/progress", get(stats::progress))
+        .route("/profiles/{profile_id}/workouts", get(workouts::list).post(workouts::create))
+        .route(
+            "/workouts/{id}",
+            get(workouts::detail).put(workouts::update).delete(workouts::delete),
+        )
+        .route("/workouts/{id}/copy", post(workouts::copy))
+        // Uploads are limited per file while streaming, as for activity imports.
+        .route(
+            "/profiles/{profile_id}/routes",
+            get(routes::list).post(routes::import).layer(DefaultBodyLimit::disable()),
+        )
+        .route("/activities/{id}/route", post(routes::from_activity))
+        .route("/routes/{id}", get(routes::detail).patch(routes::update).delete(routes::delete))
+        .route("/routes/{id}/points", get(routes::points))
+        .route("/routes/{id}/reverse", post(routes::reverse))
+        .route("/routes/{id}/copy", post(routes::copy))
+        .route("/routes/{id}/export.gpx", get(routes::export_gpx))
+        .route("/profiles/{profile_id}/plan", get(plan::plan))
+        .route("/profiles/{profile_id}/plan/receipt", put(plan::receipt))
+        .route("/profiles/{profile_id}/segments", get(segments::list))
+        .route("/segments/{id}", get(segments::detail).patch(segments::update))
         .route("/profiles/{profile_id}/load", get(load::load))
         .route("/profiles/{profile_id}/records", get(records::records))
         .route("/profiles/{profile_id}/predictions", get(records::predictions))

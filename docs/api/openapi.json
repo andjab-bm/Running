@@ -51,6 +51,80 @@
               "metrics_version": {
                 "type": "integer"
               },
+              "pacer": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/PacerResult"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "route": {
+                "properties": {
+                  "id": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "in_library": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "segment_efforts": {
+                "description": "Passages over visible segments, in the order they were run",
+                "items": {
+                  "properties": {
+                    "avg_hr": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "distance": {
+                      "type": "number"
+                    },
+                    "efforts": {
+                      "description": "Efforts on that segment",
+                      "type": "integer"
+                    },
+                    "elapsed_time": {
+                      "type": "number"
+                    },
+                    "gap_to_best": {
+                      "type": "number"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "podium": {
+                      "description": "Among the three best",
+                      "type": "boolean"
+                    },
+                    "rank": {
+                      "type": "integer"
+                    },
+                    "segment_id": {
+                      "type": "integer"
+                    },
+                    "start_t": {
+                      "type": "number"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "source_format": {
                 "enum": [
                   "gpx",
@@ -63,6 +137,42 @@
                   "$ref": "#/components/schemas/Segment"
                 },
                 "type": "array"
+              },
+              "workout": {
+                "description": "Laps carry `step` by position: step n is lap n",
+                "properties": {
+                  "id": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "in_library": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "steps": {
+                    "items": {
+                      "$ref": "#/components/schemas/WorkoutItem"
+                    },
+                    "type": "array"
+                  },
+                  "steps_done": {
+                    "type": "integer"
+                  },
+                  "unfolded": {
+                    "items": {
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": [
+                  "object",
+                  "null"
+                ]
               },
               "zones": {
                 "properties": {
@@ -232,6 +342,27 @@
         },
         "type": "object"
       },
+      "Delivery": {
+        "description": "Where an item stands with the phone.",
+        "properties": {
+          "delivered_at": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "state": {
+            "description": "none: not marked; waiting: marked, no phone holds this version; delivered: a phone holds it",
+            "enum": [
+              "none",
+              "waiting",
+              "delivered"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "Effort": {
         "description": "The fastest stretch of a standard distance inside one run, timed on moving time (pauses excluded).",
         "properties": {
@@ -337,6 +468,35 @@
             "description": "Leave the activity out of records and predictions",
             "type": "boolean"
           },
+          "pacer": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PacerResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "route": {
+            "description": "The route that was followed; null removes it",
+            "properties": {
+              "id": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "name": {
+                "maxLength": 80,
+                "type": "string"
+              }
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "rpe": {
             "maximum": 10,
             "minimum": 1,
@@ -356,6 +516,31 @@
           "title": {
             "maxLength": 200,
             "type": "string"
+          },
+          "workout": {
+            "description": "The session the run was guided by, as it was on the day; null removes it",
+            "properties": {
+              "id": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "name": {
+                "maxLength": 80,
+                "type": "string"
+              },
+              "steps": {
+                "items": {
+                  "$ref": "#/components/schemas/WorkoutItem"
+                },
+                "type": "array"
+              }
+            },
+            "type": [
+              "object",
+              "null"
+            ]
           }
         },
         "type": "object"
@@ -373,6 +558,62 @@
         "required": [
           "name"
         ],
+        "type": "object"
+      },
+      "NewWorkout": {
+        "properties": {
+          "name": {
+            "maxLength": 80,
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 500,
+            "type": "string"
+          },
+          "on_phone": {
+            "type": "boolean"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/WorkoutItem"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "steps"
+        ],
+        "type": "object"
+      },
+      "PacerResult": {
+        "description": "The pace target of a run and how it ended against it.",
+        "properties": {
+          "final_gap": {
+            "description": "Seconds ahead of the target at the end; negative when behind",
+            "type": "number"
+          },
+          "strategy": {
+            "description": "grade: adjusted to the route's gradient",
+            "enum": [
+              "even",
+              "grade"
+            ],
+            "type": "string"
+          },
+          "target": {
+            "enum": [
+              "pace",
+              "time"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "description": "Seconds per kilometre, or seconds to finish the route",
+            "type": "number"
+          }
+        },
         "type": "object"
       },
       "Profile": {
@@ -474,6 +715,87 @@
         },
         "type": "object"
       },
+      "Route": {
+        "properties": {
+          "activities": {
+            "description": "Detail only: runs done while following the route",
+            "items": {
+              "properties": {
+                "distance": {
+                  "type": "number"
+                },
+                "id": {
+                  "type": "integer"
+                },
+                "moving_time": {
+                  "type": "number"
+                },
+                "start_time": {
+                  "type": "number"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/Delivery"
+          },
+          "distance": {
+            "type": "number"
+          },
+          "gain": {
+            "description": "Null without elevation data",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "has_elevation": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "is_loop": {
+            "type": "boolean"
+          },
+          "loss": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "on_phone": {
+            "type": "boolean"
+          },
+          "preview": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array"
+          },
+          "profile_id": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": "number"
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "Segment": {
         "description": "A split, a lap, or a whole activity. SI units.",
         "properties": {
@@ -527,6 +849,109 @@
           "start_t": {
             "description": "Seconds from the start of the activity",
             "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "SegmentDetail": {
+        "properties": {
+          "distance": {
+            "type": "number"
+          },
+          "efforts": {
+            "description": "Every complete passage, fastest first; timed on elapsed time",
+            "items": {
+              "properties": {
+                "activity_id": {
+                  "type": "integer"
+                },
+                "avg_hr": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "elapsed_time": {
+                  "type": "number"
+                },
+                "gap_to_best": {
+                  "type": "number"
+                },
+                "id": {
+                  "type": "integer"
+                },
+                "rank": {
+                  "type": "integer"
+                },
+                "speed": {
+                  "type": "number"
+                },
+                "start_t": {
+                  "description": "Seconds from the start of the activity",
+                  "type": "number"
+                },
+                "start_time": {
+                  "description": "When the passage began (Unix seconds)",
+                  "type": "number"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "gain": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "points": {
+            "description": "Index-aligned arrays, one point every 20 m",
+            "properties": {
+              "dist": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "ele": {
+                "items": {
+                  "type": "number"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "lat": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "lon": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "profile_id": {
+            "type": "integer"
           }
         },
         "type": "object"
@@ -649,6 +1074,181 @@
           "profile_id"
         ],
         "type": "object"
+      },
+      "Workout": {
+        "properties": {
+          "delivery": {
+            "$ref": "#/components/schemas/Delivery"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "on_phone": {
+            "type": "boolean"
+          },
+          "profile_id": {
+            "type": "integer"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/WorkoutItem"
+            },
+            "type": "array"
+          },
+          "unfolded": {
+            "description": "Steps in the order they are run, repeats expanded",
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "updated_at": {
+            "type": "number"
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "WorkoutItem": {
+        "description": "A step, or a block of steps repeated. Durations in seconds, distances in metres, paces in seconds per kilometre.",
+        "oneOf": [
+          {
+            "properties": {
+              "end": {
+                "oneOf": [
+                  {
+                    "properties": {
+                      "type": {
+                        "const": "time"
+                      },
+                      "value": {
+                        "maximum": 21600,
+                        "minimum": 5,
+                        "type": "number"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "type": {
+                        "const": "distance"
+                      },
+                      "value": {
+                        "maximum": 100000,
+                        "minimum": 50,
+                        "type": "number"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "description": "Until the runner presses lap",
+                    "properties": {
+                      "type": {
+                        "const": "lap"
+                      }
+                    },
+                    "type": "object"
+                  }
+                ]
+              },
+              "kind": {
+                "enum": [
+                  "warmup",
+                  "effort",
+                  "recovery",
+                  "cooldown"
+                ],
+                "type": "string"
+              },
+              "target": {
+                "oneOf": [
+                  {
+                    "properties": {
+                      "type": {
+                        "const": "none"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "fast": {
+                        "type": "number"
+                      },
+                      "slow": {
+                        "type": "number"
+                      },
+                      "type": {
+                        "const": "pace"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "type": {
+                        "const": "hr_zone"
+                      },
+                      "zone": {
+                        "maximum": 5,
+                        "minimum": 1,
+                        "type": "integer"
+                      }
+                    },
+                    "type": "object"
+                  }
+                ]
+              },
+              "type": {
+                "const": "step"
+              }
+            },
+            "required": [
+              "type",
+              "kind",
+              "end"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "count": {
+                "maximum": 50,
+                "minimum": 2,
+                "type": "integer"
+              },
+              "skip_last_recovery": {
+                "type": "boolean"
+              },
+              "steps": {
+                "description": "Steps only: blocks are not nested",
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "type": {
+                "const": "repeat"
+              }
+            },
+            "required": [
+              "type",
+              "count",
+              "steps"
+            ],
+            "type": "object"
+          }
+        ]
       },
       "Zones": {
         "properties": {
@@ -1159,6 +1759,96 @@
           }
         },
         "summary": "Download the unmodified uploaded file"
+      }
+    },
+    "/activities/{id}/route": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Any value. Required on every state-changing request; cross-site requests are refused.",
+            "in": "header",
+            "name": "X-Requested-With",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "from_m": {
+                    "description": "Start of the portion to keep, metres from the start of the run",
+                    "type": "number"
+                  },
+                  "name": {
+                    "description": "Defaults to the activity's title",
+                    "maxLength": 80,
+                    "type": "string"
+                  },
+                  "to_m": {
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Route"
+                }
+              }
+            },
+            "description": "The route, in the activity's profile; it carries no time, pace or heart rate"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Cross-site request or missing X-Requested-With header"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Make a route from a run"
       }
     },
     "/activities/{id}/streams": {
@@ -2024,6 +2714,222 @@
         "summary": "Training load, its status and the advised recovery"
       }
     },
+    "/profiles/{profile_id}/plan": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "map_style_url": {
+                      "description": "Basemap of the phone's map screen; empty disables it",
+                      "type": "string"
+                    },
+                    "map_style_url_dark": {
+                      "type": "string"
+                    },
+                    "routes": {
+                      "items": {
+                        "properties": {
+                          "distance": {
+                            "type": "number"
+                          },
+                          "gain": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "has_elevation": {
+                            "type": "boolean"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "is_loop": {
+                            "type": "boolean"
+                          },
+                          "loss": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "version": {
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "workouts": {
+                      "items": {
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "note": {
+                            "type": "string"
+                          },
+                          "steps": {
+                            "items": {
+                              "$ref": "#/components/schemas/WorkoutItem"
+                            },
+                            "type": "array"
+                          },
+                          "version": {
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Sessions come whole; route points are fetched separately when a version is new"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "Everything marked for the phone (fetched by the phone at home)"
+      }
+    },
+    "/profiles/{profile_id}/plan/receipt": {
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Any value. Required on every state-changing request; cross-site requests are refused.",
+            "in": "header",
+            "name": "X-Requested-With",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "Replaces the device's previous statement for the profile",
+                "properties": {
+                  "device": {
+                    "maxLength": 64,
+                    "type": "string"
+                  },
+                  "items": {
+                    "items": {
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "kind": {
+                          "enum": [
+                            "workout",
+                            "route"
+                          ],
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "id",
+                        "version"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "device",
+                  "items"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Cross-site request or missing X-Requested-With header"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "The phone states what it now holds"
+      }
+    },
     "/profiles/{profile_id}/predictions": {
       "get": {
         "parameters": [
@@ -2201,6 +3107,293 @@
           }
         },
         "summary": "Best times over standard distances, with their history"
+      }
+    },
+    "/profiles/{profile_id}/routes": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "$ref": "#/components/schemas/Route"
+                      },
+                      "type": "array"
+                    },
+                    "last_phone_sync": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Most recently changed first"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "List a profile's routes"
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Any value. Required on every state-changing request; cross-site requests are refused.",
+            "in": "header",
+            "name": "X-Requested-With",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "files": {
+                    "items": {
+                      "format": "binary",
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "results": {
+                      "items": {
+                        "properties": {
+                          "file": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string"
+                          },
+                          "route_id": {
+                            "type": "integer"
+                          },
+                          "status": {
+                            "enum": [
+                              "imported",
+                              "failed"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "One outcome per <rte> or <trk> found; timestamps are not needed and recorded data is ignored"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Cross-site request or missing X-Requested-With header"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Import routes from .gpx files"
+      }
+    },
+    "/profiles/{profile_id}/segments": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "default": "count",
+              "enum": [
+                "count",
+                "recent"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "List the hidden segments instead of the visible ones",
+            "in": "query",
+            "name": "hidden",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "hidden_count": {
+                      "type": "integer"
+                    },
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "best_time": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "distance": {
+                            "type": "number"
+                          },
+                          "efforts": {
+                            "type": "integer"
+                          },
+                          "gain": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "hidden": {
+                            "type": "boolean"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "latest_effort": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "preview": {
+                            "items": {
+                              "items": {
+                                "type": "number"
+                              },
+                              "type": "array"
+                            },
+                            "type": "array"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "processing": {
+                      "description": "Detection is still running on some activities",
+                      "type": "boolean"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "A portion becomes a segment once covered in the same direction in three activities, over at least 300 m"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Unknown sort"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "Recurring portions of route found automatically, with their best time"
       }
     },
     "/profiles/{profile_id}/stats/calendar": {
@@ -2591,6 +3784,934 @@
           }
         },
         "summary": "Tags offered to a profile"
+      }
+    },
+    "/profiles/{profile_id}/workouts": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "$ref": "#/components/schemas/Workout"
+                      },
+                      "type": "array"
+                    },
+                    "last_phone_sync": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Most recently changed first"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "List a profile's structured sessions"
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "profile_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Any value. Required on every state-changing request; cross-site requests are refused.",
+            "in": "header",
+            "name": "X-Requested-With",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewWorkout"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workout"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Cross-site request or missing X-Requested-With header"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Create a structured session"
+      }
+    },
+    "/routes/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Any value. Required on every state-changing request; cross-site requests are refused.",
+            "in": "header",
+            "name": "X-Requested-With",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted; activities run with it keep its name"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Cross-site request or missing X-Requested-With header"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "Delete a route"
+      },
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Route"
+                }
+              }
+            },
+            "description": "Route, with the runs done while following it"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "Read a route and the runs done with it"
+      },
+      "patch": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Any value. Required on every state-changing request; cross-site requests are refused.",
+            "in": "header",
+            "name": "X-Requested-With",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "name": {
+                    "maxLength": 80,
+                    "type": "string"
+                  },
+                  "on_phone": {
+                    "type": "boolean"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Route"
+                }
+              }
+            },
+            "description": "Updated"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Cross-site request or missing X-Requested-With header"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Rename a route, or mark it for the phone"
+      }
+    },
+    "/routes/{id}/copy": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Any value. Required on every state-changing request; cross-site requests are refused.",
+            "in": "header",
+            "name": "X-Requested-With",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "profile_id": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "profile_id"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Route"
+                }
+              }
+            },
+            "description": "The copy"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Cross-site request or missing X-Requested-With header"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Copy a route to another profile"
+      }
+    },
+    "/routes/{id}/export.gpx": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/gpx+xml": {}
+            },
+            "description": "GPX 1.1 track without times"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "Download the route as GPX 1.1"
+      }
+    },
+    "/routes/{id}/points": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "count": {
+                      "type": "integer"
+                    },
+                    "dist": {
+                      "items": {
+                        "type": "number"
+                      },
+                      "type": "array"
+                    },
+                    "ele": {
+                      "items": {
+                        "type": "number"
+                      },
+                      "type": [
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "id": {
+                      "type": "integer"
+                    },
+                    "lat": {
+                      "items": {
+                        "type": "number"
+                      },
+                      "type": "array"
+                    },
+                    "lon": {
+                      "items": {
+                        "type": "number"
+                      },
+                      "type": "array"
+                    },
+                    "version": {
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Simplified to at most 5000 points; distances along the path stay true"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "The path of a route as index-aligned arrays"
+      }
+    },
+    "/routes/{id}/reverse": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Any value. Required on every state-changing request; cross-site requests are refused.",
+            "in": "header",
+            "name": "X-Requested-With",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Route"
+                }
+              }
+            },
+            "description": "A new route; gain and loss are swapped"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Cross-site request or missing X-Requested-With header"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "Create the same route in the other direction"
+      }
+    },
+    "/segments/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SegmentDetail"
+                }
+              }
+            },
+            "description": "Segment"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "A segment: trace, profile and every effort, ranked"
+      },
+      "patch": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Any value. Required on every state-changing request; cross-site requests are refused.",
+            "in": "header",
+            "name": "X-Requested-With",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "hidden": {
+                    "description": "A hidden segment is not detected again and keeps collecting efforts",
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "maxLength": 80,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SegmentDetail"
+                }
+              }
+            },
+            "description": "Segment"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Cross-site request or missing X-Requested-With header"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Rename, hide or restore a segment"
+      }
+    },
+    "/workouts/{id}": {
+      "delete": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Any value. Required on every state-changing request; cross-site requests are refused.",
+            "in": "header",
+            "name": "X-Requested-With",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted; activities run with it keep their own copy of its steps"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Cross-site request or missing X-Requested-With header"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "Delete a session"
+      },
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workout"
+                }
+              }
+            },
+            "description": "Session"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          }
+        },
+        "summary": "Read a session"
+      },
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Any value. Required on every state-changing request; cross-site requests are refused.",
+            "in": "header",
+            "name": "X-Requested-With",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "Fields left out are kept. A change of name, note or steps bumps the version.",
+                "properties": {
+                  "name": {
+                    "maxLength": 80,
+                    "type": "string"
+                  },
+                  "note": {
+                    "maxLength": 500,
+                    "type": "string"
+                  },
+                  "on_phone": {
+                    "type": "boolean"
+                  },
+                  "steps": {
+                    "items": {
+                      "$ref": "#/components/schemas/WorkoutItem"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workout"
+                }
+              }
+            },
+            "description": "Updated"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Cross-site request or missing X-Requested-With header"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Change a session, or mark it for the phone"
+      }
+    },
+    "/workouts/{id}/copy": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Any value. Required on every state-changing request; cross-site requests are refused.",
+            "in": "header",
+            "name": "X-Requested-With",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "name": {
+                    "maxLength": 80,
+                    "type": "string"
+                  },
+                  "profile_id": {
+                    "description": "The same profile duplicates the session",
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "profile_id"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workout"
+                }
+              }
+            },
+            "description": "The copy"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Cross-site request or missing X-Requested-With header"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "No such profile or activity"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Validation error"
+          }
+        },
+        "summary": "Duplicate a session, or copy it to another profile"
       }
     }
   },

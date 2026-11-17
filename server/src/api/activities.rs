@@ -17,6 +17,7 @@ use crate::{
     pipeline::{
         gpx::{self, ExportPoint},
         time,
+        workout::{Item, unfold, validate},
     },
     store,
 };
@@ -29,10 +30,12 @@ const MAX_TITLE: usize = 200;
 const MAX_DESCRIPTION: usize = 10_000;
 const MAX_TAGS: usize = 20;
 const MAX_TAG_LEN: usize = 40;
+const MAX_LINK_NAME: usize = 80;
 
 const SUMMARY_COLUMNS: &str = "a.id, a.profile_id, a.title, a.description, a.rpe, a.start_time, a.sport, a.source_format, a.file_hash,
     a.copied_from, a.metrics_version, a.distance, a.elapsed_time, a.moving_time, a.speed, a.gap_speed, a.gain, a.loss,
     a.avg_hr, a.max_hr, a.avg_cad, a.effort, a.zone_seconds, a.preview, a.exclude_from_records, a.load, a.load_estimated,
+    a.workout_id, a.workout_snapshot, a.route_id, a.route_name, a.pacer,
     (SELECT json_group_array(name) FROM (SELECT t.name FROM activity_tags x JOIN tags t ON t.id = x.tag_id
         WHERE x.activity_id = a.id ORDER BY t.name)) AS tags";
 
@@ -215,6 +218,54 @@ async fn detail_json(state: &AppState, id: i64) -> ApiResult<Value> {
         json!({ "seconds": zone_seconds, "bounds": bounds, "uses_default_hr_max": hr_max.is_none() })
     };
     let excluded = row.get::<i64, _>("exclude_from_records") != 0;
+
+    // What the run was done with. The session is the copy kept with the activity, as it was
+    // on the day; `in_library` tells whether the original still exists.
+    let mut laps = segments(state, id, "lap").await?;
+    let snapshot: Option<WorkoutLink> = row
+        .get::<Option<String>, _>("workout_snapshot")
+        .and_then(|s| serde_json::from_str(&s).ok());
+    let workout = match snapshot {
+        None => Value::Null,
+        Some(w) => {
+            let steps = unfold(&w.steps);
+            // A step change is a lap, and nothing else marks a lap in a guided run: step n is lap n.
+            for (lap, step) in laps.iter_mut().zip(&steps) {
+                lap["step"] = json!(step);
+            }
+            let in_library = match w.id {
+                Some(wid) => sqlx::query("SELECT 1 FROM workouts WHERE id = ?")
+                    .bind(wid)
+                    .fetch_optional(&state.db)
+                    .await?
+                    .is_some(),
+                None => false,
+            };
+            json!({
+                "id": w.id,
+                "name": w.name,
+                "steps": w.steps,
+                "unfolded": steps,
+                "steps_done": laps.len().min(steps.len()),
+                "in_library": in_library,
+            })
+        }
+    };
+    let route = match row.get::<Option<String>, _>("route_name") {
+        None => Value::Null,
+        Some(name) => {
+            let rid: Option<i64> = row.get("route_id");
+            let in_library = match rid {
+                Some(r) => sqlx::query("SELECT 1 FROM routes WHERE id = ?")
+                    .bind(r)
+                    .fetch_optional(&state.db)
+                    .await?
+                    .is_some(),
+                None => false,
+            };
+            json!({ "id": rid, "name": name, "in_library": in_library })
+        }
+    };
     let extra = json!({
         "description": row.get::<String, _>("description"),
         "source_format": row.get::<String, _>("source_format"),
@@ -222,7 +273,12 @@ async fn detail_json(state: &AppState, id: i64) -> ApiResult<Value> {
         "metrics_version": row.get::<i64, _>("metrics_version"),
         "zones": zones,
         "splits": segments(state, id, "split").await?,
-        "laps": segments(state, id, "lap").await?,
+        "laps": laps,
+        "workout": workout,
+        "route": route,
+        "pacer": parse_json(row.get("pacer")),
+        // Passages over the profile's recurring segments, in the order they were run.
+        "segment_efforts": super::segments::activity_efforts(state, id).await?,
         "exclude_from_records": excluded,
         // Fastest stretches of the standard distances; `rank` is set for the profile's three best times.
         "best_efforts": super::records::activity_efforts(state, id, profile_id, excluded).await?,
@@ -297,6 +353,45 @@ pub struct Journal {
     pub tags: Option<Vec<String>>,
     /// Leaves the activity out of records and predictions (a bike ride, a faulty trace).
     pub exclude_from_records: Option<bool>,
+    /// The session the run was guided by, as it was on the day; `null` removes it.
+    #[serde(default, deserialize_with = "nullable")]
+    pub workout: Option<Option<WorkoutLink>>,
+    /// The route that was followed; `null` removes it.
+    #[serde(default, deserialize_with = "nullable")]
+    pub route: Option<Option<RouteLink>>,
+    /// The pace target and how the run ended against it; `null` removes it.
+    #[serde(default, deserialize_with = "nullable")]
+    pub pacer: Option<Option<PacerResult>>,
+}
+
+/// A session as it was when the run was done. Kept with the activity, so that deleting
+/// or editing the session later does not rewrite history.
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WorkoutLink {
+    /// The session in the library, when it came from there.
+    pub id: Option<i64>,
+    pub name: String,
+    pub steps: Vec<Item>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RouteLink {
+    pub id: Option<i64>,
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PacerResult {
+    /// `pace` (seconds per kilometre) or `time` (seconds to finish the route).
+    pub target: String,
+    pub value: f64,
+    /// `even`, or `grade` when the target was adjusted to the route's gradient.
+    pub strategy: String,
+    /// Seconds ahead of the target at the end; negative when behind.
+    pub final_gap: f64,
 }
 
 fn invalid(message: impl Into<String>) -> ApiError {
@@ -349,7 +444,52 @@ pub async fn update(State(state): State<AppState>, Path(id): Path<i64>, Json(j):
         }
     };
 
+    if let Some(Some(w)) = &j.workout {
+        if w.name.trim().is_empty() || w.name.chars().count() > MAX_LINK_NAME {
+            return Err(invalid(format!(
+                "The session name must have between 1 and {MAX_LINK_NAME} characters."
+            )));
+        }
+        validate(&w.steps).map_err(invalid)?;
+    }
+    if let Some(Some(r)) = &j.route
+        && (r.name.trim().is_empty() || r.name.chars().count() > MAX_LINK_NAME)
+    {
+        return Err(invalid(format!(
+            "The route name must have between 1 and {MAX_LINK_NAME} characters."
+        )));
+    }
+    if let Some(Some(p)) = &j.pacer {
+        let known = matches!(p.target.as_str(), "pace" | "time") && matches!(p.strategy.as_str(), "even" | "grade");
+        if !known || !p.value.is_finite() || p.value <= 0.0 || !p.final_gap.is_finite() {
+            return Err(invalid("The pace target is not valid."));
+        }
+    }
+
     let mut tx = state.db.begin().await?;
+    if let Some(w) = &j.workout {
+        sqlx::query("UPDATE activities SET workout_id = ?, workout_snapshot = ? WHERE id = ?")
+            .bind(w.as_ref().and_then(|w| w.id))
+            .bind(w.as_ref().map(serde_json::to_string).transpose()?)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    if let Some(r) = &j.route {
+        sqlx::query("UPDATE activities SET route_id = ?, route_name = ? WHERE id = ?")
+            .bind(r.as_ref().and_then(|r| r.id))
+            .bind(r.as_ref().map(|r| r.name.trim().to_string()))
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    if let Some(p) = &j.pacer {
+        sqlx::query("UPDATE activities SET pacer = ? WHERE id = ?")
+            .bind(p.as_ref().map(serde_json::to_string).transpose()?)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+    }
     if let Some(t) = &title {
         sqlx::query("UPDATE activities SET title = ? WHERE id = ?")
             .bind(t)

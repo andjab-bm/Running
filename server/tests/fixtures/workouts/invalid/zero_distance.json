@@ -1,0 +1,1 @@
+{ "name": "Zero", "steps": [ { "type": "step", "kind": "effort", "end": { "type": "distance", "value": 0 } } ] }

@@ -38,6 +38,35 @@ pub const ROUTES: &[(&str, &str, &str)] = &[
     ),
     (
         "get",
+        "/profiles/{profile_id}/segments",
+        "Recurring portions of route found automatically, with their best time",
+    ),
+    ("get", "/profiles/{profile_id}/workouts", "List a profile's structured sessions"),
+    ("post", "/profiles/{profile_id}/workouts", "Create a structured session"),
+    ("get", "/workouts/{id}", "Read a session"),
+    ("put", "/workouts/{id}", "Change a session, or mark it for the phone"),
+    ("delete", "/workouts/{id}", "Delete a session"),
+    ("post", "/workouts/{id}/copy", "Duplicate a session, or copy it to another profile"),
+    ("get", "/profiles/{profile_id}/routes", "List a profile's routes"),
+    ("post", "/profiles/{profile_id}/routes", "Import routes from .gpx files"),
+    ("post", "/activities/{id}/route", "Make a route from a run"),
+    ("get", "/routes/{id}", "Read a route and the runs done with it"),
+    ("patch", "/routes/{id}", "Rename a route, or mark it for the phone"),
+    ("delete", "/routes/{id}", "Delete a route"),
+    ("get", "/routes/{id}/points", "The path of a route as index-aligned arrays"),
+    ("post", "/routes/{id}/reverse", "Create the same route in the other direction"),
+    ("post", "/routes/{id}/copy", "Copy a route to another profile"),
+    ("get", "/routes/{id}/export.gpx", "Download the route as GPX 1.1"),
+    (
+        "get",
+        "/profiles/{profile_id}/plan",
+        "Everything marked for the phone (fetched by the phone at home)",
+    ),
+    ("put", "/profiles/{profile_id}/plan/receipt", "The phone states what it now holds"),
+    ("get", "/segments/{id}", "A segment: trace, profile and every effort, ranked"),
+    ("patch", "/segments/{id}", "Rename, hide or restore a segment"),
+    (
+        "get",
         "/profiles/{profile_id}/load",
         "Training load, its status and the advised recovery",
     ),
@@ -203,6 +232,20 @@ fn schemas() -> Value {
                     "source_format": { "type": "string", "enum": ["gpx", "fit"] },
                     "has_original": { "type": "boolean" },
                     "exclude_from_records": { "type": "boolean" },
+                    "workout": { "type": ["object", "null"], "description": "Laps carry `step` by position: step n is lap n", "properties": {
+                        "id": { "type": ["integer", "null"] }, "name": { "type": "string" },
+                        "steps": { "type": "array", "items": r#ref("WorkoutItem") },
+                        "unfolded": { "type": "array", "items": { "type": "object" } },
+                        "steps_done": { "type": "integer" }, "in_library": { "type": "boolean" } } },
+                    "route": { "type": ["object", "null"], "properties": {
+                        "id": { "type": ["integer", "null"] }, "name": { "type": "string" }, "in_library": { "type": "boolean" } } },
+                    "pacer": { "oneOf": [r#ref("PacerResult"), { "type": "null" }] },
+                    "segment_efforts": { "type": "array", "description": "Passages over visible segments, in the order they were run",
+                        "items": { "type": "object", "properties": {
+                            "segment_id": { "type": "integer" }, "name": { "type": "string" }, "distance": { "type": "number" },
+                            "start_t": { "type": "number" }, "elapsed_time": { "type": "number" }, "avg_hr": { "type": ["number", "null"] },
+                            "rank": { "type": "integer" }, "efforts": { "type": "integer", "description": "Efforts on that segment" },
+                            "gap_to_best": { "type": "number" }, "podium": { "type": "boolean", "description": "Among the three best" } } } },
                     "best_efforts": { "type": "array", "description": "Empty until the background computation has processed the activity",
                         "items": { "type": "object", "properties": {
                             "distance": { "type": "number" }, "moving_time": { "type": "number" }, "start_offset": { "type": "number" },
@@ -233,7 +276,100 @@ fn schemas() -> Value {
                 "description": { "type": "string" },
                 "rpe": { "type": ["integer", "null"], "minimum": 1, "maximum": 10 },
                 "tags": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 40 } },
-                "exclude_from_records": { "type": "boolean", "description": "Leave the activity out of records and predictions" }
+                "exclude_from_records": { "type": "boolean", "description": "Leave the activity out of records and predictions" },
+                "workout": { "type": ["object", "null"], "description": "The session the run was guided by, as it was on the day; null removes it",
+                    "properties": { "id": { "type": ["integer", "null"] }, "name": { "type": "string", "maxLength": 80 },
+                        "steps": { "type": "array", "items": r#ref("WorkoutItem") } } },
+                "route": { "type": ["object", "null"], "description": "The route that was followed; null removes it",
+                    "properties": { "id": { "type": ["integer", "null"] }, "name": { "type": "string", "maxLength": 80 } } },
+                "pacer": { "oneOf": [r#ref("PacerResult"), { "type": "null" }] }
+            }
+        },
+        "PacerResult": {
+            "type": "object",
+            "description": "The pace target of a run and how it ended against it.",
+            "properties": {
+                "target": { "type": "string", "enum": ["pace", "time"] },
+                "value": { "type": "number", "description": "Seconds per kilometre, or seconds to finish the route" },
+                "strategy": { "type": "string", "enum": ["even", "grade"], "description": "grade: adjusted to the route's gradient" },
+                "final_gap": { "type": "number", "description": "Seconds ahead of the target at the end; negative when behind" }
+            }
+        },
+        "Delivery": {
+            "type": "object",
+            "description": "Where an item stands with the phone.",
+            "properties": {
+                "state": { "type": "string", "enum": ["none", "waiting", "delivered"],
+                    "description": "none: not marked; waiting: marked, no phone holds this version; delivered: a phone holds it" },
+                "delivered_at": { "type": ["number", "null"] }
+            }
+        },
+        "WorkoutItem": {
+            "description": "A step, or a block of steps repeated. Durations in seconds, distances in metres, paces in seconds per kilometre.",
+            "oneOf": [
+                { "type": "object", "required": ["type", "kind", "end"], "properties": {
+                    "type": { "const": "step" },
+                    "kind": { "type": "string", "enum": ["warmup", "effort", "recovery", "cooldown"] },
+                    "end": { "oneOf": [
+                        { "type": "object", "properties": { "type": { "const": "time" }, "value": { "type": "number", "minimum": 5, "maximum": 21600 } } },
+                        { "type": "object", "properties": { "type": { "const": "distance" }, "value": { "type": "number", "minimum": 50, "maximum": 100000 } } },
+                        { "type": "object", "properties": { "type": { "const": "lap" } }, "description": "Until the runner presses lap" } ] },
+                    "target": { "oneOf": [
+                        { "type": "object", "properties": { "type": { "const": "none" } } },
+                        { "type": "object", "properties": { "type": { "const": "pace" }, "fast": { "type": "number" }, "slow": { "type": "number" } } },
+                        { "type": "object", "properties": { "type": { "const": "hr_zone" }, "zone": { "type": "integer", "minimum": 1, "maximum": 5 } } } ] } } },
+                { "type": "object", "required": ["type", "count", "steps"], "properties": {
+                    "type": { "const": "repeat" }, "count": { "type": "integer", "minimum": 2, "maximum": 50 },
+                    "skip_last_recovery": { "type": "boolean" },
+                    "steps": { "type": "array", "description": "Steps only: blocks are not nested", "items": { "type": "object" } } } }
+            ]
+        },
+        "NewWorkout": {
+            "type": "object", "required": ["name", "steps"],
+            "properties": { "name": { "type": "string", "maxLength": 80 }, "note": { "type": "string", "maxLength": 500 },
+                "steps": { "type": "array", "minItems": 1, "items": r#ref("WorkoutItem") }, "on_phone": { "type": "boolean" } }
+        },
+        "Workout": {
+            "type": "object",
+            "properties": {
+                "id": { "type": "integer" }, "profile_id": { "type": "integer" }, "name": { "type": "string" }, "note": { "type": "string" },
+                "steps": { "type": "array", "items": r#ref("WorkoutItem") },
+                "unfolded": { "type": "array", "description": "Steps in the order they are run, repeats expanded", "items": { "type": "object" } },
+                "on_phone": { "type": "boolean" }, "version": { "type": "integer" }, "updated_at": { "type": "number" },
+                "delivery": r#ref("Delivery")
+            }
+        },
+        "Route": {
+            "type": "object",
+            "properties": {
+                "id": { "type": "integer" }, "profile_id": { "type": "integer" }, "name": { "type": "string" },
+                "distance": { "type": "number" },
+                "gain": { "type": ["number", "null"], "description": "Null without elevation data" }, "loss": { "type": ["number", "null"] },
+                "is_loop": { "type": "boolean" }, "has_elevation": { "type": "boolean" },
+                "preview": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } },
+                "on_phone": { "type": "boolean" }, "version": { "type": "integer" }, "updated_at": { "type": "number" },
+                "delivery": r#ref("Delivery"),
+                "activities": { "type": "array", "description": "Detail only: runs done while following the route", "items": { "type": "object", "properties": {
+                    "id": { "type": "integer" }, "title": { "type": "string" }, "start_time": { "type": "number" },
+                    "distance": { "type": "number" }, "moving_time": { "type": "number" } } } }
+            }
+        },
+        "SegmentDetail": {
+            "type": "object",
+            "properties": {
+                "id": { "type": "integer" }, "profile_id": { "type": "integer" }, "name": { "type": "string" },
+                "distance": { "type": "number" }, "gain": { "type": ["number", "null"] }, "hidden": { "type": "boolean" },
+                "points": { "type": "object", "description": "Index-aligned arrays, one point every 20 m", "properties": {
+                    "lat": { "type": "array", "items": { "type": "number" } }, "lon": { "type": "array", "items": { "type": "number" } },
+                    "dist": { "type": "array", "items": { "type": "number" } },
+                    "ele": { "type": ["array", "null"], "items": { "type": "number" } } } },
+                "efforts": { "type": "array", "description": "Every complete passage, fastest first; timed on elapsed time", "items": {
+                    "type": "object", "properties": {
+                        "id": { "type": "integer" }, "activity_id": { "type": "integer" }, "title": { "type": "string" },
+                        "start_time": { "type": "number", "description": "When the passage began (Unix seconds)" },
+                        "start_t": { "type": "number", "description": "Seconds from the start of the activity" },
+                        "elapsed_time": { "type": "number" }, "speed": { "type": "number" }, "avg_hr": { "type": ["number", "null"] },
+                        "rank": { "type": "integer" }, "gap_to_best": { "type": "number" } } } }
             }
         },
         "Effort": {
@@ -474,6 +610,199 @@ fn operation(method: &str, path: &str, summary: &str) -> Value {
                     } })),
                 ),
             );
+        }
+        ("get", "/profiles/{profile_id}/workouts") => {
+            responses.insert(
+                "200".into(),
+                ok(
+                    "Most recently changed first",
+                    Some(json!({ "type": "object", "properties": {
+                        "items": { "type": "array", "items": r#ref("Workout") },
+                        "last_phone_sync": nullable("number") } })),
+                ),
+            );
+        }
+        ("post", "/profiles/{profile_id}/workouts") => {
+            op.insert("requestBody".into(), json_body(r#ref("NewWorkout")));
+            responses.insert("201".into(), ok("Created", Some(r#ref("Workout"))));
+        }
+        ("get", "/workouts/{id}") => {
+            responses.insert("200".into(), ok("Session", Some(r#ref("Workout"))));
+        }
+        ("put", "/workouts/{id}") => {
+            op.insert(
+                "requestBody".into(),
+                json_body(
+                    json!({ "type": "object", "description": "Fields left out are kept. A change of name, note or steps bumps the version.",
+                    "properties": { "name": { "type": "string", "maxLength": 80 }, "note": { "type": "string", "maxLength": 500 },
+                        "steps": { "type": "array", "items": r#ref("WorkoutItem") }, "on_phone": { "type": "boolean" } } }),
+                ),
+            );
+            responses.insert("200".into(), ok("Updated", Some(r#ref("Workout"))));
+        }
+        ("delete", "/workouts/{id}") => {
+            responses.insert(
+                "204".into(),
+                ok("Deleted; activities run with it keep their own copy of its steps", None),
+            );
+        }
+        ("post", "/workouts/{id}/copy") => {
+            op.insert(
+                "requestBody".into(),
+                json_body(json!({ "type": "object", "required": ["profile_id"], "properties": {
+                    "profile_id": { "type": "integer", "description": "The same profile duplicates the session" },
+                    "name": { "type": "string", "maxLength": 80 } } })),
+            );
+            responses.insert("201".into(), ok("The copy", Some(r#ref("Workout"))));
+        }
+        ("get", "/profiles/{profile_id}/routes") => {
+            responses.insert(
+                "200".into(),
+                ok(
+                    "Most recently changed first",
+                    Some(json!({ "type": "object", "properties": {
+                        "items": { "type": "array", "items": r#ref("Route") },
+                        "last_phone_sync": nullable("number") } })),
+                ),
+            );
+        }
+        ("post", "/profiles/{profile_id}/routes") => {
+            op.insert("requestBody".into(), json!({ "required": true, "content": { "multipart/form-data": { "schema": {
+                "type": "object", "properties": { "files": { "type": "array", "items": { "type": "string", "format": "binary" } } } } } } }));
+            responses.insert(
+                "200".into(),
+                ok(
+                    "One outcome per <rte> or <trk> found; timestamps are not needed and recorded data is ignored",
+                    Some(
+                        json!({ "type": "object", "properties": { "results": { "type": "array", "items": { "type": "object", "properties": {
+                        "file": { "type": "string" }, "status": { "type": "string", "enum": ["imported", "failed"] },
+                        "route_id": { "type": "integer" }, "reason": { "type": "string" } } } } } }),
+                    ),
+                ),
+            );
+        }
+        ("post", "/activities/{id}/route") => {
+            op.insert(
+                "requestBody".into(),
+                json_body(json!({ "type": "object", "properties": {
+                    "name": { "type": "string", "maxLength": 80, "description": "Defaults to the activity's title" },
+                    "from_m": { "type": "number", "description": "Start of the portion to keep, metres from the start of the run" },
+                    "to_m": { "type": "number" } } })),
+            );
+            responses.insert(
+                "201".into(),
+                ok(
+                    "The route, in the activity's profile; it carries no time, pace or heart rate",
+                    Some(r#ref("Route")),
+                ),
+            );
+        }
+        ("get", "/routes/{id}") => {
+            responses.insert(
+                "200".into(),
+                ok("Route, with the runs done while following it", Some(r#ref("Route"))),
+            );
+        }
+        ("patch", "/routes/{id}") => {
+            op.insert(
+                "requestBody".into(),
+                json_body(json!({ "type": "object", "properties": { "name": { "type": "string", "maxLength": 80 }, "on_phone": { "type": "boolean" } } })),
+            );
+            responses.insert("200".into(), ok("Updated", Some(r#ref("Route"))));
+        }
+        ("delete", "/routes/{id}") => {
+            responses.insert("204".into(), ok("Deleted; activities run with it keep its name", None));
+        }
+        ("get", "/routes/{id}/points") => {
+            responses.insert(
+                "200".into(),
+                ok(
+                    "Simplified to at most 5000 points; distances along the path stay true",
+                    Some(json!({ "type": "object", "properties": {
+                        "id": { "type": "integer" }, "version": { "type": "integer" }, "count": { "type": "integer" },
+                        "lat": { "type": "array", "items": { "type": "number" } }, "lon": { "type": "array", "items": { "type": "number" } },
+                        "ele": { "type": ["array", "null"], "items": { "type": "number" } },
+                        "dist": { "type": "array", "items": { "type": "number" } } } })),
+                ),
+            );
+        }
+        ("post", "/routes/{id}/reverse") => {
+            responses.insert("201".into(), ok("A new route; gain and loss are swapped", Some(r#ref("Route"))));
+        }
+        ("post", "/routes/{id}/copy") => {
+            op.insert(
+                "requestBody".into(),
+                json_body(json!({ "type": "object", "required": ["profile_id"], "properties": { "profile_id": { "type": "integer" } } })),
+            );
+            responses.insert("201".into(), ok("The copy", Some(r#ref("Route"))));
+        }
+        ("get", "/routes/{id}/export.gpx") => {
+            responses.insert(
+                "200".into(),
+                json!({ "description": "GPX 1.1 track without times", "content": { "application/gpx+xml": {} } }),
+            );
+        }
+        ("get", "/profiles/{profile_id}/plan") => {
+            responses.insert(
+                "200".into(),
+                ok(
+                    "Sessions come whole; route points are fetched separately when a version is new",
+                    Some(json!({ "type": "object", "properties": {
+                        "workouts": { "type": "array", "items": { "type": "object", "properties": {
+                            "id": { "type": "integer" }, "version": { "type": "integer" }, "name": { "type": "string" },
+                            "note": { "type": "string" }, "steps": { "type": "array", "items": r#ref("WorkoutItem") } } } },
+                        "routes": { "type": "array", "items": { "type": "object", "properties": {
+                            "id": { "type": "integer" }, "version": { "type": "integer" }, "name": { "type": "string" },
+                            "distance": { "type": "number" }, "gain": nullable("number"), "loss": nullable("number"),
+                            "is_loop": { "type": "boolean" }, "has_elevation": { "type": "boolean" } } } },
+                        "map_style_url": { "type": "string", "description": "Basemap of the phone's map screen; empty disables it" },
+                        "map_style_url_dark": { "type": "string" } } })),
+                ),
+            );
+        }
+        ("put", "/profiles/{profile_id}/plan/receipt") => {
+            op.insert(
+                "requestBody".into(),
+                json_body(json!({ "type": "object", "required": ["device", "items"], "description": "Replaces the device's previous statement for the profile",
+                    "properties": { "device": { "type": "string", "maxLength": 64 },
+                        "items": { "type": "array", "items": { "type": "object", "required": ["kind", "id", "version"], "properties": {
+                            "kind": { "type": "string", "enum": ["workout", "route"] }, "id": { "type": "integer" }, "version": { "type": "integer" } } } } } })),
+            );
+            responses.insert("204".into(), ok("Recorded", None));
+        }
+        ("get", "/profiles/{profile_id}/segments") => {
+            params.extend([
+                json!({ "name": "sort", "in": "query", "schema": { "type": "string", "enum": ["count", "recent"], "default": "count" } }),
+                json!({ "name": "hidden", "in": "query", "schema": { "type": "boolean", "default": false },
+                    "description": "List the hidden segments instead of the visible ones" }),
+            ]);
+            responses.insert(
+                "200".into(),
+                ok(
+                    "A portion becomes a segment once covered in the same direction in three activities, over at least 300 m",
+                    Some(json!({ "type": "object", "properties": {
+                        "items": { "type": "array", "items": { "type": "object", "properties": {
+                            "id": { "type": "integer" }, "name": { "type": "string" }, "distance": { "type": "number" },
+                            "gain": nullable("number"), "hidden": { "type": "boolean" }, "efforts": { "type": "integer" },
+                            "best_time": nullable("number"), "latest_effort": nullable("number"),
+                            "preview": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } } } } },
+                        "hidden_count": { "type": "integer" },
+                        "processing": { "type": "boolean", "description": "Detection is still running on some activities" }
+                    } })),
+                ),
+            );
+            responses.insert("400".into(), ok("Unknown sort", Some(r#ref("Error"))));
+        }
+        ("get" | "patch", "/segments/{id}") => {
+            if method == "patch" {
+                op.insert(
+                    "requestBody".into(),
+                    json_body(json!({ "type": "object", "properties": {
+                        "name": { "type": "string", "maxLength": 80 },
+                        "hidden": { "type": "boolean", "description": "A hidden segment is not detected again and keeps collecting efforts" } } })),
+                );
+            }
+            responses.insert("200".into(), ok("Segment", Some(r#ref("SegmentDetail"))));
         }
         ("get", "/profiles/{profile_id}/load") => {
             params.extend([

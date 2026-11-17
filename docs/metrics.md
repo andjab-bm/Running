@@ -132,6 +132,35 @@ advised = clamp(RECOVERY_BASE_H + RECOVERY_PER_TYPICAL_H × (load / typical) × 
 
 All of this is built from recorded runs alone. Sleep, stress, other sports and health are not known to it, and the heart-rate effort it starts from depends on the maximum heart rate set in the profile.
 
+## 13. Recurring segments
+
+A segment is a portion of route the profile has covered, in the same direction, in at least `MIN_TRAVERSALS` (3) activities, over at least `MIN_COURSE_M` (300 m). Segments are found by the background worker; nothing has to be drawn by hand. In the code they are called *courses*, because `segments` already names splits and laps.
+
+**Same place.** Each trace is resampled every `RESAMPLE_M` (20 m) of its distance, and each point gets the direction from the point before it to the point after it. Two points are the same place when they are within `TOLERANCE_M` (25 m) and their directions differ by at most `MAX_HEADING_DIFF_DEG` (60°). Twenty-five metres absorbs phone GPS and the two sides of a road; forty metres to the side is another path, and the opposite direction is another segment.
+
+**Who else passes here.** Every resampled point is stored with its grid cell (`CELL_M`, 25 m squares) and its direction as one of eight sectors. For a new activity, one query returns the other activities of the profile present in the cell of each of its points or one of the eight around it, heading the same way give or take one sector.
+
+**New segments.** A stretch of the new activity becomes a segment where at least two other activities pass, where no known segment (hidden ones included) already runs, and over at least 300 m. Along the way:
+
+- holes of at most 2 points left by position noise are bridged;
+- the stretch is cut where the runs sharing it change by more than half between the 5 points before and the 5 points after — a junction where habits diverge;
+- the stretch is cut where it comes back onto a point it passed at least 10 points (200 m) earlier, so that laps of a loop give one segment of one lap;
+- 2 points are dropped at each end, where paths join and part and directions are still turning.
+
+The grid only proposes. A new segment is kept only if at least three activities then cover it completely (below); otherwise it is discarded.
+
+**Covering a segment.** An activity has an effort on a segment when it reaches the segment's first point, then meets at least `MATCH_COVERAGE` (90 %) of its points in order — the nearest point of the segment at most 5 points ahead, with at most 4 consecutive points of the activity off the segment — and reaches its last point. Turning back, cutting through, or running it the other way gives no effort; running it twice gives two.
+
+**Efforts are timed on elapsed time**, between the two points of the activity that start and end the passage: on a segment you race your earlier passages, stops included. (Records, section 10, use moving time.)
+
+**Names** are made from the length and the overall direction, in French like the default titles: "1,2 km · vers l'est", or "… · boucle" when the segment ends within `LOOP_M` (100 m) of its start. No place name is looked up: that would need an outbound request.
+
+**When.** After each import, copy or move, for that activity only; a new segment is matched at once against the earlier activities that pass there, so its history is complete from its creation. Deleting or moving an activity removes its efforts; the segment stays.
+
+**Checked on real data.** On the five real exports used during development the worker finds one segment: a 3.9 km loop with five complete passages across the runs. That is too little history to tune the thresholds further; they are checked again on the owner's full history (task 16.4). A one-hour run over a route already run twice is indexed, matched and turned into a segment in under 2 s on the development machine (debug build).
+
+**Known limits.** Paths less than 25 m apart running the same way (a towpath beside a road) are read as one. A long shared stretch stays one long segment unless habits diverge on it. A segment is cut from the passage that created it, so its ends are where that run joined and left the shared path.
+
 ## Test data
 
 - **Synthetic runs** built in `server/tests/pipeline.rs` cover each scenario of the `activity-metrics` spec (pauses, climbs, splits, laps, zones, effort, cadence, downsampling) and GPX reading, rejection and export.

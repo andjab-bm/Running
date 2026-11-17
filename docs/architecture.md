@@ -50,6 +50,20 @@ The phone and watch apps are described in [android.md](android.md); installing t
 - **Configuration by environment variable**, all optional: `PORT` (8080), `DATA_DIR` (`./data`), `MAX_UPLOAD_MB` (50), `MAP_STYLE_URL` (a public OpenStreetMap-based style; empty disables the basemap).
 - **One container.** `deploy/Dockerfile` builds the web app, compiles the server with the web app embedded (cross-compiled for ARM64 or AMD64) and ships the binary alone in a minimal image that runs as an unprivileged user with `/data` as its volume. `running-server healthcheck` is the container's health probe, and the server shuts down cleanly on the termination signal.
 
+### What the server computes and keeps
+
+- **At import**, in the request: the metrics of the run itself ([metrics.md](metrics.md) §1–8).
+- **After import**, in the background: best efforts, training load and recurring segments (`server/src/derive/`, [metrics.md](metrics.md) §9–13). One worker handles one activity at a time, so a batch import cannot exhaust the Pi; an activity is usable as soon as it is imported, and `GET /profiles/{id}/derive-status` says how much is left. Activities that predate a change in these computations are caught up at start-up.
+- **On request**, never stored: statistics, records, predictions and the load series. They are aggregated from the activity rows, so they always match the current activities.
+- **Household and profile.** The activity list (`GET /activities`) covers every profile, a run copied between two members appearing once. Statistics, records, load, segments, sessions and routes belong to one profile.
+
+### Sessions, routes and their delivery to the phone
+
+- A **session** is a JSON document of steps and repeated blocks (durations in seconds, distances in metres, paces in seconds per kilometre). The server validates it (`pipeline/workout.rs`); the phone reads the same document, and both are tested against the fixtures of `server/tests/fixtures/workouts/`.
+- A **route** is a path with elevations, built from the `<rte>` or `<trk>` of a GPX file — timestamps are not needed — or from a past run. Its length and climb use the same code as an activity's. It is simplified to at most 5 000 points and exported as GPX.
+- **Delivery is a pull.** The server cannot reach a sleeping phone. Sessions and routes marked "on the phone" form the profile's plan (`GET /profiles/{id}/plan`); the phone fetches it when it syncs at home, fetches the points of routes whose version is new, then states what it holds (`PUT /profiles/{id}/plan/receipt`). That statement is what lets the web show "on the phone since…", or "waiting" when an item was edited after delivery. The plan also carries the map style, so the phone's map uses the tile host configured here and no other.
+- **An activity keeps what it was run with**: the session as it was that day (so later edits or deletion do not rewrite it), the name of the route, and the pace target with its final gap. In a guided run a change of step is a lap, so the server labels laps with steps by position.
+
 ### Developing
 
 ```bash

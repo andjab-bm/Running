@@ -48,8 +48,7 @@ CREATE TABLE courses (
     distance    REAL    NOT NULL,
     gain        REAL,
     hidden      INTEGER NOT NULL DEFAULT 0,
-    points      BLOB    NOT NULL,             -- zstd JSON: lat, lon, ele, cumulative distance
-    cells       TEXT    NOT NULL,             -- JSON array of [cell, bearing8] in order
+    points      BLOB    NOT NULL,             -- zstd JSON: resampled path and elevation
     created_at  REAL    NOT NULL DEFAULT (unixepoch('subsec'))
 );
 

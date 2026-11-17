@@ -1,0 +1,1 @@
+{ "name": "Sept heures", "steps": [ { "type": "step", "kind": "effort", "end": { "type": "time", "value": 25200 } } ] }

@@ -1,0 +1,6 @@
+{ "name": "6 x 400 m", "note": "Sur la piste.", "expect_steps": 14, "steps": [
+  { "type": "step", "kind": "warmup", "end": { "type": "time", "value": 600 }, "target": { "type": "hr_zone", "zone": 2 } },
+  { "type": "repeat", "count": 6, "skip_last_recovery": false, "steps": [
+    { "type": "step", "kind": "effort", "end": { "type": "distance", "value": 400 }, "target": { "type": "pace", "fast": 300, "slow": 315 } },
+    { "type": "step", "kind": "recovery", "end": { "type": "time", "value": 90 } } ] },
+  { "type": "step", "kind": "cooldown", "end": { "type": "time", "value": 600 }, "target": { "type": "none" } } ] }

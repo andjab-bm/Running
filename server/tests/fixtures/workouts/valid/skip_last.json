@@ -1,0 +1,4 @@
+{ "name": "5 x 1 min", "note": "", "expect_steps": 9, "steps": [
+  { "type": "repeat", "count": 5, "skip_last_recovery": true, "steps": [
+    { "type": "step", "kind": "effort", "end": { "type": "time", "value": 60 } },
+    { "type": "step", "kind": "recovery", "end": { "type": "time", "value": 120 } } ] } ] }

@@ -37,6 +37,9 @@ pub struct Outcome {
     pub activity_id: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
+    /// The file is a path without timing: it can be added to the routes instead.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub usable_as_route: bool,
 }
 
 impl Outcome {
@@ -46,6 +49,7 @@ impl Outcome {
             status: Status::Failed,
             activity_id: None,
             reason: Some(reason.into()),
+            usable_as_route: false,
         }
     }
 }
@@ -131,7 +135,9 @@ pub async fn import(
         let (format, activities) = match parsed {
             Ok(v) => v,
             Err(e) => {
-                results.push(Outcome::failed(&file, e.to_string()));
+                let mut outcome = Outcome::failed(&file, e.to_string());
+                outcome.usable_as_route = e == pipeline::ParseError::NoTiming;
+                results.push(outcome);
                 continue;
             }
         };
@@ -154,6 +160,7 @@ pub async fn import(
                     status: Status::Duplicate,
                     activity_id: Some(existing),
                     reason: Some("This run is already in the profile.".into()),
+                    usable_as_route: false,
                 });
                 continue;
             }
@@ -182,6 +189,7 @@ pub async fn import(
                 status: Status::Imported,
                 activity_id: Some(id),
                 reason: None,
+                usable_as_route: false,
             });
         }
     }

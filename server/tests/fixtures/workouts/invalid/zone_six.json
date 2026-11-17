@@ -1,0 +1,1 @@
+{ "name": "Zone 6", "steps": [ { "type": "step", "kind": "effort", "end": { "type": "time", "value": 60 }, "target": { "type": "hr_zone", "zone": 6 } } ] }

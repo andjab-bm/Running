@@ -84,16 +84,23 @@ Names: the existing `segments` table keeps splits and laps; the new tables are `
 4. **Hidden** courses keep their row (`hidden = 1`) so detection does not recreate them; efforts keep being matched so restoring is complete.
 5. **Names**: "1,2 km · <direction>" from length and overall bearing; no reverse geocoding (it would need an outbound request).
 
+**As built** (details and constants in `docs/metrics.md` §13), where it differs from the plan above:
+
+- Matching compares resampled points directly (within 25 m and 60° of heading), not cells; the grid is only used to find which other activities pass somewhere. `courses` therefore stores the path, not a cell list.
+- A candidate overlapping a known course is not rejected at 70 %: the points already covered by a known course are removed first, so new segments never overlap existing ones.
+- Candidates are also cut where a stretch comes back onto itself (laps of a loop), and lose two points at each end, where headings are still turning. Both came from tests: laps made one unmatched multi-lap segment on the owner's real exports, and corner points prevented earlier runs from being matched.
+- A new segment is kept only if three activities then cover it completely.
+
 *Alternative*: Fréchet / dynamic-time-warping similarity between all pairs — quadratic in history and far beyond a Pi. *Alternative*: an R-tree (as hinted in `running-foundations`) — the grid in SQLite does the same job with no dependency and survives restarts. *Alternative*: user-drawn segments only — the brief asks for automatic detection.
 
 ### 6. Sessions and routes: stored as documents, versioned for delivery
 
-- `workouts(id, profile_id, name, note, steps JSON, on_phone, version, updated_at)`. `steps` is a list of items; an item is a **step** `{kind, end: {type: time|distance|lap, value}, target: {type: none|pace|hr_zone, lo, hi | zone}}` or a **repeat** `{count, skip_last_recovery, steps: [step…]}` (one level). Validation lives in one Rust function shared by create and update, mirrored by a pure-Kotlin parser in `core` tested against the same JSON fixtures (`testdata/workouts/*.json`, committed).
+- `workouts(id, profile_id, name, note, steps JSON, on_phone, version, updated_at)`. `steps` is a list of items; an item is a **step** `{kind, end: {type: time|distance|lap, value}, target: {type: none|pace|hr_zone, lo, hi | zone}}` or a **repeat** `{count, skip_last_recovery, steps: [step…]}` (one level). Validation lives in one Rust function shared by create and update, mirrored by a pure-Kotlin parser in `core` tested against the same JSON fixtures (`server/tests/fixtures/workouts/`, committed — `testdata/` is git-ignored). Paces in the document are seconds per kilometre (`fast`, `slow`).
 - `routes(id, profile_id, name, distance, gain, loss, is_loop, has_elevation, points BLOB, preview, on_phone, version, updated_at)`. `points` is the zstd JSON of parallel arrays (lat, lon, ele, cumulative distance), simplified to 5 m tolerance (Douglas–Peucker) and capped at 5 000 points. Elevation gain/loss reuse the activity elevation code. A route is built from a GPX `<rte>` or `<trk>` (times ignored) or from an activity's streams; GPX export reuses `pipeline/gpx.rs`.
 - Starter sessions are templates embedded in the web app; adding one is an ordinary create.
 - `version` increments on every change; `on_phone` is the "mark for the phone" flag.
 
-API: `GET|POST /profiles/{pid}/workouts`, `GET|PUT|DELETE /workouts/{id}`, `POST /workouts/{id}/copy`; `GET /profiles/{pid}/routes`, `POST /profiles/{pid}/routes` (multipart GPX, or JSON `{from_activity, from_m, to_m}`), `GET|PATCH|DELETE /routes/{id}`, `POST /routes/{id}/reverse`, `POST /routes/{id}/copy`, `GET /routes/{id}/export.gpx`.
+API: `GET|POST /profiles/{pid}/workouts`, `GET|PUT|DELETE /workouts/{id}`, `POST /workouts/{id}/copy`; `GET /profiles/{pid}/routes`, `POST /profiles/{pid}/routes` (multipart GPX), `POST /activities/{id}/route` (JSON `{name, from_m, to_m}`, a route from a run), `GET|PATCH|DELETE /routes/{id}`, `POST /routes/{id}/reverse`, `POST /routes/{id}/copy`, `GET /routes/{id}/export.gpx`.
 
 *Alternative*: FIT workout and course files as the stored form — the phone app is ours, so a JSON document both sides validate is simpler than two more FIT message families; GPX export covers interoperability for routes.
 
@@ -158,7 +165,7 @@ All three are replayable: the attached plan is written as the first entries of t
 
 ### 13. Activities learn what they were run with
 
-`activities` gains `workout_id`, `workout_snapshot` (JSON: name and steps as run), `route_id`, `route_name`, `pacer` (JSON: target, strategy, final gap) and `exclude_from_records`. `PATCH /activities/{id}` accepts them as optional fields, validated like the journal; the phone sends them in the same patch as title, effort and note, reusing the `journal_dirty` retry. Ids are plain references without cascade: deleting a session or a route leaves the snapshot and the name in place (specs `workout-library`, `route-library`). The activity page labels laps with steps by position — step *n* is lap *n* — which holds because step changes are the only laps of a guided run.
+`activities` gains `workout_id`, `workout_snapshot` (JSON: name and steps as run), `route_id`, `route_name`, `pacer` (JSON: target, strategy, final gap) and `exclude_from_records`. `PATCH /activities/{id}` accepts them as three optional objects — `workout` (id, name, steps), `route` (id, name) and `pacer` (target, value, strategy, final gap), `null` removing one — validated like the journal; the phone sends them in the same patch as title, effort and note, reusing the `journal_dirty` retry. Ids are plain references without cascade: deleting a session or a route leaves the snapshot and the name in place (specs `workout-library`, `route-library`). The activity page labels laps with steps by position — step *n* is lap *n* — which holds because step changes are the only laps of a guided run.
 
 ### 14. Web structure
 

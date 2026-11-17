@@ -2,12 +2,15 @@
 //!
 //! Everything here is pure computation with no I/O, so it can be tested on
 //! in-memory data and re-run whenever algorithms or profile settings change.
+pub mod courses;
 pub mod efforts;
 pub mod gpx;
 pub mod load;
 pub mod metrics;
 pub mod parse;
+pub mod routes;
 pub mod time;
+pub mod workout;
 
 use std::fmt;
 
@@ -79,7 +82,10 @@ impl fmt::Display for ParseError {
         match self {
             ParseError::Unrecognised => write!(f, "The format is not recognised: only .gpx and .fit files are accepted."),
             ParseError::Corrupt(why) => write!(f, "The file is damaged and could not be read ({why})."),
-            ParseError::NoTiming => write!(f, "The file is a route without timing data, not a recorded activity."),
+            ParseError::NoTiming => write!(
+                f,
+                "The file is a route without timing data, not a recorded activity. It can be added to the routes instead."
+            ),
             ParseError::Empty => write!(f, "The file contains no recorded samples."),
         }
     }

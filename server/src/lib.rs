@@ -1,4 +1,6 @@
 //! Self-hosted running tracker: HTTP API and embedded web app.
+// The OpenAPI description is one large `json!` literal.
+#![recursion_limit = "512"]
 pub mod api;
 pub mod config;
 pub mod db;

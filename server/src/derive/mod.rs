@@ -15,13 +15,12 @@ use std::{
 use sqlx::{Row, SqlitePool};
 
 use crate::{
-    pipeline::{
-        efforts::{BestEffort, best_efforts},
-        load::activity_load,
-    },
+    pipeline::{courses, efforts::best_efforts, load::activity_load},
     store,
 };
 use tokio::sync::mpsc;
+
+pub mod segments;
 
 /// Bumped whenever a derived figure would come out differently, so that it is recomputed.
 pub const DERIVED_VERSION: i64 = 1;
@@ -30,9 +29,9 @@ const HISTORY: usize = 64;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Job {
-    /// Derive one activity, then refresh what its profile shares (segments).
+    /// Derive one activity: best efforts, load, and its part in the profile's segments.
     Activity(i64),
-    /// Derive the profile's outdated activities, then refresh what the profile shares.
+    /// Derive the profile's outdated activities.
     /// Enqueued when an activity left the profile or its settings changed.
     Profile(i64),
     /// Derive every outdated activity of every profile.
@@ -166,33 +165,26 @@ async fn coalesce(db: &SqlitePool, batch: Vec<Job>) -> Vec<Job> {
 async fn run_job(db: &SqlitePool, job: Job) -> anyhow::Result<()> {
     match job {
         Job::Activity(id) => {
-            if let Some(profile_id) = derive_activity(db, id).await? {
-                derive_shared(db, profile_id).await?;
-            }
+            derive_activity(db, id).await?;
         }
+        // An activity that left the profile took its efforts with it; what is left to do
+        // is the profile's outdated activities, if any.
         Job::Profile(profile_id) => {
             for id in outdated(db, Some(profile_id)).await? {
                 derive_activity(db, id).await?;
                 tokio::task::yield_now().await;
             }
-            derive_shared(db, profile_id).await?;
         }
         Job::Backfill => {
-            let mut profiles = HashSet::new();
+            // Oldest first, so that segments appear in the order the runs were made.
             for id in outdated(db, None).await? {
-                if let Some(p) = derive_activity(db, id).await? {
-                    profiles.insert(p);
-                }
+                derive_activity(db, id).await?;
                 tokio::task::yield_now().await;
-            }
-            for p in profiles {
-                derive_shared(db, p).await?;
             }
         }
     }
     Ok(())
 }
-
 async fn outdated(db: &SqlitePool, profile_id: Option<i64>) -> anyhow::Result<Vec<i64>> {
     let rows = sqlx::query("SELECT id FROM activities WHERE derived_version < ? AND (? IS NULL OR profile_id = ?) ORDER BY start_time")
         .bind(DERIVED_VERSION)
@@ -216,31 +208,40 @@ async fn derive_activity(db: &SqlitePool, id: i64) -> anyhow::Result<Option<i64>
     let profile_id: i64 = row.get(0);
     let blob: Vec<u8> = row.get(1);
     // Decompressing and scanning a long run is CPU work: keep it off the async threads.
-    let computed = tokio::task::spawn_blocking(move || -> anyhow::Result<Vec<BestEffort>> {
-        Ok(best_efforts(&store::decode_streams(&blob)?.streams))
+    let computed = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
+        let streams = store::decode_streams(&blob)?.streams;
+        let efforts = best_efforts(&streams);
+        let trace = courses::resample(&streams);
+        Ok((streams, efforts, trace))
     })
     .await?;
 
-    let mut tx = db.begin().await?;
+    // A failure in one figure must not leave the activity "processing" for ever:
+    // it is logged and the activity is retried at the next version bump.
     match &computed {
-        Ok(efforts) => {
-            sqlx::query("DELETE FROM best_efforts WHERE activity_id = ?")
-                .bind(id)
-                .execute(&mut *tx)
-                .await?;
-            for e in efforts {
-                sqlx::query("INSERT INTO best_efforts (activity_id, distance_m, moving_s, start_offset_m) VALUES (?, ?, ?, ?)")
-                    .bind(id)
-                    .bind(e.distance)
-                    .bind(e.moving_s)
-                    .bind(e.start_offset_m)
-                    .execute(&mut *tx)
-                    .await?;
+        Ok((streams, _, trace)) => {
+            if let Err(e) = segments::refresh_activity(db, id, profile_id, streams, trace).await {
+                tracing::error!("activity {id}: segments not refreshed: {e:#}");
             }
         }
-        // A failure in one figure must not leave the activity "processing" for ever:
-        // it is logged and the activity is retried at the next version bump.
-        Err(e) => tracing::error!("activity {id}: best efforts not computed: {e:#}"),
+        Err(e) => tracing::error!("activity {id}: streams unreadable: {e:#}"),
+    }
+
+    let mut tx = db.begin().await?;
+    if let Ok((_, efforts, _)) = &computed {
+        sqlx::query("DELETE FROM best_efforts WHERE activity_id = ?")
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+        for e in efforts {
+            sqlx::query("INSERT INTO best_efforts (activity_id, distance_m, moving_s, start_offset_m) VALUES (?, ?, ?, ?)")
+                .bind(id)
+                .bind(e.distance)
+                .bind(e.moving_s)
+                .bind(e.start_offset_m)
+                .execute(&mut *tx)
+                .await?;
+        }
     }
     // Training load: the heart-rate effort when there is one, an estimate otherwise.
     let (load, estimated) = activity_load(row.get("effort"), row.get("moving_time"), row.get("rpe"));
@@ -253,12 +254,6 @@ async fn derive_activity(db: &SqlitePool, id: i64) -> anyhow::Result<Option<i64>
         .await?;
     tx.commit().await?;
     Ok(Some(profile_id))
-}
-
-/// Refreshes what the activities of a profile share. Nothing yet: recurring
-/// segments are detected and matched here.
-async fn derive_shared(_db: &SqlitePool, _profile_id: i64) -> anyhow::Result<()> {
-    Ok(())
 }
 
 /// Marks activities as waiting for the worker again.

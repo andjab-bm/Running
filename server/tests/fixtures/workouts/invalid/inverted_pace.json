@@ -1,0 +1,1 @@
+{ "name": "Allure inversee", "steps": [ { "type": "step", "kind": "effort", "end": { "type": "time", "value": 60 }, "target": { "type": "pace", "fast": 315, "slow": 300 } } ] }

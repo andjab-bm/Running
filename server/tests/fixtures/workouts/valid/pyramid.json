@@ -1,0 +1,6 @@
+{ "name": "Pyramide", "note": "", "expect_steps": 5, "steps": [
+  { "type": "step", "kind": "warmup", "end": { "type": "time", "value": 900 } },
+  { "type": "step", "kind": "effort", "end": { "type": "time", "value": 60 }, "target": { "type": "pace", "fast": 290, "slow": 305 } },
+  { "type": "step", "kind": "recovery", "end": { "type": "lap" } },
+  { "type": "step", "kind": "effort", "end": { "type": "time", "value": 120 } },
+  { "type": "step", "kind": "cooldown", "end": { "type": "distance", "value": 1000 } } ] }
