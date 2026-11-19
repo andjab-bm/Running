@@ -8,7 +8,7 @@
 # server is cross-compiled for the other architecture, so nothing runs under emulation.
 
 # --- 1. web app: static files, the same for every architecture ---
-FROM --platform=$BUILDPLATFORM node:24-trixie-slim AS web
+FROM --platform=$BUILDPLATFORM node:26-trixie-slim AS web
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json web/.npmrc ./
 RUN --mount=type=cache,target=/root/.npm npm ci
