@@ -46,9 +46,12 @@ data class Settings(
     val autoPause: Boolean = true,
     val keepScreenOn: Boolean = true,
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
-    /** Map styles of the home server, as last retrieved; empty when it has none. */
-    val mapStyleUrl: String = "",
-    val mapStyleUrlDark: String = "",
+    /**
+     * Map styles: the public OpenFreeMap ones by default, so the basemap works without a server. A
+     * style the home server announces replaces them at the next sync.
+     */
+    val mapStyleUrl: String = DEFAULT_MAP_STYLE,
+    val mapStyleUrlDark: String = DEFAULT_MAP_STYLE_DARK,
     /** The pace target last used, in seconds per kilometre, proposed again on the ready screen. */
     val pacerPace: Double = 360.0,
     /** The target time last entered for a route, in seconds; null before the first one. */
@@ -79,6 +82,10 @@ data class Settings(
 
 /** The pacer alert margins offered, in seconds. */
 val PACER_MARGINS = listOf(15, 30, 60)
+
+/** Public vector styles, the same ones the server proposes by default. */
+const val DEFAULT_MAP_STYLE = "https://tiles.openfreemap.org/styles/positron"
+const val DEFAULT_MAP_STYLE_DARK = "https://tiles.openfreemap.org/styles/dark"
 
 /** The coaching engines' settings that come from the phone's: alerts and the regular announcement. */
 fun Settings.coach(engine: SessionEngine.Config) = Coach.Settings(
@@ -137,8 +144,8 @@ class SettingsStore(private val context: Context) {
             autoPause = p[K.autoPause] ?: d.autoPause,
             keepScreenOn = p[K.keepScreenOn] ?: d.keepScreenOn,
             theme = p[K.theme]?.let { runCatching { ThemeChoice.valueOf(it) }.getOrNull() } ?: d.theme,
-            mapStyleUrl = p[K.mapStyle] ?: d.mapStyleUrl,
-            mapStyleUrlDark = p[K.mapStyleDark] ?: d.mapStyleUrlDark,
+            mapStyleUrl = p[K.mapStyle]?.ifEmpty { null } ?: d.mapStyleUrl,
+            mapStyleUrlDark = p[K.mapStyleDark]?.ifEmpty { null } ?: d.mapStyleUrlDark,
             pacerPace = p[K.pacerPace] ?: d.pacerPace,
             pacerTime = p[K.pacerTime],
             cueVoice = p[K.cueVoice] ?: d.cueVoice,

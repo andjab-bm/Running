@@ -125,7 +125,10 @@ class SyncEngine(
      */
     private suspend fun syncPlan(api: ServerClient, dao: PlanDao, profileId: Long): PlanCount {
         val manifest = api.plan(profileId)
-        updateSettings { it.copy(mapStyleUrl = manifest.mapStyleUrl, mapStyleUrlDark = manifest.mapStyleUrlDark) }
+        // A server without a style leaves the app's own; the runner's "Fond de carte" switch turns it off.
+        if (manifest.mapStyleUrl.isNotEmpty()) {
+            updateSettings { it.copy(mapStyleUrl = manifest.mapStyleUrl, mapStyleUrlDark = manifest.mapStyleUrlDark) }
+        }
         val used = inUse()
         val wanted = manifest.workouts.associateBy { it.id }
         for (w in manifest.workouts) {

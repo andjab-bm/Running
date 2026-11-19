@@ -174,9 +174,9 @@ fun CoachingSettings(settings: Settings, change: ((Settings) -> Settings) -> Uni
                 Toggle("Fond de carte pendant la course", "", settings.basemap && styled) { v -> if (styled) change { it.copy(basemap = v) } }
             }
             Text(
-                if (styled) "Le fond vient du fournisseur de carte configuré sur le serveur de la maison : il voit la zone affichée, pas ta course. " +
+                if (styled) "Le fond est téléchargé sur internet (OpenFreeMap par défaut, ou le fournisseur du serveur de la maison) : il voit la zone affichée, pas ta course. " +
                     "Désactivé, le parcours et la trace s'affichent sur un fond uni et aucune demande n'est faite."
-                else "Le serveur n'a pas de fond de carte configuré : la carte s'affiche toujours sur un fond uni.",
+                else "Aucun fond de carte configuré : la carte s'affiche sur un fond uni.",
                 style = Type.small, color = c.ink3,
             )
         }

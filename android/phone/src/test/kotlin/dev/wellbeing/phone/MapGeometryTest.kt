@@ -5,6 +5,8 @@ import dev.wellbeing.phone.ui.CameraFollow
 import dev.wellbeing.phone.ui.GeoBounds
 import dev.wellbeing.phone.ui.LatLon
 import dev.wellbeing.phone.ui.MercatorFrame
+import dev.wellbeing.phone.data.DEFAULT_MAP_STYLE
+import dev.wellbeing.phone.data.DEFAULT_MAP_STYLE_DARK
 import dev.wellbeing.phone.ui.basemapStyle
 import dev.wellbeing.phone.ui.heading
 import dev.wellbeing.phone.ui.nextFrame
@@ -37,7 +39,9 @@ class MapGeometryTest {
         assertEquals("https://tiles.example/dark.json", basemapStyle(s, dark = true))
         assertEquals("https://tiles.example/light.json", basemapStyle(s.copy(mapStyleUrlDark = ""), dark = true))
         assertNull(basemapStyle(s.copy(basemap = false), dark = false))
-        assertNull(basemapStyle(Settings(), dark = false))
+        assertEquals(DEFAULT_MAP_STYLE, basemapStyle(Settings(), dark = false))
+        assertEquals(DEFAULT_MAP_STYLE_DARK, basemapStyle(Settings(), dark = true))
+        assertNull(basemapStyle(Settings(mapStyleUrl = "", mapStyleUrlDark = ""), dark = false))
         assertTrue(Settings().basemap)
     }
 

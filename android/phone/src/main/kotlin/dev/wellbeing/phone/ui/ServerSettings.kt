@@ -1,6 +1,11 @@
 package dev.wellbeing.phone.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,12 +53,35 @@ private sealed interface Link {
 /** Avatar colours of the web app, in the order profiles are created. */
 private val avatarColors = listOf(0xFFB9AFFF, 0xFFF7AFC3, 0xFF8FE0BB, 0xFFFFC39C, 0xFF9CCBF7, 0xFFEFD877).map(::Color)
 
+/** One line in the settings: the server and profile in use, or that none is set; opens [ServerSheet]. */
+@Composable
+fun ServerRow(settings: Settings, onOpen: () -> Unit) {
+    val c = LocalColors.current
+    val host = settings.serverUrl.removePrefix("http://").removePrefix("https://")
+    val detail = when {
+        settings.serverUrl.isBlank() -> "Non configuré"
+        settings.profileId == null -> "$host · aucun profil choisi"
+        else -> "$host · ${settings.profileName}"
+    }
+    Row(
+        Modifier.fillMaxWidth().clip(Radius.tile).background(c.surface).clickable(role = Role.Button, onClick = onOpen).padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.server_title), style = Type.h3, color = c.ink)
+            Text(detail, style = Type.small, color = if (settings.serverUrl.isBlank() || settings.profileId == null) c.rose.ink else c.ink2)
+        }
+        AppIcon(Icon.CHEVRON, c.ink3, 18.dp)
+    }
+}
+
 /**
- * Pairing with the home server and choice of the profile runs go to. A new address is only
- * kept once it has answered as this product's server.
+ * Pairing with the home server and choice of the profile runs go to, in a sheet. A new address is
+ * only kept once it has answered as this product's server. While a server answers with profiles
+ * and none of them is chosen, the sheet cannot be closed.
  */
 @Composable
-fun ServerSettings(settings: Settings, store: SettingsStore) {
+fun ServerSheet(settings: Settings, store: SettingsStore, onDismiss: () -> Unit) {
     val c = LocalColors.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -77,7 +105,12 @@ fun ServerSettings(settings: Settings, store: SettingsStore) {
     // Shows the state of the saved server when the screen opens.
     LaunchedEffect(Unit) { if (settings.serverUrl.isNotBlank()) connect(settings.serverUrl, keep = false) }
 
-    Card {
+    val mustChoose = link is Link.Connected && profiles.isNotEmpty() && profiles.none { it.id == settings.profileId }
+    val close = { if (!mustChoose) onDismiss() }
+    BackHandler(onBack = close)
+
+    BottomSheet(close) {
+      Column(Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.server_title), style = Type.h3, color = c.ink, modifier = Modifier.weight(1f))
@@ -98,10 +131,8 @@ fun ServerSettings(settings: Settings, store: SettingsStore) {
             AppButton(stringResource(R.string.server_connect), { connect(address, keep = true) }, kind = ButtonKind.PRIMARY, modifier = Modifier.fillMaxWidth())
             Text(stringResource(R.string.server_privacy), style = Type.small, color = c.ink2)
         }
-    }
 
-    if (profiles.isNotEmpty() || settings.profileId != null) Card {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (profiles.isNotEmpty() || settings.profileId != null) Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(stringResource(R.string.profile_title), style = Type.h3, color = c.ink)
             if (profiles.isEmpty()) Text(settings.profileName, style = Type.strong, color = c.ink)
             profiles.forEachIndexed { i, p ->
@@ -128,5 +159,8 @@ fun ServerSettings(settings: Settings, store: SettingsStore) {
             }
             Text(stringResource(R.string.profile_hint), style = Type.small, color = c.ink2)
         }
+      }
+      if (mustChoose) Text("Choisis un profil pour terminer.", style = Type.small.copy(fontWeight = FontWeight.SemiBold), color = c.rose.ink)
+      else AppButton("Terminé", close, modifier = Modifier.fillMaxWidth())
     }
 }

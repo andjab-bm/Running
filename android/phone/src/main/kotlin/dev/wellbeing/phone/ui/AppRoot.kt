@@ -137,6 +137,7 @@ fun SettingsScreen(settings: Settings, store: SettingsStore) {
     fun change(f: (Settings) -> Settings) { scope.launch { store.update(f) } }
     var picking by remember { mutableStateOf<Int?>(null) }
     var coaching by rememberSaveable { mutableStateOf(false) }
+    var serverOpen by rememberSaveable { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -149,7 +150,7 @@ fun SettingsScreen(settings: Settings, store: SettingsStore) {
                 CoachingSettings(settings, ::change)
                 return@Column
             }
-            ServerSettings(settings, store)
+            ServerRow(settings) { serverOpen = true }
             Card {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(stringResource(R.string.settings_main_screen), style = Type.h3, color = c.ink)
@@ -182,6 +183,7 @@ fun SettingsScreen(settings: Settings, store: SettingsStore) {
                 }
             }
         }
+        if (serverOpen) ServerSheet(settings, store) { serverOpen = false }
         picking?.let { slot ->
             BottomSheet({ picking = null }) {
                 // The combined field needs the full width: it is only offered for the bottom slot.
