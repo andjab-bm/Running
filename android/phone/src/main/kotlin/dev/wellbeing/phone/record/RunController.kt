@@ -67,6 +67,8 @@ data class Coaching(
     val complete: Boolean,
     val route: RouteTracker.State?,
     val routeName: String?,
+    /** The route's points, for the maps. */
+    val path: dev.wellbeing.running.RoutePath? = null,
     val pacerTarget: PacerTarget?,
     val pacer: Pacer.State?,
 )
@@ -302,6 +304,7 @@ object RunController {
             complete = c.runner?.complete ?: false,
             route = c.tracker?.state,
             routeName = c.route?.name,
+            path = c.route,
             pacerTarget = c.pacerTarget,
             pacer = c.pacer?.state,
         )

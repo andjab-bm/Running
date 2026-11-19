@@ -18,6 +18,8 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        // MapLibre ships native code for four architectures: the Pixel 8 needs arm64, the emulator x86_64.
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
     compileOptions {
@@ -73,6 +75,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.play.services.location)
     implementation(libs.play.services.wearable)
+    implementation(libs.maplibre.android)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
 

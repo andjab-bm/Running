@@ -23,6 +23,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -195,38 +197,6 @@ private fun SplitBars(s: Snapshot, settings: Settings, modifier: Modifier) {
 
 private const val MAX_BARS = 8
 
-/** The area reserved for a map: until then, the shape of the trace so far, with no basemap. */
-@Composable
-fun MiniMap(track: List<Sample>, modifier: Modifier, live: Boolean = true) {
-    val c = LocalColors.current
-    Box(modifier.clip(Radius.tile).background(c.surface.copy(alpha = 0.92f))) {
-        Canvas(Modifier.fillMaxSize().padding(14.dp)) {
-            if (track.size < 2) return@Canvas
-            val lat0 = track.minOf { it.lat }; val lat1 = track.maxOf { it.lat }
-            val lon0 = track.minOf { it.lon }; val lon1 = track.maxOf { it.lon }
-            // Longitudes shrink with latitude: keep the trace in proportion.
-            val kx = cos(Math.toRadians((lat0 + lat1) / 2))
-            val w = max((lon1 - lon0) * kx, 1e-6); val h = max(lat1 - lat0, 1e-6)
-            val k = minOf(size.width / w, size.height / h).toFloat()
-            val ox = (size.width - (w * k).toFloat()) / 2; val oy = (size.height - (h * k).toFloat()) / 2
-            fun at(p: Sample) = Offset(ox + ((p.lon - lon0) * kx * k).toFloat(), size.height - oy - ((p.lat - lat0) * k).toFloat())
-            val step = max(1, track.size / 400)
-            val path = Path()
-            track.filterIndexed { i, _ -> i % step == 0 || i == track.lastIndex }.forEachIndexed { i, p ->
-                val o = at(p); if (i == 0) path.moveTo(o.x, o.y) else path.lineTo(o.x, o.y)
-            }
-            drawPath(path, c.accent, style = Stroke(3.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-            if (live) drawCircle(c.accent, 5.dp.toPx(), at(track.last()))
-        }
-        if (track.size < 2 && live) {
-            Canvas(Modifier.fillMaxSize().padding(22.dp)) {
-                drawCircle(c.surface3, size.minDimension / 2.6f, style = Stroke(3.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 14f)), cap = StrokeCap.Round))
-            }
-        }
-        if (live) Text(stringResource(R.string.minimap), style = Type.eyebrow.copy(letterSpacing = androidx.compose.ui.unit.TextUnit.Unspecified), color = c.ink3, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 6.dp))
-    }
-}
-
 @Composable
 private fun RoundControl(icon: Icon, label: String, description: String, onClick: () -> Unit, big: Boolean = false) {
     val c = LocalColors.current
@@ -251,8 +221,19 @@ fun LiveScreen(s: Snapshot, settings: Settings) {
     var locked by rememberSaveable { mutableStateOf(false) }
     // A guided run opens on its step page, before the metrics and the lap.
     val guided = coaching?.steps?.isNotEmpty() == true
-    val pages = if (guided) 3 else 2
+    // Step (guided runs only), main, lap, map.
+    val pages = if (guided) 4 else 3
     val pager = rememberPagerState { pages }
+    val mainPage = if (guided) 1 else 0
+    val mapPage = pages - 1
+    val screenOn by androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+    val visible = screenOn.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
+    val miniMap = MiniMapInput(
+        path = coaching?.path,
+        style = basemapStyle(settings, c.isDark),
+        active = visible && pager.settledPage == mainPage,
+        onOpen = { scope.launch { pager.animateScrollToPage(mapPage) } },
+    )
     val paused = s.phase != Phase.RUNNING
     val f = settings.fields
 
@@ -284,7 +265,10 @@ fun LiveScreen(s: Snapshot, settings: Settings) {
                 val kind = if (guided) page else page + 1
                 Column(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (kind == 0) StepPage(s, coaching!!, settings)
-                    else if (kind == 1) {
+                    else if (kind == 3) {
+                        // The map exists only while it is the page shown and the screen is on.
+                        if (visible && pager.settledPage == page) MapPage(s, settings, track, coaching, locked) else MapPlaceholder()
+                    } else if (kind == 1) CompositionLocalProvider(LocalMiniMap provides miniMap) {
                         coaching?.takeIf { it.pacer != null }?.let { PacerBar(it, settings) }
                         val bars = f[0] == Field.AVG_PACE
                         FieldTile(f[0], s, settings, track, if (bars) 76 else 92, Modifier.weight(if (bars) 1.7f else 1.25f).fillMaxWidth(), hero = true)
@@ -311,7 +295,7 @@ fun LiveScreen(s: Snapshot, settings: Settings) {
         Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp), horizontalArrangement = Arrangement.Center) {
             for (i in 0 until pages) {
                 val on = pager.currentPage == i
-                val label = stringResource(listOf(R.string.page_step, R.string.page_metrics, R.string.page_lap)[if (guided) i else i + 1])
+                val label = stringResource(listOf(R.string.page_step, R.string.page_metrics, R.string.page_lap, R.string.page_map)[if (guided) i else i + 1])
                 Box(Modifier.padding(horizontal = 4.dp).size(width = 26.dp, height = 16.dp).clickable(enabled = !locked) { scope.launch { pager.animateScrollToPage(i) } }.semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
                     Box(Modifier.size(width = if (on) 22.dp else 8.dp, height = 8.dp).clip(Radius.pill).background(if (on) c.accent else c.surface3))
                 }

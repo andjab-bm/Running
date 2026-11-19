@@ -45,6 +45,9 @@ class AppColors(val isDark: Boolean) {
     val sky = Pastel(c("p-sky"), c("i-sky"))
     val butter = Pastel(c("p-butter"), c("i-butter"))
     val rose = Pastel(c("p-rose"), c("i-rose"))
+    /** The plain map background and the basemap colours of the approved design. */
+    val mapLand = c("map-land")
+    val mapRoad = c("map-road")
     val zoneInk = Color(0xFF000000 or Tokens.ZONE_INK.toLong())
 
     fun zone(z: Int) = Color(0xFF000000 or Tokens.zone(z).toLong())

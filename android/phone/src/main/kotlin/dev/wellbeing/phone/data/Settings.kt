@@ -65,6 +65,8 @@ data class Settings(
     /** Seconds ahead or behind before a pacer alert: 15, 30 or 60. */
     val pacerMargin: Int = 30,
     val alertOffRoute: Boolean = true,
+    /** Load the basemap of the server's map style during the run; on by default, by the owner's decision. */
+    val basemap: Boolean = true,
 ) {
     val splitMeters get() = if (units == Units.IMPERIAL) 1609.344 else 1000.0
 }
@@ -110,6 +112,7 @@ class SettingsStore(private val context: Context) {
         val alertPacer = booleanPreferencesKey("alert_pacer")
         val pacerMargin = longPreferencesKey("pacer_margin")
         val alertOffRoute = booleanPreferencesKey("alert_off_route")
+        val basemap = booleanPreferencesKey("basemap")
     }
 
     val flow: Flow<Settings> = context.store.data.map(::read)
@@ -141,6 +144,7 @@ class SettingsStore(private val context: Context) {
             alertPacer = p[K.alertPacer] ?: d.alertPacer,
             pacerMargin = p[K.pacerMargin]?.toInt()?.takeIf { it in PACER_MARGINS } ?: d.pacerMargin,
             alertOffRoute = p[K.alertOffRoute] ?: d.alertOffRoute,
+            basemap = p[K.basemap] ?: d.basemap,
         )
     }
 
@@ -171,6 +175,7 @@ class SettingsStore(private val context: Context) {
             p[K.alertPacer] = s.alertPacer
             p[K.pacerMargin] = s.pacerMargin.toLong()
             p[K.alertOffRoute] = s.alertOffRoute
+            p[K.basemap] = s.basemap
         }
     }
 }

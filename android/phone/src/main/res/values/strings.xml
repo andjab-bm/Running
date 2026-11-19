@@ -158,4 +158,5 @@
     <string name="resume_run_hint">Arrêtée par erreur ? Le temps passé ici comptera comme une pause.</string>
     <string name="settings_general">Général</string>
     <string name="settings_coaching">Coaching</string>
+    <string name="page_map">Carte</string>
 </resources>

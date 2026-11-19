@@ -148,4 +148,20 @@ fun CoachingSettings(settings: Settings, change: ((Settings) -> Settings) -> Uni
             Text("Les réglages changés pendant une course s'appliquent à la suivante.", style = Type.small, color = c.ink3)
         }
     }
+
+    Card {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Carte", style = Type.h3, color = c.ink)
+            val styled = settings.mapStyleUrl.isNotEmpty()
+            Column(Modifier.alpha(if (styled) 1f else 0.45f)) {
+                Toggle("Fond de carte pendant la course", "", settings.basemap && styled) { v -> if (styled) change { it.copy(basemap = v) } }
+            }
+            Text(
+                if (styled) "Le fond vient du fournisseur de carte configuré sur le serveur de la maison : il voit la zone affichée, pas ta course. " +
+                    "Désactivé, le parcours et la trace s'affichent sur un fond uni et aucune demande n'est faite."
+                else "Le serveur n'a pas de fond de carte configuré : la carte s'affiche toujours sur un fond uni.",
+                style = Type.small, color = c.ink3,
+            )
+        }
+    }
 }
