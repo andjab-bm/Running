@@ -135,6 +135,12 @@ object WatchLink {
                         WatchProtocol.CommandType.RESUME -> Command.RESUME
                         WatchProtocol.CommandType.LAP -> Command.LAP
                         WatchProtocol.CommandType.STOP -> Command.STOP
+                        // Starting from the wrist comes with task 15.2: until then this phone does not
+                        // advertise it, and refuses it if asked.
+                        WatchProtocol.CommandType.START_NEW -> {
+                            send(source, WatchProtocol.PATH_ACK, WatchProtocol.Ack(c.id, false, WatchProtocol.Refusal.OTHER).encode())
+                            return
+                        }
                     },
                 )
                 send(source, WatchProtocol.PATH_ACK, WatchProtocol.Ack(c.id, applied = signal != Signal.NONE).encode())

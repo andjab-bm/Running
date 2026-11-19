@@ -1,7 +1,7 @@
 //! Contract between the Android recorder and the importer.
 //!
 //! `tests/fixtures/android-recorder*.fit` are written by the phone app's FIT encoder
-//! (`android/core`, test `FitEncoderTest`) from a scripted run: three laps, one manual
+//! (`android/core`, test `FitEncoderTest`) from scripted runs. The main one has three laps, one manual
 //! pause of 60 s and one automatic pause of about 40 s. The `.json` next to each file holds
 //! the figures the phone computed for the same run. Regenerate both with
 //! `./gradlew :core:test -PupdateFixtures=true` in `android/`.
@@ -79,4 +79,36 @@ fn a_run_recorded_without_the_watch_has_no_heart_rate() {
     assert!(run.zones.is_none());
     within(run.summary.whole.dist, phone["distance_m"].as_f64().unwrap(), 0.01, "distance");
     assert_eq!(run.laps.len(), 3);
+}
+
+#[test]
+fn a_run_stopped_and_resumed_on_the_phone_is_one_run_with_a_pause() {
+    // `android-recorder-resumed`: stopped after 10 minutes, two minutes on the summary while walking
+    // about 340 m, resumed for 5 minutes, stopped again.
+    let (run, phone) = load(
+        include_bytes!("fixtures/android-recorder-resumed.fit"),
+        include_str!("fixtures/android-recorder-resumed.json"),
+    );
+    let whole = &run.summary.whole;
+    assert_eq!(
+        run.laps.len() as u64,
+        phone["laps"].as_u64().unwrap(),
+        "one lap, reopened by the resume"
+    );
+    within(
+        whole.dist,
+        phone["distance_m"].as_f64().unwrap(),
+        0.01,
+        "distance, without the walk while stopped",
+    );
+    let moving = phone["moving_s"].as_f64().unwrap();
+    assert!(
+        (whole.moving_time - moving).abs() <= 5.0,
+        "moving time: the server has {}, the phone {moving}",
+        whole.moving_time
+    );
+    assert!(
+        whole.elapsed_time - whole.moving_time >= 115.0,
+        "the stop reads as a pause: {whole:?}"
+    );
 }

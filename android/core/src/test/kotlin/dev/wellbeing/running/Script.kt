@@ -71,5 +71,12 @@ class Script(
             .move(500).lap()
             .move(300).stand(40).move(300)
             .stop()
+
+        /** Stopped by mistake after 10 minutes, walked about 340 m during two minutes on the summary, resumed. */
+        fun resumed() = Script()
+            .start().move(600).stop()
+            .move(120, speed = 2.8)
+            .resume().move(300)
+            .stop()
     }
 }

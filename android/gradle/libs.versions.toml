@@ -1,4 +1,5 @@
 # Versions pinned on 2026-11-15 from Google Maven, Maven Central and services.gradle.org.
+# MapLibre added on 2026-11-19 from Maven Central (change insights-and-coaching).
 # See docs/android.md for what each library is used for.
 [versions]
 agp = "9.5.1"
@@ -20,6 +21,7 @@ healthServices = "1.1.0"
 playServicesLocation = "21.4.0"
 playServicesWearable = "20.0.1"
 okhttp = "5.5.1"
+maplibre = "13.7.1"
 serialization = "1.13.0"
 coroutines = "1.11.0"
 junit = "4.13.2"
@@ -53,6 +55,7 @@ wear-ongoing = { module = "androidx.wear:wear-ongoing", version.ref = "wearOngoi
 health-services = { module = "androidx.health:health-services-client", version.ref = "healthServices" }
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 play-services-wearable = { module = "com.google.android.gms:play-services-wearable", version.ref = "playServicesWearable" }
+maplibre-android = { module = "org.maplibre.gl:android-sdk", version.ref = "maplibre" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver3", version.ref = "okhttp" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }

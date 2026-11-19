@@ -32,8 +32,8 @@ class FitEncoderTest {
         return counts
     }
 
-    private fun build(withHr: Boolean): Triple<ByteArray, RecordedRun, RunSummary> {
-        val s = Script.fixture(withHr)
+    private fun build(withHr: Boolean, script: Script = Script.fixture(withHr)): Triple<ByteArray, RecordedRun, RunSummary> {
+        val s = script
         val run = s.engine().recorded()
         return Triple(FitEncoder.encode(run, s.hr), run, RunSummary.of(run, s.hr))
     }
@@ -87,9 +87,14 @@ class FitEncoderTest {
     fun `committed fixtures are what the encoder produces`() {
         val dir = File(System.getProperty("repo.root"), "server/tests/fixtures")
         val update = System.getProperty("update.fixtures") == "true"
-        for (withHr in listOf(true, false)) {
-            val (fit, run, summary) = build(withHr)
-            val name = if (withHr) "android-recorder" else "android-recorder-nohr"
+        val runs = listOf(
+            "android-recorder" to build(withHr = true),
+            "android-recorder-nohr" to build(withHr = false),
+            // Stopped, resumed and stopped again: one run whose stop reads as a pause.
+            "android-recorder-resumed" to build(withHr = true, Script.resumed()),
+        )
+        for ((name, built) in runs) {
+            val (fit, run, summary) = built
             val expected = """
                 {
                   "distance_m": ${"%.2f".format(java.util.Locale.ROOT, summary.distance)},

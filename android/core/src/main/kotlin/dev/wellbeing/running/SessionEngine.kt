@@ -72,6 +72,17 @@ class SessionEngine(private val config: Config = Config()) {
     var phase = Phase.READY
         private set
 
+    /**
+     * Set by the coaching layer while a short effort is under way: the runner must not be
+     * auto-paused in a 200 m sprint whatever the measured speed. Not part of the log: it is
+     * derived again from the same events on replay.
+     */
+    var suppressAutoPause = false
+
+    /** Whether the last position received was used (accurate, not a jump, during the run). */
+    var lastFixAccepted = false
+        private set
+
     private var startT = 0L
     private var endT = 0L
     private var lastT = 0L
@@ -97,6 +108,8 @@ class SessionEngine(private val config: Config = Config()) {
     private var lapStartT = 0L
     private var lapDist0 = 0.0
     private var lapMoving0 = 0L
+    /** The lap the stop closed, and where it had started, so that a resume can reopen it. */
+    private var closedByStop: Triple<Long, Double, Long>? = null
     private val laps = mutableListOf<LapRecord>()
     private val splits = mutableListOf<Long>()
     private var splitMoving0 = 0L
@@ -119,7 +132,8 @@ class SessionEngine(private val config: Config = Config()) {
             phase = Phase.PAUSED
             Signal.PAUSED
         }
-        is Event.Resume -> if (phase != Phase.PAUSED && phase != Phase.AUTO_PAUSED) Signal.NONE else {
+        is Event.Resume -> if (phase != Phase.PAUSED && phase != Phase.AUTO_PAUSED && phase != Phase.STOPPED) Signal.NONE else {
+            if (phase == Phase.STOPPED) reopen()
             advance(e.t)
             resume(e.t)
             Signal.RESUMED
@@ -132,7 +146,10 @@ class SessionEngine(private val config: Config = Config()) {
         is Event.Stop -> if (!active) Signal.NONE else {
             advance(e.t)
             if (phase == Phase.RUNNING) timer += TimerEvent(e.t, false)
+            val open = Triple(lapStartT, lapDist0, lapMoving0)
+            val before = laps.size
             closeLap(e.t, manual = false)
+            closedByStop = if (laps.size > before) open else null
             phase = Phase.STOPPED
             endT = e.t
             Signal.STOPPED
@@ -142,6 +159,7 @@ class SessionEngine(private val config: Config = Config()) {
             while (steps.isNotEmpty() && steps.first() < e.t - CADENCE_WINDOW_MS) steps.removeFirst()
             Signal.NONE
         }
+        is Event.Plan -> Signal.NONE
         is Event.HeartRate -> {
             if (e.t >= hrT) { hr = e.bpm; hrT = e.t }
             Signal.NONE
@@ -153,6 +171,22 @@ class SessionEngine(private val config: Config = Config()) {
         if (t <= lastT) return
         if (phase == Phase.RUNNING) movingMs += t - lastT
         lastT = t
+    }
+
+    /**
+     * Undoes the end of the run, not its time: the stop's timer event stays and the resume adds a
+     * start, so the gap is a pause in the file; the lap the stop closed goes on; and the position is
+     * forgotten, so walking about while stopped adds no distance.
+     */
+    private fun reopen() {
+        closedByStop?.let { (t, d, m) ->
+            laps.removeAt(laps.lastIndex)
+            lapStartT = t; lapDist0 = d; lapMoving0 = m
+        }
+        closedByStop = null
+        endT = 0
+        prev = null
+        jumps = 0
     }
 
     private fun resume(t: Long) {
@@ -172,6 +206,7 @@ class SessionEngine(private val config: Config = Config()) {
     }
 
     private fun onFix(e: Event.Location): Signal {
+        lastFixAccepted = false
         accuracy = e.accuracy
         lastFixT = e.t
         if (phase == Phase.STOPPED) return Signal.NONE
@@ -189,6 +224,7 @@ class SessionEngine(private val config: Config = Config()) {
         }
         jumps = 0
         prev = fix
+        lastFixAccepted = true
         raw += d
         rawMarks.addLast(Mark(e.t, raw))
         while (rawMarks.first().t < e.t - PACE_WINDOW_MS) rawMarks.removeFirst()
@@ -210,7 +246,7 @@ class SessionEngine(private val config: Config = Config()) {
                 distMarks.addLast(Mark(e.t, dist))
                 while (distMarks.first().t < e.t - PACE_WINDOW_MS) distMarks.removeFirst()
                 samples += Sample(e.t, e.lat, e.lon, ele, dist, cadenceAt(e.t), speed)
-                if (still && config.autoPause) {
+                if (still && config.autoPause && !suppressAutoPause) {
                     val since = belowSince ?: e.t.also { belowSince = it }
                     if (e.t - since >= AUTO_PAUSE_ENTER_HOLD_MS) {
                         // The pause is dated from the moment the runner stopped, not from its detection.

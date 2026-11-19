@@ -68,7 +68,16 @@ sealed interface Event {
 
     /** Live heart rate, for display only: the saved run uses the stored heart-rate samples. */
     data class HeartRate(override val t: Long, val bpm: Int) : Event
+
+    /**
+     * What the run is done with, written first in its log so that a replay restores the coaching.
+     * The session is kept whole (as it was that day); the route by identity, its points being on the phone.
+     */
+    data class Plan(override val t: Long, val workout: Workout?, val route: RouteRef?, val pacer: PacerTarget?) : Event
 }
+
+/** A route by identity: the phone keeps its points, and the activity keeps its name. */
+data class RouteRef(val id: Long, val version: Long, val name: String)
 
 /** What an event did, so the caller can vibrate, speak or redraw. */
 enum class Signal { NONE, STARTED, PAUSED, RESUMED, LAP, STOPPED, AUTO_PAUSED, AUTO_RESUMED }

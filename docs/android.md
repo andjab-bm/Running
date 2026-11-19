@@ -67,7 +67,8 @@ Versions were taken from Google Maven, Maven Central and services.gradle.org on 
 | WorkManager | 2.12.0 | background sync |
 | DataStore (preferences) | 1.3.0 | settings |
 | OkHttp | 5.5.1 | HTTP client to the home server |
-| kotlinx.serialization (JSON) | 1.13.0 | API payloads |
+| MapLibre Native for Android | 13.7.1 | map screen and mini-map basemap (`MapView`, `MapSnapshotter`); added 2026-11-19 |
+| kotlinx.serialization (JSON) | 1.13.0 | API payloads; in `core`, reading the session document (JSON tree only, no compiler plugin) |
 | kotlinx.coroutines | 1.11.0 | concurrency |
 | Play services location | 21.4.0 | fused location (on-device) |
 | Play services wearable | 20.0.1 | phone ↔ watch Data Layer |
@@ -78,6 +79,8 @@ Versions were taken from Google Maven, Maven Central and services.gradle.org on 
 | JUnit | 4.13.2 (Android modules), JUnit Platform via `kotlin-test` (`core`) | tests |
 
 ### Deviations from the design document
+
+- **Coaching (change `insights-and-coaching`), read through Context7 on 2026-11-19.** MapLibre Native's newest stable Android release is 13.7.1; the `2026.x-globe` releases on Maven Central are previews of the globe projection and are not used. Text-to-speech, audio focus and background location are platform APIs, so nothing is pinned for them. What the documentation confirms: a cue requests `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` with the usage `USAGE_ASSISTANCE_NAVIGATION_GUIDANCE` and abandons the same request afterwards; a French voice is checked with `isLanguageAvailable` (`LANG_MISSING_DATA` means it must be installed) and `Voice.isNetworkConnectionRequired()` tells an offline voice; a `location` foreground service cannot be created from the background without `ACCESS_BACKGROUND_LOCATION`, and starting any foreground service from the background still needs an exemption, which is why the start from the wrist also asks to ignore battery optimisation (design Decision 11, to be proved on the phone in task 15.1). No deviation from the design.
 
 - **Target SDK is 36, compile SDK 37.** The apps compile against the newest platform but keep the behaviour of the previous release until the Android 17 behaviour changes have been checked on the owner's phone.
 - **The watch interface uses plain Compose, not Wear Compose Material.** Its few screens are text, three round buttons and an arc; drawing them directly keeps the app small and exactly as approved on the prototype. The Wear Compose libraries stay pinned in the catalog but are not linked.
@@ -137,6 +140,28 @@ The recording logic lives in `core` (`SessionEngine`): it is driven only by even
 ### Deviation from the design document
 
 - **The run in progress is stored as its event log**, not as sample rows written every five seconds. Samples, laps and timer events are derived from the engine when the run is saved. This is what makes the rebuilt run identical to the interrupted one.
+
+## Coaching engines (`core`)
+
+Change `insights-and-coaching` adds three engines beside `SessionEngine`, which stays the authority on time, distance and pauses. They read its snapshots and the positions it accepted, have no clock of their own, and are wired together by `Coach`.
+
+- **`Workout`** reads and checks the session document with the server's rules (`server/tests/fixtures/workouts/` is read by both test suites) and unfolds its repeats.
+- **`WorkoutRunner`** follows the steps on moving time and distance, so a pause never consumes a step. A step that reaches its length makes `Coach` issue a lap at that instant; a lap press ends the current step; so the laps of a guided run are its steps. While an effort expected to last under two minutes is current, auto-pause is suspended. It gives a countdown 5 s before a step of 30 s or 200 m and more ends, and a target alert after 15 s outside the target, at most every 30 s.
+- **`RouteTracker`** projects each accepted position on the route only within 50 m behind and 300 m ahead of the last match (a figure-of-eight is followed in its own order), looks up to 2 km ahead when lost, joins the route partway at the earliest passage within reach, calls the runner off route beyond 40 m for 10 s (alert at most once a minute), and announces arrival within 30 m of the end once its last 150 m are reached.
+- **`Pacer`** compares moving time with a plan — a monotone table distance → time: a straight line for a fixed pace; for a target time on a route, even, or per 100 m slice weighted by the energy cost of its grade (`Grade.factor`, the server's Minetti polynomial with its ±30 % clamp, checked against `server/tests/fixtures/grade-factor.json`, which the server's test `grade_factor` writes). Progress is along the route from where it was joined, or distance covered (marked approximate) off it; at arrival the gap freezes as the final result.
+- **Cues** are values (`Cue`), ordered by `CueQueue` (step changes, then alerts, then distance announcements; dropped after 20 s; while paused only the pause, a step change and the end of the session go out), worded by `Speech` in French with figures as a runner says them, and felt through `VibrationPatterns`, one waveform per kind, shared by the phone and the watch.
+- **Replay.** The run's log starts with a `Plan` event (session document, route identity and version, pace target), stored as JSON in the new `text` field of `EventRow`. `Coach.fromLog` rebuilds every engine from the log without issuing anything twice; the laps the coach issued are logged like the others.
+- **Resume after stopping.** `SessionEngine` accepts `Resume` after `Stop` until the run is saved: the stop's timer event stays and a start is added (the server reads the gap as a pause, `server/tests/android_fit.rs`), the lap the stop closed is reopened, and the position is forgotten so walking about on the summary adds no distance.
+
+### Watch protocol version 2
+
+The state keeps its version-1 layout and leading byte, and appends a 26-byte extension (marker `2`, then flags — start from the wrist possible, run ended, pacer, route, off route, searching for a position, step present — the step's kind, index, count, remaining seconds or metres or time spent in it, target and where the runner stands against it, and the pacer gap). A watch or phone still on version 1 reads the fields it knows and ignores the rest; a version-1 state decodes with no extension. `START_NEW` asks the phone to start a run; its acknowledgement carries a refusal reason. `/wellbeing/cue` carries a cue kind for the watch to vibrate. A finished run is sent as phase `STOPPED` with the "ended" flag, so `STOPPED` alone now means stopped, not saved.
+
+### Deviations from the design document
+
+- **The protocol's leading version byte stays 1** and the extension carries the marker `2`, rather than a message whose first byte is 2: the version-1 decoder rejects any other leading byte, so this is what lets a phone on version 2 and a watch on version 1 work together (task 15.5).
+- **A step change and the end of the session are still delivered while paused.** The design said only pause and resume; a lap pressed during a pause changes the step, and the runner should hear which one starts. Distance announcements, target, pacer and route alerts are silenced as specified.
+- **The phone's event log table has no `text` column yet**: until the Room migration of task 12.1 adds it, a plan logged by the phone would be lost on replay. Nothing logs a plan before group 12.
 
 ## Trying the phone app without going for a run
 
