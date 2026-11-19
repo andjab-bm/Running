@@ -129,6 +129,24 @@ test('statistics show the calendar, the volume and the progress curves', async (
 	await expect(curves.getByText('Pas encore de données.')).toHaveCount(3);
 });
 
+test('an imperial profile sees its statistics in miles and minutes per mile', async ({ page, request }) => {
+	const set = (units: string) => request.put(`/api/v1/profiles/${alex}`, { headers: WRITE, data: { units } });
+	expect((await set('imperial')).ok()).toBeTruthy();
+	try {
+		await open(page, 'stats');
+		const calendar = page.locator('section.card', { has: page.getByRole('heading', { name: 'Calendrier' }) });
+		await expect(calendar.locator('.tile', { hasText: 'Distance' }).locator('small')).toHaveText('mi');
+		const curves = page.locator('section.card', { has: page.getByRole('heading', { name: 'Courbes de progression' }) });
+		await expect(curves.getByText('/mi').first()).toBeVisible();
+		await expect(curves.getByText('/km')).toHaveCount(0);
+		const volume = page.locator('section.card', { has: page.getByRole('heading', { name: 'Volume' }) });
+		await volume.locator('.b').last().hover();
+		await expect(volume.getByText(/ mi · /).first()).toBeVisible();
+	} finally {
+		expect((await set('metric')).ok()).toBeTruthy();
+	}
+});
+
 test('records list the best times, their history and the predictions', async ({ page, request }) => {
 	const { distances } = await api<{ distances: { distance: number; record: { moving_time: number; activity_id: number } | null }[] }>(
 		request,
