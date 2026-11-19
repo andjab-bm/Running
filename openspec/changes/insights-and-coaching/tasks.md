@@ -64,7 +64,7 @@ Phases: groups 2–7 (server) and 11 (`core`) can start at once; groups 9–10 w
 
 ## 9. Web: progress section
 
-- [ ] 9.1 Restructure the navigation as approved (new sections, import reachable from the activity list) and add the API client functions for groups 3–5; verify the existing Playwright suite passes after updating its navigation steps
+- [x] 9.1 Restructure the navigation as approved (new sections, import reachable from the activity list) and add the API client functions for groups 3–5; verify the existing Playwright suite passes after updating its navigation steps
 - [ ] 9.2 Build the statistics tab (heatmap with year and measure switch and day detail, volume bars with week/month switch, progress curves with tag filter and gaps); verify in the browser against a seeded server the scenarios of `training-statistics`, in both unit systems
 - [x] 9.3 Build the records tab (records with next two, history chart, predictions with basis, indicative mark and empty state, processing notice from the derive status); verify in the browser the records-page, never-run and no-recent-effort scenarios
 - [x] 9.4 Build the load tab (daily and weekly load, short/long curves, status, recovery remaining, estimated marks, explanation panel); verify in the browser the status and recovery scenarios against seeded data
@@ -73,11 +73,11 @@ Phases: groups 2–7 (server) and 11 (`core`) can start at once; groups 9–10 w
 
 ## 10. Web: segments, planner and activity page
 
-- [ ] 10.1 Build the segment list (sorting, empty state, hidden list, processing notice) and the segment page (map, profile, ranked efforts with gaps, chronological chart, rename, hide); verify in the browser the list, page, hide and restore scenarios of `personal-segments`
-- [ ] 10.2 Build the session library and editor (steps, reorder, repeat block with skip-last-recovery, targets in the profile's units and zones, outline, totals as exact / minimum / unknown, duplicate, delete, copy to profile, starter sessions); verify in the browser every scenario of `workout-library` except the activity-page ones
-- [ ] 10.3 Build the route library and route page (GPX upload, create from an activity with optional portion, map with hover-synchronised profile, activities run with it, rename, reverse, copy, export, delete); verify in the browser every scenario of `route-library` except the activity-page one
-- [ ] 10.4 Build the "on the phone" mark with waiting/delivered states and last phone sync on sessions and routes; verify in the browser, using a script that plays the phone's calls, the mark, delivered and edited-since-delivery scenarios
-- [ ] 10.5 Add to the activity page: record marks with the highlighted stretch, segment efforts with rank, gap and map/chart highlight, session steps against targets, route and pacer result, the exclude-from-records action, and "create a route from this activity"; verify in the browser on seeded activities with and without each element
+- [x] 10.1 Build the segment list (sorting, empty state, hidden list, processing notice) and the segment page (map, profile, ranked efforts with gaps, chronological chart, rename, hide); verify in the browser the list, page, hide and restore scenarios of `personal-segments`
+- [x] 10.2 Build the session library and editor (steps, reorder, repeat block with skip-last-recovery, targets in the profile's units and zones, outline, totals as exact / minimum / unknown, duplicate, delete, copy to profile, starter sessions); verify in the browser every scenario of `workout-library` except the activity-page ones
+- [x] 10.3 Build the route library and route page (GPX upload, create from an activity with optional portion, map with hover-synchronised profile, activities run with it, rename, reverse, copy, export, delete); verify in the browser every scenario of `route-library` except the activity-page one
+- [x] 10.4 Build the "on the phone" mark with waiting/delivered states and last phone sync on sessions and routes; verify in the browser, using a script that plays the phone's calls, the mark, delivered and edited-since-delivery scenarios
+- [x] 10.5 Add to the activity page: record marks with the highlighted stretch, segment efforts with rank, gap and map/chart highlight, session steps against targets, route and pacer result, the exclude-from-records action, and "create a route from this activity"; verify in the browser on seeded activities with and without each element
 - [ ] 10.6 Add Playwright coverage for segments, the session editor, routes and the activity-page additions, with contrast checks; verify the suite passes in CI and update the `web/` section of `docs/architecture.md`
 
 ## 11. Android `core`: coaching engines

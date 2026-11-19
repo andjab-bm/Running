@@ -8,6 +8,7 @@
 	import MetricChart, { type Block, type TipRow } from '#lib/components/MetricChart.svelte';
 	import Modal from '#lib/components/Modal.svelte';
 	import * as f from '#lib/format.ts';
+	import { endText, KINDS, targetText } from '#lib/workout.ts';
 
 	type Measure = 'pace' | 'hr' | 'cad' | 'ele';
 	const MEASURES: { key: Measure; label: string; icon: IconName }[] = [
@@ -32,7 +33,7 @@
 	let sel = $state<{ i0: number; i1: number } | null>(null);
 	let selRow = $state(-1);
 	let menu = $state(false);
-	let dialog = $state<'copy' | 'move' | 'delete' | null>(null);
+	let dialog = $state<'copy' | 'move' | 'delete' | 'route' | null>(null);
 	let target = $state<number | null>(null);
 	let keepHr = $state(false);
 
@@ -239,6 +240,103 @@
 		sel = { i0: at(r.start_t), i1: at(r.start_t + r.elapsed_time) };
 	}
 
+	// ---- stretches named elsewhere on the page: records, segments, steps ----
+	const indexAtTime = (t: number) => {
+		let lo = 0;
+		let hi = s!.t.length - 1;
+		while (lo < hi) {
+			const m = (lo + hi) >> 1;
+			if (s!.t[m] < t) lo = m + 1;
+			else hi = m;
+		}
+		return lo;
+	};
+	const indexAtDistance = (d: number) => {
+		let lo = 0;
+		let hi = s!.dist.length - 1;
+		while (lo < hi) {
+			const m = (lo + hi) >> 1;
+			if (s!.dist[m] < d) lo = m + 1;
+			else hi = m;
+		}
+		return lo;
+	};
+	/** Highlights a stretch on the map and the chart while it is hovered or focused. */
+	function mark(span: { from_m: number; to_m: number } | { from_t: number; to_t: number } | null) {
+		selRow = -1;
+		if (!span || !s) return (sel = null);
+		sel = 'from_m' in span ? { i0: indexAtDistance(span.from_m), i1: indexAtDistance(span.to_m) } : { i0: indexAtTime(span.from_t), i1: indexAtTime(span.to_t) };
+	}
+	const rankWord = (n: number) => (n === 1 ? '1ᵉʳ' : `${n}ᵉ`);
+
+	// ---- records ----
+	const podium = $derived(a ? a.best_efforts.filter((e) => e.rank !== null).sort((p, q) => p.rank! - q.rank! || q.distance - p.distance) : []);
+	let excluding = $state(false);
+	async function setExcluded(on: boolean) {
+		excluding = true;
+		try {
+			a = await api.updateJournal(id, { exclude_from_records: on });
+			app.changed();
+			app.notify(on ? 'Course exclue des records et des prédictions' : 'Course de nouveau comptée dans les records');
+		} catch (e) {
+			app.notify(errorText(e));
+		} finally {
+			excluding = false;
+		}
+	}
+
+	// ---- session done ----
+	/** `Effort 2/6`: numbered within its kind when the kind comes back. */
+	const stepLabels = $derived.by(() => {
+		if (!a?.workout) return [];
+		const steps = a.workout.unfolded;
+		const total = (k: string) => steps.filter((x) => x.kind === k).length;
+		const seen: Record<string, number> = {};
+		return steps.map((x) => {
+			seen[x.kind] = (seen[x.kind] ?? 0) + 1;
+			return total(x.kind) > 1 ? `${KINDS[x.kind]} ${seen[x.kind]}/${total(x.kind)}` : KINDS[x.kind];
+		});
+	});
+	/** Whether a lap stayed in its step's target; null when the step had none or nothing to compare. */
+	function onTarget(lap: Segment, step: NonNullable<Activity['workout']>['unfolded'][number]): boolean | null {
+		const t = step.target;
+		if (t.type === 'pace') return lap.speed > 0 ? 1000 / lap.speed >= t.fast && 1000 / lap.speed <= t.slow : null;
+		if (t.type === 'hr_zone' && lap.avg_hr !== null && a?.zones) return lap.avg_hr >= a.zones.bounds[t.zone - 1] && lap.avg_hr < a.zones.bounds[t.zone];
+		return null;
+	}
+
+	// ---- route from this run ----
+	let routeName = $state('');
+	let portion = $state(false);
+	let fromText = $state('');
+	let toText = $state('');
+	function openRoute() {
+		menu = false;
+		routeName = a!.title.slice(0, 80);
+		portion = false;
+		fromText = '0';
+		toText = f.distance(a!.distance, units);
+		dialog = 'route';
+	}
+	const readKm = (t: string) => Number(t.trim().replace(',', '.')) * unitLen;
+	const portionError = $derived.by(() => {
+		if (!portion || !a) return '';
+		const [from, to] = [readKm(fromText), readKm(toText)];
+		if (!Number.isFinite(from) || !Number.isFinite(to)) return 'Indiquez deux distances.';
+		if (from < 0 || to > a.distance + 1 || to - from < 100) return `Choisissez une portion d'au moins 100 m entre 0 et ${f.distance(a.distance, units)} ${f.distanceUnit(units)}.`;
+		return '';
+	});
+	async function createRoute() {
+		try {
+			const r = await api.routeFromActivity(id, { name: routeName.trim(), ...(portion ? { from_m: readKm(fromText), to_m: readKm(toText) } : {}) });
+			dialog = null;
+			app.notify(`Parcours « ${r.name} » créé`);
+			goto(`/plan/routes/${r.id}`);
+		} catch (e) {
+			app.notify(errorText(e));
+		}
+	}
+
 	// ---- zones ----
 	const zoneTotal = $derived(a?.zones ? a.zones.seconds.reduce((p, q) => p + q, 0) : 0);
 
@@ -340,6 +438,7 @@
 					</div>
 				</div>
 				<div class="row" style="position:relative">
+					<button class="btn sm" type="button" onclick={openRoute}><Icon name="route" size={16} />Créer un parcours</button>
 					<a class="iconbtn" href={api.exportUrl(a.id)} download data-tip="Exporter en GPX" aria-label="Exporter en GPX"><Icon name="download" /></a>
 					{#if others.length}
 						<button class="iconbtn" type="button" data-tip="Copier vers un profil" aria-label="Copier vers un profil" onclick={() => open('copy')}><Icon name="users" /></button>
@@ -533,6 +632,156 @@
 			</div>
 		</div>
 
+		<section class="card" aria-label="Records dans cette course">
+			<div class="card-h">
+				<h2>Records dans cette course</h2>
+				<button class="switch excl" type="button" aria-pressed={a.exclude_from_records} disabled={excluding} onclick={() => setExcluded(!a!.exclude_from_records)}>
+					<span class="tr"></span>Exclure des records
+				</button>
+			</div>
+			<div class="card-b">
+				{#if a.exclude_from_records}
+					<div class="note butter"><Icon name="eyeoff" /><span>Cette course est exclue des records et des prédictions : ses temps ne comptent plus, le record précédent est rétabli.</span></div>
+				{:else if podium.length}
+					<div class="recs">
+						{#each podium as e (e.distance)}
+							<button
+								type="button"
+								class="rec"
+								class:r1={e.rank === 1}
+								onpointerenter={() => mark({ from_m: e.start_offset, to_m: e.start_offset + e.distance })}
+								onpointerleave={() => mark(null)}
+								onfocus={() => mark({ from_m: e.start_offset, to_m: e.start_offset + e.distance })}
+								onblur={() => mark(null)}
+							>
+								<span class="medal m{e.rank}">{e.rank}</span>
+								<span>
+									<b>{e.rank === 1 ? `Record sur ${f.raceName(e.distance)}` : `${rankWord(e.rank!)} temps sur ${f.raceName(e.distance)}`}</b><br />
+									<span class="num rt">{f.duration(e.moving_time)}</span>
+									<span class="small muted">entre {f.distance(e.start_offset, units)} et {f.distance(e.start_offset + e.distance, units)} {f.distanceUnit(units)}</span>
+								</span>
+							</button>
+						{/each}
+					</div>
+					<p class="small muted" style="margin:10px 0 0">Survoler un temps surligne sa portion sur la carte et le graphique. Le classement est celui d'aujourd'hui : il change si un temps est battu plus tard.</p>
+				{:else}
+					<p class="muted" style="margin:0">
+						{a.best_efforts.length ? 'Aucun de vos trois meilleurs temps sur les distances de référence dans cette course.' : 'Course trop courte pour les distances de référence, ou pas encore analysée.'}
+					</p>
+				{/if}
+			</div>
+		</section>
+
+		{#if a.workout || a.segment_efforts.length || a.route || a.pacer}
+			<div class="grid2">
+				{#if a.workout}
+					{@const w = a.workout}
+					<section class="card" aria-label="Séance">
+						<div class="card-h">
+							<div>
+								<h2>Séance · {#if w.in_library && w.id}<a class="lnk" href="/plan/workouts/{w.id}">{w.name}</a>{:else}{w.name}{/if}</h2>
+								<span class="small muted">Telle qu'elle était le jour de la course</span>
+							</div>
+							<div class="lg"><span class="target hit"><i></i>Dans la cible</span><span class="target miss"><i></i>Hors cible</span></div>
+						</div>
+						<div class="card-b">
+							<div class="tablebox">
+								<table class="steps">
+									<thead><tr><th>Étape</th><th>Temps</th><th>Distance</th><th>Allure</th><th>Cible</th></tr></thead>
+									<tbody>
+										{#each w.unfolded as step, n (n)}
+											{@const lap = n < w.steps_done ? a.laps[n] : undefined}
+											{#if lap}
+												{@const hit = onTarget(lap, step)}
+												<tr
+													class:on={selRow === -2 - n}
+													onpointerenter={() => (mark({ from_t: lap.start_t, to_t: lap.start_t + lap.elapsed_time }), (selRow = -2 - n))}
+													onpointerleave={() => mark(null)}
+												>
+													<td class="name">{stepLabels[n]}</td>
+													<td>{f.duration(lap.moving_time)}</td>
+													<td>{f.distance(lap.distance, units)}</td>
+													<td>{f.pace(lap.speed, units)}</td>
+													<td>
+														{#if step.target.type === 'none'}<span class="muted">—</span>{:else}<span class="target" class:hit={hit === true} class:miss={hit === false}><i></i>{targetText(step.target, units, a.zones?.bounds)}</span>{/if}
+													</td>
+												</tr>
+											{:else}
+												<tr class="undone">
+													<td class="name">{stepLabels[n]}</td>
+													<td colspan="4" class="nd">Non fait{n === w.steps_done ? ' : course arrêtée avant' : ''} · prévu {endText(step.end, units)}</td>
+												</tr>
+											{/if}
+										{/each}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</section>
+				{/if}
+				{#if a.segment_efforts.length || a.route || a.pacer}
+					<div class="col">
+						{#if a.segment_efforts.length}
+							<section class="card" aria-label="Segments">
+								<div class="card-h"><h2>Segments</h2></div>
+								<div class="card-b">
+									{#each a.segment_efforts as e, n (n)}
+										<a
+											class="prow"
+											href="/segments/{e.segment_id}"
+											onpointerenter={() => mark({ from_t: a!.start_time + e.start_t, to_t: a!.start_time + e.start_t + e.elapsed_time })}
+											onpointerleave={() => mark(null)}
+											onfocus={() => mark({ from_t: a!.start_time + e.start_t, to_t: a!.start_time + e.start_t + e.elapsed_time })}
+											onblur={() => mark(null)}
+										>
+											<span class="medal" class:m1={e.rank === 1} class:m2={e.rank === 2} class:m3={e.rank === 3}>{e.rank}</span>
+											<span class="grow"><b>{e.name}</b><br /><span class="small muted">{rankWord(e.rank)} de vos {e.efforts} passages</span></span>
+											<span class="sr">
+												<b class="num">{f.duration(e.elapsed_time)}</b><br />
+												{#if e.rank === 1}<span class="best">Meilleur temps</span>{:else}<span class="small muted">+{f.duration(e.gap_to_best)}</span>{/if}
+											</span>
+										</a>
+									{/each}
+								</div>
+							</section>
+						{/if}
+						{#if a.route || a.pacer}
+							<section class="card" aria-label="Parcours et allure cible">
+								<div class="card-h"><h2>{a.route && a.pacer ? 'Parcours et allure cible' : a.route ? 'Parcours suivi' : 'Allure cible'}</h2></div>
+								<div class="card-b stack">
+									{#if a.route}
+										{#if a.route.in_library && a.route.id}
+											<a class="prow" href="/plan/routes/{a.route.id}">
+												<span class="chip sky"><Icon name="route" size={18} /></span>
+												<span class="grow"><b>{a.route.name}</b><br /><span class="small muted">Parcours suivi pendant la course</span></span>
+												<span class="chev"><Icon name="chev" size={16} /></span>
+											</a>
+										{:else}
+											<div class="prow">
+												<span class="chip sky"><Icon name="route" size={18} /></span>
+												<span class="grow"><b>{a.route.name}</b><br /><span class="small muted">Parcours suivi, supprimé depuis de vos parcours</span></span>
+											</div>
+										{/if}
+									{/if}
+									{#if a.pacer}
+										{@const p = a.pacer}
+										<div class="tile {p.final_gap >= 0 ? 'mint' : 'peach'}">
+											<div class="top"><span class="chip"><Icon name="gauge" size={16} /></span>Allure cible · {p.strategy === 'grade' ? 'ajustée à la pente' : 'régulière'}</div>
+											<div class="v">{f.duration(Math.abs(p.final_gap))}<small>{p.final_gap >= 0 ? "d'avance" : 'de retard'}</small></div>
+											<div class="s">
+												{p.target === 'time' ? `Objectif ${f.duration(p.value)} sur le parcours` : `Objectif ${f.duration(units === 'imperial' ? p.value * 1.609344 : p.value)} ${f.paceUnit(units)}`}
+												· {p.final_gap >= 0 ? 'objectif tenu' : 'objectif manqué'}
+											</div>
+										</div>
+									{/if}
+								</div>
+							</section>
+						{/if}
+					</div>
+				{/if}
+			</div>
+		{/if}
+
 		<section class="card" aria-label="Découpage">
 			<div class="card-h">
 				<h2>Découpage</h2>
@@ -576,7 +825,27 @@
 	</div>
 {/if}
 
-{#if dialog === 'delete' && a}
+{#if dialog === 'route' && a}
+	<Modal title="Créer un parcours" onclose={() => (dialog = null)}>
+		<p class="muted" style="margin:0">Le parcours garde le tracé et l'altitude, sans temps, allure ni fréquence cardiaque. Il va dans les parcours de {owner.name}.</p>
+		<div class="field" style="margin:0">
+			<label for="r-name">Nom</label>
+			<input id="r-name" type="text" maxlength="80" bind:value={routeName} />
+		</div>
+		<button class="switch" type="button" aria-pressed={portion} onclick={() => (portion = !portion)}><span class="tr"></span>Seulement une portion de la course</button>
+		{#if portion}
+			<div class="row" style="flex-wrap:nowrap">
+				<div class="field grow" style="margin:0"><label for="r-from">Depuis ({f.distanceUnit(units)})</label><input id="r-from" type="text" inputmode="decimal" bind:value={fromText} /></div>
+				<div class="field grow" style="margin:0"><label for="r-to">Jusqu'à ({f.distanceUnit(units)})</label><input id="r-to" type="text" inputmode="decimal" bind:value={toText} /></div>
+			</div>
+			{#if portionError}<span class="err">{portionError}</span>{/if}
+		{/if}
+		<div class="row" style="justify-content:flex-end">
+			<button class="btn" type="button" onclick={() => (dialog = null)}>Annuler</button>
+			<button class="btn primary" type="button" disabled={!routeName.trim() || !!portionError} onclick={createRoute}><Icon name="route" />Créer le parcours</button>
+		</div>
+	</Modal>
+{:else if dialog === 'delete' && a}
 	<Modal title="Supprimer cette sortie ?" onclose={() => (dialog = null)}>
 		<p class="muted" style="margin:0">« {a.title} », son journal et son fichier d'origine seront définitivement supprimés.</p>
 		<div class="row" style="justify-content:flex-end">
@@ -613,21 +882,6 @@
 {/if}
 
 <style>
-	.back {
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		color: var(--ink-2);
-		font-weight: 600;
-		font-size: 14px;
-		padding: 6px 12px 6px 8px;
-		border-radius: 999px;
-		margin-left: -8px;
-	}
-	.back:hover {
-		background: var(--surface-2);
-		color: var(--ink);
-	}
 	.meta {
 		display: flex;
 		gap: 14px;
@@ -669,18 +923,6 @@
 	}
 	.pop .dng {
 		color: var(--i-rose);
-	}
-	.dgrid {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) 370px;
-		gap: 20px;
-		align-items: start;
-	}
-	.col {
-		display: flex;
-		flex-direction: column;
-		gap: 20px;
-		min-width: 0;
 	}
 	.mapcard {
 		position: relative;
@@ -904,19 +1146,93 @@
 		border-radius: 6px;
 		background: var(--pace-fast);
 	}
-	.best {
-		font: 700 11px var(--font-body);
-		color: var(--i-lav);
-		background: var(--p-lav);
-		padding: 2px 8px;
-		border-radius: 999px;
-	}
 	small {
 		font-weight: 500;
 	}
-	@media (max-width: 1180px) {
-		.dgrid {
-			grid-template-columns: minmax(0, 1fr);
-		}
+	.excl {
+		width: auto;
+	}
+	.recs {
+		display: flex;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+	.rec {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 16px;
+		border-radius: var(--r-lg);
+		background: var(--surface-2);
+		text-align: left;
+		transition: transform 0.15s;
+	}
+	.rec:hover {
+		transform: translateY(-2px);
+	}
+	.rec.r1 {
+		background: var(--p-butter);
+	}
+	.rec.r1 .medal {
+		background: var(--surface);
+	}
+	.chev {
+		display: inline-grid;
+		transform: rotate(-90deg);
+		color: var(--ink-3);
+	}
+	.rt {
+		font-size: 22px;
+		font-weight: 600;
+		margin-right: 4px;
+	}
+	.lnk {
+		color: var(--accent);
+	}
+	.lnk:hover {
+		text-decoration: underline;
+	}
+	table.steps {
+		min-width: 480px;
+	}
+	.undone td {
+		color: var(--ink-3);
+	}
+	td.nd {
+		text-align: left;
+		font: 500 14px var(--font-body);
+	}
+	.sr {
+		text-align: right;
+		flex: none;
+	}
+	.sr .num {
+		font-size: 18px;
+	}
+	.stack {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+	.chip {
+		width: 44px;
+		height: 44px;
+		border-radius: 12px;
+		display: grid;
+		place-items: center;
+		flex: none;
+	}
+	.chip.sky {
+		background: var(--p-sky);
+		color: var(--i-sky);
+	}
+	.tile.peach .v small,
+	.tile.mint .v small {
+		margin-left: 8px;
+	}
+	.err {
+		color: var(--i-rose);
+		font-size: 13px;
+		font-weight: 600;
 	}
 </style>

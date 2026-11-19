@@ -111,11 +111,100 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 
 .skeleton { border-radius: var(--r-lg); background: var(--surface-2); min-height: 80px; }
 
+/* page structure */
+.back {
+	display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); font-weight: 600; font-size: 14px;
+	padding: 6px 12px 6px 8px; border-radius: 999px; margin-left: -8px; align-self: flex-start;
+}
+.back:hover { background: var(--surface-2); color: var(--ink); }
+.dgrid { display: grid; grid-template-columns: minmax(0, 1fr) 370px; gap: 20px; align-items: start; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.small { font-size: 13px; }
+.tabs {
+	display: inline-flex; background: var(--surface); border-radius: 999px; padding: 5px; gap: 4px; box-shadow: var(--shadow);
+	align-self: flex-start; max-width: 100%; overflow-x: auto; scrollbar-width: none;
+}
+.tabs button, .tabs a {
+	padding: 9px 18px; border-radius: 999px; color: var(--ink-2); font-weight: 600; display: inline-flex; gap: 8px; align-items: center;
+	white-space: nowrap; transition: background 0.15s, color 0.15s;
+}
+.tabs button:hover, .tabs a:hover { background: var(--surface-2); color: var(--ink); }
+.tabs [aria-pressed="true"], .tabs [aria-current="page"] { background: var(--accent); color: var(--on-accent); }
+
+/* ranked tables; :where keeps them below any page's own rules */
+/* Positioned, so that nothing absolutely placed inside escapes its scrolling. */
+.tablebox { overflow-x: auto; margin: 0 -8px; position: relative; }
+:where(.tablebox) table { border-collapse: separate; border-spacing: 0 2px; width: 100%; min-width: 560px; }
+:where(.tablebox) :is(th, td) { padding: 9px 12px; text-align: right; white-space: nowrap; }
+:where(.tablebox) th { font-size: 12px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-3); }
+:where(.tablebox) td { font: 500 16px var(--font-display); font-variant-numeric: tabular-nums; transition: background 0.12s; }
+:where(.tablebox) :is(th, td):first-child { text-align: left; }
+:where(.tablebox) td:first-child { border-radius: 12px 0 0 12px; }
+:where(.tablebox) td:last-child { border-radius: 0 12px 12px 0; }
+:where(.tablebox) td.name { font: 600 14.5px var(--font-body); }
+:where(.tablebox) .name { text-align: left; }
+:where(.tablebox) tbody tr:hover td, :where(.tablebox) tbody tr.on td { background: var(--surface-2); }
+.best { font: 700 11px var(--font-body); color: var(--i-lav); background: var(--p-lav); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.medal {
+	display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font: 700 12px var(--font-display);
+	background: var(--surface-2); color: var(--ink-2); flex: none;
+}
+.medal.m1 { background: var(--p-butter); color: var(--i-butter); }
+.medal.m2 { background: var(--surface-3); color: var(--ink); }
+.medal.m3 { background: var(--p-peach); color: var(--i-peach); }
+
+/* list rows and library cards */
+.prow { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: var(--r-md); width: 100%; text-align: left; }
+.prow:hover { background: var(--surface-2); }
+.prow .th { width: 64px; height: 44px; border-radius: 12px; background: var(--p-sky); flex: none; overflow: hidden; position: relative; }
+.libs { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.lib {
+	background: var(--surface); border-radius: var(--r-xl); box-shadow: var(--shadow); padding: 18px; display: flex; flex-direction: column;
+	gap: 12px; text-align: left; transition: transform 0.18s, box-shadow 0.18s; min-width: 0;
+}
+.lib:hover { transform: translateY(-3px); box-shadow: 0 20px 44px rgba(70, 58, 140, 0.13); }
+.lib h3 { margin: 0; font: 600 18px/1.25 var(--font-display); overflow-wrap: anywhere; }
+.lib .thumb { border-radius: 20px; aspect-ratio: 16 / 8; position: relative; overflow: hidden; background: var(--p-sky); display: block; }
+.lib .mini { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink-2); font-size: 13.5px; }
+.lib .mini b { font: 600 15.5px var(--font-display); color: var(--ink); font-variant-numeric: tabular-nums; }
+.lg { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.lg i { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+
+/* sessions */
+.outline { display: flex; align-items: flex-end; gap: 3px; height: 54px; background: var(--surface-2); border-radius: 14px; padding: 8px; }
+.outline i { display: block; border-radius: 5px; min-width: 4px; transition: transform 0.12s; transform-origin: bottom; }
+.outline i:hover { transform: scaleY(1.1); }
+.k-warmup { background: var(--c-mint); height: 45%; }
+.k-effort { background: var(--accent); height: 100%; }
+.k-recovery { background: var(--c-sky); height: 30%; }
+.k-cooldown { background: var(--c-peach); height: 40%; }
+.target { display: inline-flex; align-items: center; gap: 6px; }
+.target i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.target.hit i { background: var(--c-mint); }
+.target.miss i { background: var(--c-peach); }
+
+/* delivery to the phone */
+.phone {
+	display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+	background: var(--surface-2); color: var(--ink-2); transition: background 0.15s;
+}
+.phone:hover { background: var(--surface-3); }
+.phone.wait { background: var(--p-butter); color: var(--i-butter); }
+.phone.ok { background: var(--p-mint); color: var(--i-mint); }
+.note.butter { background: var(--p-butter); }
+
+@media (max-width: 1180px) {
+	.dgrid, .grid2 { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 900px) {
 	.tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 	.tile .v { font-size: 26px; }
 	.card-h { padding: 16px 16px 0; }
 	.card-b { padding: 14px 16px 18px; }
+}
+@media (max-width: 420px) {
+	.libs { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 560px) {
 	.seg.compact button .lb { display: none; }

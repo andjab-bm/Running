@@ -64,6 +64,15 @@ The phone and watch apps are described in [android.md](android.md); installing t
 - **Delivery is a pull.** The server cannot reach a sleeping phone. Sessions and routes marked "on the phone" form the profile's plan (`GET /profiles/{id}/plan`); the phone fetches it when it syncs at home, fetches the points of routes whose version is new, then states what it holds (`PUT /profiles/{id}/plan/receipt`). That statement is what lets the web show "on the phone since…", or "waiting" when an item was edited after delivery. The plan also carries the map style, so the phone's map uses the tile host configured here and no other.
 - **An activity keeps what it was run with**: the session as it was that day (so later edits or deletion do not rewrite it), the name of the route, and the pace target with its final gap. In a guided run a change of step is a lap, so the server labels laps with steps by position.
 
+## The web app
+
+- **Sections.** Activités (the household list, import), Progression (statistics, records, load), Segments (the profile's recurring portions and every passage), Planifier (sessions and routes, with their state on the phone) and Réglages. Everything but the household list belongs to the active profile; an activity, segment, session or route page uses the units and time zone of the profile that owns it.
+- **Session editor.** The fields hold what the runner types; `src/lib/workout.ts` reads them into the shared session document on every change, so the outline and totals follow, and checks the document with the server's limits before saving. Paces are typed in the profile's unit and stored per kilometre. Totals are exact, a minimum (a step ends on lap) or unknown (a distance without a pace target), never invented. Starter sessions are defined in the web app and added to the library only on request.
+- **Delivery to the phone** is shown from what the server knows: not marked, waiting (marked, and no phone holds this version) or on the phone since the time of the phone's statement, with the time of the profile's last phone sync.
+- **The activity page** adds, when they exist: the record marks with the stretch highlighted on the map and the chart, the session as run with each step against its target and the steps not done, the passages over segments with their rank, the route followed and the pacer result, the switch that leaves the run out of records, and the creation of a route from the run or a portion of it.
+
+Browser tests: `e2e/progress.spec.ts` covers the Progression section and `e2e/training.spec.ts` segments, the session editor, routes, delivery states (playing the phone's calls through the API) and the activity-page additions, each with contrast and sideways-scroll checks in both themes at 360 px and 1440 px.
+
 ### Developing
 
 ```bash

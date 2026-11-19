@@ -66,7 +66,7 @@ test('recent runs are imported and processed in the background', async ({ reques
 test('the navigation leads to Progression and its three tabs', async ({ page }) => {
 	await page.goto('/');
 	const nav = page.getByRole('navigation', { name: 'Navigation principale' });
-	await expect(nav.getByRole('link')).toHaveText(['Activités', 'Progression', 'Réglages']);
+	await expect(nav.getByRole('link')).toHaveText(['Activités', 'Progression', 'Segments', 'Planifier', 'Réglages']);
 	// Import is reached from the activity list, and still belongs to that section.
 	await page.getByRole('link', { name: 'Importer' }).click();
 	await expect(page.getByRole('heading', { name: 'Importer', level: 1 })).toBeVisible();

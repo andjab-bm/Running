@@ -13,6 +13,9 @@
 	let error = $state('');
 	let sheet = $state(false);
 	let input = $state<HTMLInputElement | null>(null);
+	// The files of the last batch, so a path without timing can be offered to the routes.
+	let sent: File[] = [];
+	let asRoute = $state<Record<string, number | 'busy'>>({});
 
 	const count = (s: ImportOutcome['status']) => results.filter((r) => r.status === s).length;
 	const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
@@ -28,6 +31,8 @@
 		error = '';
 		results = [];
 		pending = files.map((f) => f.name);
+		sent = files;
+		asRoute = {};
 		try {
 			results = await api.importFiles(profile.id, files);
 			const n = count('imported');
@@ -42,6 +47,25 @@
 			pending = [];
 			busy = false;
 			if (input) input.value = '';
+		}
+	}
+
+	async function addToRoutes(name: string) {
+		const file = sent.find((f) => f.name === name);
+		if (!file) return;
+		asRoute[name] = 'busy';
+		try {
+			const [r] = await api.importRoutes(profile.id, [file]);
+			if (r?.status === 'imported' && r.route_id) {
+				asRoute[name] = r.route_id;
+				app.notify('Ajouté à vos parcours');
+			} else {
+				delete asRoute[name];
+				app.notify(r?.reason ?? "Ce fichier n'a pas pu devenir un parcours.");
+			}
+		} catch (e) {
+			delete asRoute[name];
+			app.notify(errorText(e));
 		}
 	}
 
@@ -120,9 +144,23 @@
 								<span class="st {look.cls}"><Icon name={look.icon} /></span>
 								<div class="grow">
 									<div class="fn">{r.file}</div>
-									<div class="fs">{r.status === 'failed' ? (r.reason ?? look.text) : look.text}</div>
+									<div class="fs">
+										{#if r.usable_as_route}
+											Un tracé sans horaires, pas une course enregistrée : il peut servir de parcours à suivre.
+										{:else}
+											{r.status === 'failed' ? (r.reason ?? look.text) : look.text}
+										{/if}
+									</div>
 								</div>
 								{#if r.activity_id}<a class="btn sm" href="/activities/{r.activity_id}">Voir</a>{/if}
+								{#if r.usable_as_route}
+									{@const done = asRoute[r.file]}
+									{#if typeof done === 'number'}
+										<a class="btn sm" href="/plan/routes/{done}">Voir le parcours</a>
+									{:else}
+										<button class="btn sm" type="button" disabled={done === 'busy'} onclick={() => addToRoutes(r.file)}><Icon name="route" size={16} />Ajouter aux parcours</button>
+									{/if}
+								{/if}
 							</div>
 						{/each}
 					</div>

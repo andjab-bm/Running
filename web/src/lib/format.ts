@@ -79,6 +79,15 @@ export function clock(unix: number, timezone?: string | null): string {
 	return safeFormat(unix, { hour: '2-digit', minute: '2-digit' }, timezone);
 }
 
+/** `aujourd'hui, 21:14`, `hier, 21:14` or `12 nov., 21:14`: when something last happened. */
+export function since(unix: number, timezone?: string | null, now = Date.now() / 1000): string {
+	const day = (t: number) => safeFormat(t, { year: 'numeric', month: 'numeric', day: 'numeric' }, timezone);
+	const at = clock(unix, timezone);
+	if (day(unix) === day(now)) return `aujourd'hui, ${at}`;
+	if (day(unix) === day(now - 86400)) return `hier, ${at}`;
+	return `${safeFormat(unix, { day: 'numeric', month: 'short' }, timezone)}, ${at}`;
+}
+
 /** `novembre 2026`, used to group the activity list. */
 export function monthKey(unix: number, timezone?: string | null): string {
 	return safeFormat(unix, { month: 'long', year: 'numeric' }, timezone);

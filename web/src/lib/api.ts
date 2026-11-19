@@ -137,6 +137,154 @@ export interface Load {
 	processing: boolean;
 }
 
+// ---- segments ----
+
+export interface SegmentSummary {
+	id: number;
+	name: string;
+	distance: number;
+	gain: number | null;
+	hidden: boolean;
+	efforts: number;
+	best_time: number | null;
+	latest_effort: number | null;
+	preview: [number, number][];
+}
+
+export interface SegmentEffort {
+	id: number;
+	activity_id: number;
+	title: string;
+	start_time: number;
+	start_t: number;
+	elapsed_time: number;
+	speed: number;
+	avg_hr: number | null;
+	rank: number;
+	gap_to_best: number | null;
+}
+
+export interface SegmentDetail {
+	id: number;
+	profile_id: number;
+	name: string;
+	distance: number;
+	gain: number | null;
+	hidden: boolean;
+	points: { lat: number[]; lon: number[]; dist: number[]; ele: number[] | null };
+	efforts: SegmentEffort[];
+}
+
+// ---- sessions ----
+
+export type StepKind = 'warmup' | 'effort' | 'recovery' | 'cooldown';
+export type StepEnd = { type: 'time'; value: number } | { type: 'distance'; value: number } | { type: 'lap' };
+/** Paces in seconds per kilometre, whatever the profile's units. */
+export type StepTarget = { type: 'none' } | { type: 'pace'; fast: number; slow: number } | { type: 'hr_zone'; zone: number };
+export interface Step {
+	type: 'step';
+	kind: StepKind;
+	end: StepEnd;
+	target: StepTarget;
+}
+export interface Repeat {
+	type: 'repeat';
+	count: number;
+	skip_last_recovery: boolean;
+	steps: Step[];
+}
+export type WorkoutItem = Step | Repeat;
+export type UnfoldedStep = Omit<Step, 'type'>;
+
+/** Where an item marked for the phone stands. */
+export interface Delivery {
+	state: 'none' | 'waiting' | 'delivered';
+	delivered_at: number | null;
+}
+
+export interface Workout {
+	id: number;
+	profile_id: number;
+	name: string;
+	note: string;
+	steps: WorkoutItem[];
+	unfolded: UnfoldedStep[];
+	on_phone: boolean;
+	version: number;
+	updated_at: number;
+	delivery: Delivery;
+}
+
+// ---- routes ----
+
+export interface RouteSummary {
+	id: number;
+	profile_id: number;
+	name: string;
+	distance: number;
+	gain: number | null;
+	loss: number | null;
+	is_loop: boolean;
+	has_elevation: boolean;
+	preview: [number, number][];
+	on_phone: boolean;
+	version: number;
+	updated_at: number;
+	delivery: Delivery;
+}
+
+export interface RouteDetail extends RouteSummary {
+	activities: { id: number; title: string; start_time: number; distance: number; moving_time: number }[];
+}
+
+export interface RoutePoints {
+	id: number;
+	version: number;
+	count: number;
+	lat: number[];
+	lon: number[];
+	ele: number[] | null;
+	dist: number[];
+}
+
+export interface RouteImportOutcome {
+	file: string;
+	status: 'imported' | 'failed';
+	route_id?: number;
+	reason?: string;
+}
+
+// ---- what the activity page adds ----
+
+export interface ActivitySegmentEffort {
+	segment_id: number;
+	name: string;
+	distance: number;
+	start_t: number;
+	elapsed_time: number;
+	avg_hr: number | null;
+	rank: number;
+	efforts: number;
+	gap_to_best: number;
+	podium: boolean;
+}
+
+export interface ActivityBestEffort {
+	distance: number;
+	moving_time: number;
+	start_offset: number;
+	/** 1 to 3 when the time is among the profile's three best; null otherwise or when excluded. */
+	rank: number | null;
+}
+
+export interface PacerResult {
+	target: 'pace' | 'time';
+	value: number;
+	strategy: 'even' | 'grade';
+	/** Seconds ahead of the target at the end; negative when behind. */
+	final_gap: number;
+}
+
 export interface Activity extends ActivitySummary {
 	description: string;
 	source_format: 'gpx' | 'fit';
@@ -144,7 +292,14 @@ export interface Activity extends ActivitySummary {
 	metrics_version: number;
 	zones: { seconds: number[]; bounds: number[]; uses_default_hr_max: boolean } | null;
 	splits: Segment[];
-	laps: Segment[];
+	/** In a guided run, lap n is step n of the session. */
+	laps: (Segment & { step?: UnfoldedStep })[];
+	workout: { id: number | null; name: string; steps: WorkoutItem[]; unfolded: UnfoldedStep[]; steps_done: number; in_library: boolean } | null;
+	route: { id: number | null; name: string; in_library: boolean } | null;
+	pacer: PacerResult | null;
+	segment_efforts: ActivitySegmentEffort[];
+	exclude_from_records: boolean;
+	best_efforts: ActivityBestEffort[];
 }
 
 export interface Streams {
@@ -166,6 +321,8 @@ export interface ImportOutcome {
 	status: 'imported' | 'duplicate' | 'failed';
 	activity_id?: number;
 	reason?: string;
+	/** A path without timing: it can be added to the routes instead. */
+	usable_as_route?: boolean;
 }
 
 export class ApiError extends Error {
@@ -285,7 +442,7 @@ export const api = {
 	load: (profileId: number, days: number, tz: number) => request<Load>('GET', `/profiles/${profileId}/load${query({ days, tz_offset_minutes: tz })}`),
 	activity: (id: number) => request<Activity>('GET', `/activities/${id}`),
 	streams: (id: number, resolution: 'low' | 'full' = 'low') => request<Streams>('GET', `/activities/${id}/streams?resolution=${resolution}`),
-	updateJournal: (id: number, j: { title?: string; description?: string; rpe?: number | null; tags?: string[] }) =>
+	updateJournal: (id: number, j: { title?: string; description?: string; rpe?: number | null; tags?: string[]; exclude_from_records?: boolean }) =>
 		request<Activity>('PATCH', `/activities/${id}`, j),
 	deleteActivity: (id: number) => request<void>('DELETE', `/activities/${id}`),
 	copyActivity: (id: number, profileId: number, keepHr: boolean) =>
@@ -299,5 +456,34 @@ export const api = {
 		return request<{ results: ImportOutcome[] }>('POST', `/profiles/${profileId}/imports?tz_offset_minutes=${tz}`, form).then((r) => r.results);
 	},
 	exportUrl: (id: number) => `${BASE}/activities/${id}/export.gpx`,
-	originalUrl: (id: number) => `${BASE}/activities/${id}/original`
+	originalUrl: (id: number) => `${BASE}/activities/${id}/original`,
+
+	segments: (profileId: number, sort: 'count' | 'recent', hidden: boolean) =>
+		request<{ items: SegmentSummary[]; hidden_count: number; processing: boolean }>('GET', `/profiles/${profileId}/segments${query({ sort, hidden })}`),
+	segment: (id: number) => request<SegmentDetail>('GET', `/segments/${id}`),
+	updateSegment: (id: number, c: { name?: string; hidden?: boolean }) => request<SegmentDetail>('PATCH', `/segments/${id}`, c),
+
+	workouts: (profileId: number) => request<{ items: Workout[]; last_phone_sync: number | null }>('GET', `/profiles/${profileId}/workouts`),
+	workout: (id: number) => request<Workout>('GET', `/workouts/${id}`),
+	createWorkout: (profileId: number, w: { name: string; note: string; steps: WorkoutItem[]; on_phone?: boolean }) =>
+		request<Workout>('POST', `/profiles/${profileId}/workouts`, w),
+	updateWorkout: (id: number, c: { name?: string; note?: string; steps?: WorkoutItem[]; on_phone?: boolean }) => request<Workout>('PUT', `/workouts/${id}`, c),
+	deleteWorkout: (id: number) => request<void>('DELETE', `/workouts/${id}`),
+	copyWorkout: (id: number, profileId: number, name?: string) => request<Workout>('POST', `/workouts/${id}/copy`, { profile_id: profileId, name }),
+
+	routes: (profileId: number) => request<{ items: RouteSummary[]; last_phone_sync: number | null }>('GET', `/profiles/${profileId}/routes`),
+	route: (id: number) => request<RouteDetail>('GET', `/routes/${id}`),
+	routePoints: (id: number) => request<RoutePoints>('GET', `/routes/${id}/points`),
+	importRoutes: (profileId: number, files: File[]) => {
+		const form = new FormData();
+		for (const f of files) form.append('files', f, f.name);
+		return request<{ results: RouteImportOutcome[] }>('POST', `/profiles/${profileId}/routes`, form).then((r) => r.results);
+	},
+	routeFromActivity: (activityId: number, c: { name?: string; from_m?: number; to_m?: number }) =>
+		request<RouteDetail>('POST', `/activities/${activityId}/route`, c),
+	updateRoute: (id: number, c: { name?: string; on_phone?: boolean }) => request<RouteDetail>('PATCH', `/routes/${id}`, c),
+	reverseRoute: (id: number) => request<RouteDetail>('POST', `/routes/${id}/reverse`),
+	copyRoute: (id: number, profileId: number) => request<RouteDetail>('POST', `/routes/${id}/copy`, { profile_id: profileId }),
+	deleteRoute: (id: number) => request<void>('DELETE', `/routes/${id}`),
+	routeExportUrl: (id: number) => `${BASE}/routes/${id}/export.gpx`
 };

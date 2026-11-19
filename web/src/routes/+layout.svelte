@@ -14,6 +14,8 @@
 	const NAV: { href: string; label: string; icon: IconName }[] = [
 		{ href: '/', label: 'Activités', icon: 'list' },
 		{ href: '/progress', label: 'Progression', icon: 'trend' },
+		{ href: '/segments', label: 'Segments', icon: 'flag' },
+		{ href: '/plan', label: 'Planifier', icon: 'timer' },
 		{ href: '/settings', label: 'Réglages', icon: 'sliders' }
 	];
 	const THEMES: { value: Theme; label: string; icon: IconName }[] = [
@@ -323,8 +325,10 @@
 		.navlink {
 			flex-direction: column;
 			gap: 3px;
-			font-size: 11.5px;
-			padding: 8px 16px;
+			font-size: 11px;
+			padding: 8px;
+			flex: 1;
+			min-width: 0;
 		}
 		.navlink[aria-current='page'] {
 			box-shadow: none;
