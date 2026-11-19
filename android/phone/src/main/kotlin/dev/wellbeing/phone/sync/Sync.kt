@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit
 object Sync {
     private const val NOW = "sync-now"
     private const val PERIODIC = "sync-periodic"
-    /** While runs are pending, the server is looked for this often (WorkManager's minimum). */
+    /** The server is looked for this often on an unmetered network (WorkManager's minimum). */
     private const val PERIOD_MIN = 15L
 
     private val mutex = Mutex()
@@ -63,6 +63,9 @@ object Sync {
                     updateSettings = { store.update(it) },
                     client = { ServerApi(it) },
                     readFit = { path -> File(app.filesDir, path).takeIf(File::exists)?.readBytes() },
+                    plan = AppDb.get(app).plan(),
+                    device = android.os.Build.MODEL.ifBlank { "Android" },
+                    inUse = { dev.wellbeing.phone.record.RunController.inUse() },
                 ).run()
             }
             _last.value = report
@@ -97,8 +100,9 @@ object Sync {
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val report = Sync.run(applicationContext)
-        // Nothing left to send: stop waking up until a new run is saved or edited.
-        if (report.pending == 0) Sync.stopPeriodic(applicationContext)
+        // Without a server there is nothing to look for: wait until one is configured. Otherwise the
+        // quarter-hourly look-up also brings sessions and routes marked on the web in the meantime.
+        if (report.result == SyncResult.NOT_CONFIGURED) Sync.stopPeriodic(applicationContext)
         return Result.success()
     }
 }

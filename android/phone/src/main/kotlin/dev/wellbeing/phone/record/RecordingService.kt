@@ -85,27 +85,27 @@ class RecordingService : LifecycleService(), SensorEventListener {
         return START_NOT_STICKY
     }
 
-    @Suppress("MissingPermission") // checked in onStartCommand
+    private var tracking = false
+
     private fun begin() {
         started = true
-        fused.requestLocationUpdates(
-            LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L).setMinUpdateIntervalMillis(1000L).build(),
-            locationCallback,
-            Looper.getMainLooper(),
-        )
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
-            sensors.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)?.let { sensors.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST) }
-        }
-        sensors.getDefaultSensor(Sensor.TYPE_PRESSURE)?.let { sensors.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
-        wakeLock = getSystemService(PowerManager::class.java)
-            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "wellbeing:run").apply { acquire(MAX_RUN_MS) }
+        startTracking()
 
         ticker = lifecycleScope.launch {
             var n = 0
+            var stoppedAt: Long? = null
             while (true) {
                 delay(1000)
-                val phase = RunController.phase
-                if (phase == null || phase == Phase.STOPPED) break
+                val phase = RunController.phase ?: break
+                if (phase == Phase.STOPPED) {
+                    // On the summary: kept in the foreground so the run can be resumed, but without
+                    // positions or wake lock; after a while the run is left for the resume prompt.
+                    if (tracking) stopTracking()
+                    val since = stoppedAt ?: SystemClock.elapsedRealtime().also { stoppedAt = it }
+                    if (SystemClock.elapsedRealtime() - since >= SUMMARY_KEEP_MS) break
+                    continue
+                }
+                if (!tracking) { startTracking(); stoppedAt = null }
                 if (stepsSinceTick > 0) {
                     RunController.dispatch(Event.Steps(System.currentTimeMillis(), stepsSinceTick))
                     stepsSinceTick = 0
@@ -117,6 +117,30 @@ class RecordingService : LifecycleService(), SensorEventListener {
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
+    }
+
+    @Suppress("MissingPermission") // checked in onStartCommand
+    private fun startTracking() {
+        tracking = true
+        fused.requestLocationUpdates(
+            LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000L).setMinUpdateIntervalMillis(1000L).build(),
+            locationCallback,
+            Looper.getMainLooper(),
+        )
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED) {
+            sensors.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)?.let { sensors.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST) }
+        }
+        sensors.getDefaultSensor(Sensor.TYPE_PRESSURE)?.let { sensors.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
+        wakeLock = getSystemService(PowerManager::class.java)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "wellbeing:run").apply { acquire(MAX_RUN_MS) }
+    }
+
+    private fun stopTracking() {
+        tracking = false
+        fused.removeLocationUpdates(locationCallback)
+        sensors.unregisterListener(this)
+        wakeLock?.takeIf { it.isHeld }?.release()
+        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification())
     }
 
     private fun onLocation(l: Location) {
@@ -161,10 +185,12 @@ class RecordingService : LifecycleService(), SensorEventListener {
                 Phase.RUNNING -> R.string.state_running
                 Phase.PAUSED -> R.string.state_paused
                 Phase.AUTO_PAUSED -> R.string.state_auto_paused
+                Phase.STOPPED -> R.string.state_stopped
                 else -> R.string.state_ready
             },
         )
         val text = if (s == null || s.phase == Phase.READY) getString(R.string.notif_ready)
+        else if (s.phase == Phase.STOPPED) getString(R.string.notif_stopped)
         else "${Format.duration(s.movingMs / 1000.0)} · ${Format.distance(s.distance, Units.METRIC)} km"
         val open = PendingIntent.getActivity(
             this, 0,
@@ -185,9 +211,7 @@ class RecordingService : LifecycleService(), SensorEventListener {
 
     override fun onDestroy() {
         ticker?.cancel()
-        fused.removeLocationUpdates(locationCallback)
-        sensors.unregisterListener(this)
-        wakeLock?.takeIf { it.isHeld }?.release()
+        stopTracking()
         RunController.flush()
         super.onDestroy()
     }
@@ -199,5 +223,7 @@ class RecordingService : LifecycleService(), SensorEventListener {
         /** The wake lock is released by itself after this long, whatever happens. */
         private const val MAX_RUN_MS = 12 * 60 * 60 * 1000L
         private const val OFFSET_TRACKING = 0.02
+        /** How long a stopped run waits on its summary, resumable, before the service lets go. */
+        private const val SUMMARY_KEEP_MS = 30 * 60_000L
     }
 }

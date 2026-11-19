@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -70,6 +71,15 @@ enum class Icon(val path: String) {
     ALERT("M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"),
     CLOUD("M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"),
     CHEVRON("M9 6l6 6-6 6"),
+    REPEAT("M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"),
+    TARGET("M21 12a9 9 0 1 1 -18 0a9 9 0 1 1 18 0M17 12a5 5 0 1 1 -10 0a5 5 0 1 1 10 0M13 12a1 1 0 1 1 -2 0a1 1 0 1 1 2 0"),
+    CALENDAR("M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2zM16 2v4M8 2v4M3 10h18"),
+    X("M18 6L6 18M6 6l12 12"),
+    PLUS("M12 5v14M5 12h14"),
+    MINUS("M5 12h14"),
+    UP("M12 19V5M5 12l7-7 7 7"),
+    DOWN("M12 5v14M19 12l-7 7-7-7"),
+    EQUAL("M5 9h14M5 15h14"),
 }
 
 @Composable
@@ -177,6 +187,20 @@ fun Toggle(title: String, subtitle: String, checked: Boolean, onChange: (Boolean
         Box(Modifier.size(width = 44.dp, height = 26.dp).clip(Radius.pill).background(if (checked) c.accent else c.surface3).padding(3.dp)) {
             Box(Modifier.size(20.dp).align(if (checked) Alignment.CenterEnd else Alignment.CenterStart).clip(CircleShape).background(c.surface))
         }
+    }
+}
+
+/** The switch alone, for a row that lays out its own title. */
+@Composable
+fun SwitchOnly(checked: Boolean, description: String, onChange: (Boolean) -> Unit) {
+    val c = LocalColors.current
+    Box(
+        Modifier.size(width = 44.dp, height = 26.dp).clip(Radius.pill).background(if (checked) c.accent else c.surface3)
+            .clickable(role = Role.Switch) { onChange(!checked) }
+            .semantics { contentDescription = description; stateDescription = if (checked) "activé" else "désactivé" }
+            .padding(3.dp),
+    ) {
+        Box(Modifier.size(20.dp).align(if (checked) Alignment.CenterEnd else Alignment.CenterStart).clip(CircleShape).background(c.surface))
     }
 }
 

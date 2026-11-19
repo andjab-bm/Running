@@ -3,6 +3,7 @@ package dev.wellbeing.phone.data
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -36,6 +37,13 @@ data class Settings(
     val autoPause: Boolean = true,
     val keepScreenOn: Boolean = true,
     val theme: ThemeChoice = ThemeChoice.SYSTEM,
+    /** Map styles of the home server, as last retrieved; empty when it has none. */
+    val mapStyleUrl: String = "",
+    val mapStyleUrlDark: String = "",
+    /** The pace target last used, in seconds per kilometre, proposed again on the ready screen. */
+    val pacerPace: Double = 360.0,
+    /** The target time last entered for a route, in seconds; null before the first one. */
+    val pacerTime: Double? = null,
 ) {
     val splitMeters get() = if (units == Units.IMPERIAL) 1609.344 else 1000.0
 }
@@ -53,6 +61,10 @@ class SettingsStore(private val context: Context) {
         val autoPause = booleanPreferencesKey("auto_pause")
         val keepScreenOn = booleanPreferencesKey("keep_screen_on")
         val theme = stringPreferencesKey("theme")
+        val mapStyle = stringPreferencesKey("map_style_url")
+        val mapStyleDark = stringPreferencesKey("map_style_url_dark")
+        val pacerPace = doublePreferencesKey("pacer_pace")
+        val pacerTime = doublePreferencesKey("pacer_time")
     }
 
     val flow: Flow<Settings> = context.store.data.map(::read)
@@ -69,6 +81,10 @@ class SettingsStore(private val context: Context) {
             autoPause = p[K.autoPause] ?: d.autoPause,
             keepScreenOn = p[K.keepScreenOn] ?: d.keepScreenOn,
             theme = p[K.theme]?.let { runCatching { ThemeChoice.valueOf(it) }.getOrNull() } ?: d.theme,
+            mapStyleUrl = p[K.mapStyle] ?: d.mapStyleUrl,
+            mapStyleUrlDark = p[K.mapStyleDark] ?: d.mapStyleUrlDark,
+            pacerPace = p[K.pacerPace] ?: d.pacerPace,
+            pacerTime = p[K.pacerTime],
         )
     }
 
@@ -84,6 +100,10 @@ class SettingsStore(private val context: Context) {
             p[K.autoPause] = s.autoPause
             p[K.keepScreenOn] = s.keepScreenOn
             p[K.theme] = s.theme.name
+            p[K.mapStyle] = s.mapStyleUrl
+            p[K.mapStyleDark] = s.mapStyleUrlDark
+            p[K.pacerPace] = s.pacerPace
+            if (s.pacerTime == null) p.remove(K.pacerTime) else p[K.pacerTime] = s.pacerTime
         }
     }
 }

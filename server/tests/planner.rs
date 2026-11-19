@@ -610,3 +610,37 @@ async fn an_activity_keeps_what_it_was_run_with() {
     );
     assert!(f["laps"][0].get("step").is_none());
 }
+
+/// `tests/fixtures/android-recorder-guided.fit` is "6 x 400 m" (`fixtures/workouts/valid/intervals.json`)
+/// recorded by the phone's coach: the server reads fourteen laps and labels each with its step.
+#[tokio::test]
+async fn a_guided_run_from_the_phone_has_fourteen_labelled_laps() {
+    let c = ctx().await;
+    let run = import(
+        &c,
+        c.profile,
+        &[("guided.fit", include_bytes!("fixtures/android-recorder-guided.fit"))],
+    )
+    .await[0];
+    let doc: Value = serde_json::from_str(include_str!("fixtures/workouts/valid/intervals.json")).unwrap();
+    let url = format!("/api/v1/activities/{run}");
+    let (status, a) = send(
+        &c,
+        Method::PATCH,
+        &url,
+        Some(json!({ "workout": { "id": null, "name": doc["name"], "steps": doc["steps"] } })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{a}");
+    let laps = a["laps"].as_array().unwrap();
+    assert_eq!(laps.len(), 14);
+    assert_eq!(a["workout"]["steps_done"].as_u64(), Some(14));
+    assert!(laps.iter().all(|l| l["step"].is_object()), "every lap is labelled");
+    assert_eq!(laps[0]["step"]["kind"], "warmup");
+    assert_eq!(laps[13]["step"]["kind"], "cooldown");
+    for effort in laps.iter().skip(1).step_by(2).take(6) {
+        assert_eq!(effort["step"]["kind"], "effort");
+        let d = effort["distance"].as_f64().unwrap();
+        assert!((d - 400.0).abs() < 8.0, "an effort of {d} m");
+    }
+}

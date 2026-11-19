@@ -32,6 +32,26 @@ class FitEncoderTest {
         return counts
     }
 
+    /**
+     * "6 x 400 m" (`server/tests/fixtures/workouts/valid/intervals.json`) run with the coach: every
+     * step is a lap, and the stop closes the cool-down, so the file has fourteen laps.
+     */
+    private fun guided(): Triple<ByteArray, RecordedRun, RunSummary> {
+        val doc = File(System.getProperty("repo.root"), "server/tests/fixtures/workouts/valid/intervals.json").readText()
+        val coach = Coach(workout = Workout.parse(doc).getOrThrow(), zoneBounds = listOf(95, 114, 133, 152, 171, 190))
+        val s = Script().start().move(600 + 6 * (143 + 90) + 590).stop()
+        s.events.forEach { coach.on(it) }
+        val run = coach.engine.recorded()
+        return Triple(FitEncoder.encode(run, s.hr), run, RunSummary.of(run, s.hr))
+    }
+
+    @Test
+    fun `a guided run has one lap per step`() {
+        val (_, run, _) = guided()
+        assertEquals(14, run.laps.size)
+        assertTrue(run.laps.subList(1, 13).filterIndexed { i, _ -> i % 2 == 0 }.all { kotlin.math.abs(it.distance - 400) < 3 })
+    }
+
     private fun build(withHr: Boolean, script: Script = Script.fixture(withHr)): Triple<ByteArray, RecordedRun, RunSummary> {
         val s = script
         val run = s.engine().recorded()
@@ -92,6 +112,8 @@ class FitEncoderTest {
             "android-recorder-nohr" to build(withHr = false),
             // Stopped, resumed and stopped again: one run whose stop reads as a pause.
             "android-recorder-resumed" to build(withHr = true, Script.resumed()),
+            // A guided "6 x 400 m": fourteen laps, one per step.
+            "android-recorder-guided" to guided(),
         )
         for ((name, built) in runs) {
             val (fit, run, summary) = built

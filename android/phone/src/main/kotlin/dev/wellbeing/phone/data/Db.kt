@@ -12,6 +12,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
 import androidx.room.Update
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 /** Life of a run on the phone. */
@@ -51,6 +53,11 @@ data class RunEntity(
     val journalDirty: Boolean = false,
     /** Path of the FIT file, relative to the app's files directory. */
     val fitPath: String? = null,
+    /**
+     * What the run was done with — session as run, route, pace target and final gap — as the JSON
+     * fields of the server's journal patch; sent with the notes.
+     */
+    val context: String? = null,
 )
 
 /** Log of the run in progress; deleted when the run is saved. */
@@ -64,6 +71,8 @@ data class EventEntity(
     val b: Double? = null,
     val c: Double? = null,
     val d: Double? = null,
+    /** The run's plan (session, route, pace target) as JSON; null for every other event. */
+    val text: String? = null,
 )
 
 @Entity(tableName = "hr_samples", primaryKeys = ["runId", "t"])
@@ -108,6 +117,49 @@ data class ServerActivityEntity(
     val avgHr: Int?,
     val gain: Double?,
 )
+
+/**
+ * A session delivered to the phone by the home server, as it was at [version]. [steps] is the
+ * session document, read with `dev.wellbeing.running.Workout.parse`.
+ */
+@Entity(tableName = "plan_workouts")
+data class PlanWorkoutEntity(
+    @PrimaryKey val id: Long,
+    val profileId: Long,
+    val version: Long,
+    val name: String,
+    val note: String,
+    val steps: String,
+)
+
+/** A route delivered to the phone, with its points as JSON arrays (`lat`, `lon`, `ele`, `dist`). */
+@Entity(tableName = "plan_routes")
+data class PlanRouteEntity(
+    @PrimaryKey val id: Long,
+    val profileId: Long,
+    val version: Long,
+    val name: String,
+    val distance: Double,
+    val gain: Double?,
+    val loss: Double?,
+    val isLoop: Boolean,
+    val hasElevation: Boolean,
+    val points: String,
+)
+
+@Dao
+interface PlanDao {
+    @Query("SELECT * FROM plan_workouts WHERE profileId = :profileId ORDER BY name COLLATE NOCASE") fun watchWorkouts(profileId: Long): Flow<List<PlanWorkoutEntity>>
+    @Query("SELECT * FROM plan_routes WHERE profileId = :profileId ORDER BY name COLLATE NOCASE") fun watchRoutes(profileId: Long): Flow<List<PlanRouteEntity>>
+    @Query("SELECT * FROM plan_workouts") suspend fun workouts(): List<PlanWorkoutEntity>
+    @Query("SELECT * FROM plan_routes") suspend fun routes(): List<PlanRouteEntity>
+    @Query("SELECT * FROM plan_workouts WHERE id = :id") suspend fun workout(id: Long): PlanWorkoutEntity?
+    @Query("SELECT * FROM plan_routes WHERE id = :id") suspend fun route(id: Long): PlanRouteEntity?
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putWorkout(w: PlanWorkoutEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putRoute(r: PlanRouteEntity)
+    @Query("DELETE FROM plan_workouts WHERE id = :id") suspend fun deleteWorkout(id: Long)
+    @Query("DELETE FROM plan_routes WHERE id = :id") suspend fun deleteRoute(id: Long)
+}
 
 @Dao
 interface RunDao {
@@ -160,18 +212,41 @@ interface RunDao {
 }
 
 @Database(
-    entities = [RunEntity::class, EventEntity::class, HrEntity::class, SampleEntity::class, LapEntity::class, TimerEntity::class, ServerActivityEntity::class],
-    version = 1,
+    entities = [
+        RunEntity::class, EventEntity::class, HrEntity::class, SampleEntity::class, LapEntity::class, TimerEntity::class,
+        ServerActivityEntity::class, PlanWorkoutEntity::class, PlanRouteEntity::class,
+    ],
+    version = 2,
     exportSchema = true,
 )
 abstract class AppDb : RoomDatabase() {
     abstract fun runs(): RunDao
+    abstract fun plan(): PlanDao
 
     companion object {
         @Volatile private var instance: AppDb? = null
 
+        /** Version 2 (coaching): the plan of the run in the event log, and the sessions and routes delivered to the phone. */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `events` ADD COLUMN `text` TEXT")
+                db.execSQL("ALTER TABLE `runs` ADD COLUMN `context` TEXT")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `plan_workouts` (`id` INTEGER NOT NULL, `profileId` INTEGER NOT NULL, `version` INTEGER NOT NULL, " +
+                        "`name` TEXT NOT NULL, `note` TEXT NOT NULL, `steps` TEXT NOT NULL, PRIMARY KEY(`id`))",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `plan_routes` (`id` INTEGER NOT NULL, `profileId` INTEGER NOT NULL, `version` INTEGER NOT NULL, " +
+                        "`name` TEXT NOT NULL, `distance` REAL NOT NULL, `gain` REAL, `loss` REAL, `isLoop` INTEGER NOT NULL, " +
+                        "`hasElevation` INTEGER NOT NULL, `points` TEXT NOT NULL, PRIMARY KEY(`id`))",
+                )
+            }
+        }
+
         fun get(context: Context): AppDb = instance ?: synchronized(this) {
-            instance ?: Room.databaseBuilder(context.applicationContext, AppDb::class.java, "wellbeing.db").build().also { instance = it }
+            instance ?: Room.databaseBuilder(context.applicationContext, AppDb::class.java, "wellbeing.db")
+                .addMigrations(MIGRATION_1_2)
+                .build().also { instance = it }
         }
     }
 }

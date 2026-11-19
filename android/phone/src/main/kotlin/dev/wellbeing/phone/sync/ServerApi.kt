@@ -3,8 +3,11 @@ package dev.wellbeing.phone.sync
 import dev.wellbeing.running.Units
 import dev.wellbeing.running.Zones
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
@@ -26,6 +29,35 @@ import java.util.concurrent.TimeUnit
 data class ServerProfile(val id: Long, val name: String, val units: Units, val zones: Zones)
 
 data class ServerActivity(val id: Long, val startT: Long, val title: String, val distance: Double, val movingMs: Long, val avgHr: Int?, val gain: Double?)
+
+/** A session marked for the phone; [steps] is the session document as JSON. */
+data class PlanWorkout(val id: Long, val version: Long, val name: String, val note: String, val steps: String)
+
+/** A route marked for the phone, without its points (fetched only when the version is new). */
+data class PlanRoute(
+    val id: Long,
+    val version: Long,
+    val name: String,
+    val distance: Double,
+    val gain: Double?,
+    val loss: Double?,
+    val isLoop: Boolean,
+    val hasElevation: Boolean,
+)
+
+/** Everything marked for the phone in a profile, and the map style the phone's maps use. */
+data class PlanManifest(val workouts: List<PlanWorkout>, val routes: List<PlanRoute>, val mapStyleUrl: String, val mapStyleUrlDark: String)
+
+/** A route's points as the JSON the phone stores: arrays `lat`, `lon`, `ele` (or null), `dist`. */
+data class RoutePoints(val version: Long, val json: String)
+
+/** One item the phone holds, for the receipt. */
+data class HeldItem(val kind: String, val id: Long, val version: Long) {
+    companion object {
+        const val WORKOUT = "workout"
+        const val ROUTE = "route"
+    }
+}
 
 /** Outcome of one uploaded file, as the server reports it. */
 data class ImportOutcome(val status: String, val activityId: Long?, val reason: String?) {
@@ -58,9 +90,16 @@ interface ServerClient {
     /** The profile, or null when it does not exist (any more). */
     fun profile(id: Long): ServerProfile?
     fun importFit(profileId: Long, fileName: String, bytes: ByteArray, tzOffsetMinutes: Int): ImportOutcome
-    /** Applies notes to an activity; a null [title] leaves the server's title. False when the activity is gone. */
-    fun patchJournal(activityId: Long, title: String?, description: String, rpe: Int?): Boolean
+    /**
+     * Applies notes to an activity; a null [title] leaves the server's title. [context] holds the
+     * `workout`, `route` and `pacer` fields of the patch, as JSON. False when the activity is gone.
+     */
+    fun patchJournal(activityId: Long, title: String?, description: String, rpe: Int?, context: String? = null): Boolean
     fun activities(profileId: Long): List<ServerActivity>
+    fun plan(profileId: Long): PlanManifest
+    fun routePoints(id: Long): RoutePoints
+    /** States everything the phone now holds for the profile; replaces its previous statement. */
+    fun planReceipt(profileId: Long, device: String, items: List<HeldItem>)
 }
 
 /**
@@ -139,11 +178,13 @@ class ServerApi(baseUrl: String, client: OkHttpClient = defaultClient) : ServerC
         )
     }
 
-    override fun patchJournal(activityId: Long, title: String?, description: String, rpe: Int?): Boolean {
+    override fun patchJournal(activityId: Long, title: String?, description: String, rpe: Int?, context: String?): Boolean {
+        val extra = context?.let { runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull() }
         val payload = buildJsonObject {
             if (!title.isNullOrBlank()) put("title", title)
             put("description", description)
             if (rpe == null) put("rpe", JsonNull) else put("rpe", rpe)
+            extra?.forEach { (k, v) -> put(k, v) }
         }
         val result = call(request("activities/$activityId").patch(payload.toString().toRequestBody("application/json".toMediaType())).build())
         if (result.first == 404) return false
@@ -166,6 +207,47 @@ class ServerApi(baseUrl: String, client: OkHttpClient = defaultClient) : ServerC
                 gain = o["gain"]?.jsonPrimitive?.doubleOrNull,
             )
         }
+    }
+
+    override fun plan(profileId: Long): PlanManifest {
+        val result = call(request("profiles/$profileId/plan").build())
+        if (result.first == 404) throw ApiException(ApiException.Kind.PROFILE_MISSING)
+        val o = ok(result)
+        fun JsonObject.long(k: String) = get(k)?.jsonPrimitive?.longOrNull ?: throw ApiException(ApiException.Kind.NOT_OUR_SERVER)
+        fun JsonObject.text(k: String) = get(k)?.jsonPrimitive?.contentOrNull.orEmpty()
+        return PlanManifest(
+            workouts = o["workouts"]?.jsonArray.orEmpty().map { it.jsonObject }.map { w ->
+                PlanWorkout(w.long("id"), w.long("version"), w.text("name"), w.text("note"), (w["steps"] as? JsonArray ?: JsonArray(emptyList())).toString())
+            },
+            routes = o["routes"]?.jsonArray.orEmpty().map { it.jsonObject }.map { r ->
+                PlanRoute(
+                    r.long("id"), r.long("version"), r.text("name"),
+                    r["distance"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                    r["gain"]?.jsonPrimitive?.doubleOrNull, r["loss"]?.jsonPrimitive?.doubleOrNull,
+                    r["is_loop"]?.jsonPrimitive?.booleanOrNull ?: false, r["has_elevation"]?.jsonPrimitive?.booleanOrNull ?: false,
+                )
+            },
+            mapStyleUrl = o.text("map_style_url"),
+            mapStyleUrlDark = o.text("map_style_url_dark"),
+        )
+    }
+
+    override fun routePoints(id: Long): RoutePoints {
+        val o = ok(call(request("routes/$id/points").build()))
+        val keep = buildJsonObject {
+            for (k in listOf("lat", "lon", "ele", "dist")) put(k, o[k] ?: JsonNull)
+        }
+        return RoutePoints(o["version"]?.jsonPrimitive?.longOrNull ?: 0, keep.toString())
+    }
+
+    override fun planReceipt(profileId: Long, device: String, items: List<HeldItem>) {
+        val payload = buildJsonObject {
+            put("device", device)
+            put("items", buildJsonArray { items.forEach { add(buildJsonObject { put("kind", it.kind); put("id", it.id); put("version", it.version) }) } })
+        }
+        val result = call(request("profiles/$profileId/plan/receipt").put(payload.toString().toRequestBody("application/json".toMediaType())).build())
+        if (result.first == 404) throw ApiException(ApiException.Kind.PROFILE_MISSING)
+        if (result.first !in 200..299) throw ApiException(ApiException.Kind.SERVER_ERROR, "HTTP ${result.first}")
     }
 
     companion object {

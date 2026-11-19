@@ -105,7 +105,9 @@ fun ReadyScreen(s: Snapshot?, settings: Settings) {
         onDispose { RunController.leaveReady() }
     }
 
+    val prepared by RunController.prepared.collectAsState()
     Column(Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+      Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Column {
             Eyebrow(if (settings.profileName.isNotEmpty()) stringResource(R.string.ready_profile, settings.profileName) else stringResource(R.string.ready_no_profile))
             Text(stringResource(R.string.ready_title), style = Type.h1, color = c.ink, modifier = Modifier.padding(top = 6.dp))
@@ -147,11 +149,13 @@ fun ReadyScreen(s: Snapshot?, settings: Settings) {
             },
             if (joined) c.mint else null,
         )
-        StatusRow(Icon.PAUSE, stringResource(if (settings.autoPause) R.string.autopause_on else R.string.autopause_off), stringResource(R.string.autopause_detail), null)
-        Spacer(Modifier.weight(1f))
+        Attachments(settings)
+      }
+        if (!granted) return@Column
+        val ok = s?.gpsReady == true
         val start = stringResource(R.string.start)
         Column(
-            Modifier.align(Alignment.CenterHorizontally).size(148.dp).clip(CircleShape).background(c.accent)
+            Modifier.align(Alignment.CenterHorizontally).size(if (prepared.isEmpty) 148.dp else 112.dp).clip(CircleShape).background(c.accent)
                 .clickable(role = Role.Button) { RunController.command(Command.START) }.semantics { contentDescription = start },
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
         ) {
@@ -159,7 +163,7 @@ fun ReadyScreen(s: Snapshot?, settings: Settings) {
             Text(start, style = Type.h2, color = c.onAccent)
         }
         Text(
-            stringResource(if (ok) R.string.start_hint_ready else R.string.start_hint_wait),
+            if (!ok) stringResource(R.string.start_hint_wait) else if (prepared.workout != null) stringResource(R.string.start_hint_session) else stringResource(R.string.start_hint_ready),
             style = Type.small, color = c.ink2, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().heightIn(min = 40.dp),
         )
     }
@@ -248,7 +252,7 @@ fun SummaryScreen(f: Finished, settings: Settings, onSaved: () -> Unit) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Column {
-                Eyebrow(stringResource(R.string.summary_eyebrow))
+                Eyebrow(stringResource(R.string.summary_eyebrow_unsaved))
                 Text("${Format.distance(f.summary.distance, u)} ${Format.distanceUnit(u)}", style = Type.h1, color = c.ink)
             }
             if (short) Row(Modifier.fillMaxWidth().clip(Radius.row).background(c.butter.fill).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -263,14 +267,24 @@ fun SummaryScreen(f: Finished, settings: Settings, onSaved: () -> Unit) {
                 MiniTile(stringResource(R.string.f_gain), Format.elevation(f.summary.gain, u), Format.elevationUnit(u), c.sky, Modifier.weight(1f))
                 MiniTile(stringResource(R.string.avg_hr), f.summary.avgHeartRate?.toString() ?: Format.PLACEHOLDER, if (f.summary.avgHeartRate != null) stringResource(R.string.unit_bpm) else "", c.rose, Modifier.weight(1f))
             }
+            SummaryPacer(f, settings)
+            SummarySteps(f, settings)
+            f.routeName?.let { name ->
+                Card {
+                    Column {
+                        Text(name, style = Type.strong, color = c.ink)
+                        Text(stringResource(R.string.summary_route), style = Type.small, color = c.ink2)
+                    }
+                }
+            }
             Card {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TextInput(stringResource(R.string.title), title, { title = it }, stringResource(R.string.title_default))
+                    TextInput(stringResource(R.string.title), title, { title = it }, f.workoutName ?: stringResource(R.string.title_default))
                     RpePicker(rpe) { rpe = it }
                     TextInput(stringResource(R.string.note), note, { note = it }, stringResource(R.string.note_hint), lines = 3)
                 }
             }
-            Card {
+            if (f.steps == null) Card {
                 Column {
                     Text(stringResource(R.string.laps), style = Type.h3, color = c.ink, modifier = Modifier.padding(bottom = 8.dp))
                     f.run.laps.forEachIndexed { i, l ->
@@ -290,7 +304,11 @@ fun SummaryScreen(f: Finished, settings: Settings, onSaved: () -> Unit) {
             val discardButton: @Composable () -> Unit = {
                 AppButton(stringResource(R.string.discard), { confirmDiscard = true }, kind = ButtonKind.DANGER, icon = Icon.TRASH, modifier = Modifier.fillMaxWidth())
             }
-            if (short) { discardButton(); saveButton() } else { saveButton(); discardButton() }
+            val resumeButton: @Composable () -> Unit = {
+                AppButton(stringResource(R.string.resume_run), { RunController.resumeStopped() }, icon = Icon.PLAY, modifier = Modifier.fillMaxWidth())
+                Text(stringResource(R.string.resume_run_hint), style = Type.small, color = c.ink2, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            }
+            if (short) { discardButton(); saveButton(); resumeButton() } else { saveButton(); resumeButton(); discardButton() }
         }
         if (confirmDiscard) ConfirmSheet(
             stringResource(R.string.discard_title), stringResource(R.string.discard_body), stringResource(R.string.delete),

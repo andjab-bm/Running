@@ -63,6 +63,23 @@ import java.time.LocalTime
 import kotlin.math.cos
 import kotlin.math.max
 
+/** The time figures of the fields, apart from drawing so they are unit-tested. */
+object FieldTime {
+    /** Label of the field while running. The combined field counts moving time, labelled "Temps". */
+    fun label(f: Field) = when (f) {
+        Field.ELAPSED -> R.string.f_elapsed
+        Field.TIME, Field.COMBINED -> R.string.f_time
+        else -> null
+    }
+
+    /** Moving time stops with a pause; elapsed time does not. */
+    fun value(f: Field, s: Snapshot): String? = when (f) {
+        Field.ELAPSED -> Format.duration(s.elapsedMs / 1000.0)
+        Field.TIME, Field.COMBINED -> Format.duration(s.movingMs / 1000.0)
+        else -> null
+    }
+}
+
 /** What a field shows: its label, icon, colour family, value and unit. */
 private class FieldView(val label: Int, val icon: Icon, val pastel: Pastel, val value: String, val unit: String = "")
 
@@ -71,8 +88,10 @@ private fun fieldView(f: Field, s: Snapshot, settings: Settings): FieldView {
     val c = LocalColors.current
     val u = settings.units
     return when (f) {
-        Field.TIME -> FieldView(R.string.f_time, Icon.CLOCK, c.mint, Format.duration(s.movingMs / 1000.0))
-        Field.ELAPSED, Field.COMBINED -> FieldView(R.string.f_elapsed, Icon.CLOCK, c.mint, Format.duration(s.elapsedMs / 1000.0))
+        Field.TIME -> FieldView(FieldTime.label(f)!!, Icon.CLOCK, c.mint, FieldTime.value(f, s)!!)
+        Field.ELAPSED -> FieldView(FieldTime.label(f)!!, Icon.CLOCK, c.mint, FieldTime.value(f, s)!!)
+        // The combined field shows moving time, so it stops with the run (change insights-and-coaching).
+        Field.COMBINED -> FieldView(FieldTime.label(f)!!, Icon.CLOCK, c.mint, FieldTime.value(f, s)!!)
         Field.DISTANCE -> FieldView(R.string.f_distance, Icon.ROUTE, c.sky, Format.distance(s.distance, u), Format.distanceUnit(u))
         Field.PACE -> FieldView(R.string.f_pace, Icon.GAUGE, c.lav, Format.pace(s.pace, u), Format.paceUnit(u))
         Field.AVG_PACE -> FieldView(R.string.f_avg_pace, Icon.GAUGE, c.lav, Format.pace(s.avgPace, u), Format.paceUnit(u))
@@ -110,7 +129,7 @@ private fun FieldTile(f: Field, s: Snapshot, settings: Settings, track: List<Sam
     when {
         f == Field.COMBINED -> Row(modifier.clip(Radius.card).background(c.sky.fill).padding(horizontal = 18.dp, vertical = 12.dp)) {
             Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.Center) {
-                Label(stringResource(R.string.f_elapsed), Icon.CLOCK, c.sky.ink)
+                Label(stringResource(v.label), Icon.CLOCK, c.sky.ink)
                 Figure(v.value, "", 44, c.ink, c.ink2)
                 Spacer(Modifier.height(6.dp))
                 Label(stringResource(R.string.f_distance), Icon.ROUTE, c.sky.ink)
@@ -228,8 +247,12 @@ fun LiveScreen(s: Snapshot, settings: Settings) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val track by RunController.track.collectAsState()
+    val coaching by RunController.coaching.collectAsState()
     var locked by rememberSaveable { mutableStateOf(false) }
-    val pager = rememberPagerState { 2 }
+    // A guided run opens on its step page, before the metrics and the lap.
+    val guided = coaching?.steps?.isNotEmpty() == true
+    val pages = if (guided) 3 else 2
+    val pager = rememberPagerState { pages }
     val paused = s.phase != Phase.RUNNING
     val f = settings.fields
 
@@ -258,8 +281,11 @@ fun LiveScreen(s: Snapshot, settings: Settings) {
 
         Box(Modifier.weight(1f)) {
             HorizontalPager(pager, userScrollEnabled = !locked, modifier = Modifier.fillMaxSize().alpha(if (paused) 0.62f else 1f)) { page ->
+                val kind = if (guided) page else page + 1
                 Column(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (page == 0) {
+                    if (kind == 0) StepPage(s, coaching!!, settings)
+                    else if (kind == 1) {
+                        coaching?.takeIf { it.pacer != null }?.let { PacerBar(it, settings) }
                         val bars = f[0] == Field.AVG_PACE
                         FieldTile(f[0], s, settings, track, if (bars) 76 else 92, Modifier.weight(if (bars) 1.7f else 1.25f).fillMaxWidth(), hero = true)
                         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -283,9 +309,9 @@ fun LiveScreen(s: Snapshot, settings: Settings) {
         }
 
         Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp), horizontalArrangement = Arrangement.Center) {
-            for (i in 0..1) {
+            for (i in 0 until pages) {
                 val on = pager.currentPage == i
-                val label = stringResource(if (i == 0) R.string.page_metrics else R.string.page_lap)
+                val label = stringResource(listOf(R.string.page_step, R.string.page_metrics, R.string.page_lap)[if (guided) i else i + 1])
                 Box(Modifier.padding(horizontal = 4.dp).size(width = 26.dp, height = 16.dp).clickable(enabled = !locked) { scope.launch { pager.animateScrollToPage(i) } }.semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
                     Box(Modifier.size(width = if (on) 22.dp else 8.dp, height = 8.dp).clip(Radius.pill).background(if (on) c.accent else c.surface3))
                 }
@@ -314,7 +340,8 @@ fun LiveScreen(s: Snapshot, settings: Settings) {
                     RoundControl(Icon.LOCK, stringResource(R.string.act_lock), stringResource(R.string.act_lock), { locked = true })
                 }
                 else -> {
-                    RoundControl(Icon.FLAG, stringResource(R.string.act_lap), stringResource(R.string.act_lap), { RunController.command(Command.LAP) })
+                    val lapLabel = stringResource(if (guided && coaching?.complete == false) R.string.act_next_step else R.string.act_lap)
+                    RoundControl(Icon.FLAG, lapLabel, lapLabel, { RunController.command(Command.LAP) })
                     RoundControl(Icon.PAUSE, "", stringResource(R.string.act_pause), { RunController.command(Command.PAUSE) }, big = true)
                     RoundControl(Icon.LOCK, stringResource(R.string.act_lock), stringResource(R.string.act_lock), { locked = true })
                 }

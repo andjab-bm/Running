@@ -41,7 +41,7 @@ import dev.wellbeing.running.Phase
 import kotlinx.coroutines.launch
 
 private enum class Tab(val label: Int, val icon: Icon) {
-    RUN(R.string.tab_run, Icon.PLAY), HISTORY(R.string.tab_history, Icon.LIST), SETTINGS(R.string.tab_settings, Icon.SLIDERS)
+    RUN(R.string.tab_run, Icon.PLAY), PLAN(R.string.tab_plan, Icon.CALENDAR), HISTORY(R.string.tab_history, Icon.LIST), SETTINGS(R.string.tab_settings, Icon.SLIDERS)
 }
 
 /**
@@ -75,6 +75,7 @@ fun AppRoot(store: SettingsStore, onRunActive: (active: Boolean, keepScreenOn: B
                         LiveScreen(s, settings)
                     }
                     tab == Tab.RUN && interrupted == null -> ReadyScreen(s, settings)
+                    tab == Tab.PLAN -> PlanScreen(settings) { tab = Tab.RUN }
                     tab == Tab.HISTORY -> openRun?.let { id ->
                         BackHandler { openRun = null }
                         RunPage(id, settings) { openRun = null }

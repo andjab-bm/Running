@@ -1,5 +1,8 @@
 package dev.wellbeing.phone.sync
 
+import dev.wellbeing.phone.data.PlanDao
+import dev.wellbeing.phone.data.PlanRouteEntity
+import dev.wellbeing.phone.data.PlanWorkoutEntity
 import dev.wellbeing.phone.data.RunDao
 import dev.wellbeing.phone.data.RunEntity
 import dev.wellbeing.phone.data.ServerActivityEntity
@@ -23,11 +26,24 @@ enum class SyncResult {
     METERED,
 }
 
-data class SyncReport(val result: SyncResult, val uploaded: Int = 0, val failed: Int = 0, val pending: Int = 0)
+data class SyncReport(
+    val result: SyncResult,
+    val uploaded: Int = 0,
+    val failed: Int = 0,
+    val pending: Int = 0,
+    /** Sessions and routes on the phone after the attempt; null when the plan was not reached. */
+    val plan: PlanCount? = null,
+)
+
+data class PlanCount(val workouts: Int, val routes: Int)
+
+/** Sessions and routes attached to the run being prepared or recorded: never replaced or removed under it. */
+data class InUse(val workoutId: Long? = null, val routeId: Long? = null)
 
 /**
  * One sync attempt: check the server, refresh the profile, upload pending runs oldest first,
- * apply notes, then refresh the cached list of the profile's activities.
+ * apply notes, refresh the cached list of the profile's activities, then bring the plan — the
+ * sessions and routes marked for the phone — up to date and tell the server what the phone holds.
  *
  * Retries are safe because the server refuses a run it already holds and says which activity it
  * is: a duplicate is treated as uploaded.
@@ -38,6 +54,10 @@ class SyncEngine(
     private val updateSettings: suspend ((Settings) -> Settings) -> Unit,
     private val client: (baseUrl: String) -> ServerClient,
     private val readFit: (path: String) -> ByteArray?,
+    private val plan: PlanDao? = null,
+    /** How the phone names itself in its receipts. */
+    private val device: String = "phone",
+    private val inUse: () -> InUse = { InUse() },
 ) {
     suspend fun run(): SyncReport {
         val s = settings()
@@ -45,6 +65,7 @@ class SyncEngine(
         if (s.serverUrl.isBlank() || profileId == null) return SyncReport(SyncResult.NOT_CONFIGURED, pending = dao.toSync().size)
         var uploaded = 0
         var failed = 0
+        planCount = null
         try {
             val api = client(s.serverUrl)
             api.health()
@@ -75,7 +96,7 @@ class SyncEngine(
                 }
                 val activityId = run.serverActivityId
                 if (run.journalDirty && activityId != null) {
-                    api.patchJournal(activityId, run.title.ifBlank { null }, run.note, run.rpe)
+                    api.patchJournal(activityId, run.title.ifBlank { null }, run.note, run.rpe, run.context)
                     dao.updateRun(run.copy(journalDirty = false))
                 }
             }
@@ -83,6 +104,7 @@ class SyncEngine(
             val list = api.activities(profileId)
             dao.clearServerActivities(profileId)
             dao.insertServerActivities(list.map { ServerActivityEntity(it.id, profileId, it.startT, it.title, it.distance, it.movingMs, it.avgHr, it.gain) })
+            planCount = plan?.let { syncPlan(api, it, profileId) }
         } catch (e: ApiException) {
             val result = when (e.kind) {
                 ApiException.Kind.NOT_OUR_SERVER -> SyncResult.NOT_OUR_SERVER
@@ -91,10 +113,46 @@ class SyncEngine(
             }
             return SyncReport(result, uploaded, failed, dao.toSync().size)
         }
-        return SyncReport(SyncResult.DONE, uploaded, failed, dao.toSync().size)
+        return SyncReport(SyncResult.DONE, uploaded, failed, dao.toSync().size, planCount)
     }
 
-    private fun RunEntity.hasNotes() = title.isNotBlank() || note.isNotBlank() || rpe != null
+    private var planCount: PlanCount? = null
+
+    /**
+     * Applies the profile's plan: new and changed sessions and routes come in (a route's points only
+     * when its version is new), unmarked ones and those of another profile go, except what the run
+     * being prepared or recorded uses. Then the server is told what the phone holds.
+     */
+    private suspend fun syncPlan(api: ServerClient, dao: PlanDao, profileId: Long): PlanCount {
+        val manifest = api.plan(profileId)
+        updateSettings { it.copy(mapStyleUrl = manifest.mapStyleUrl, mapStyleUrlDark = manifest.mapStyleUrlDark) }
+        val used = inUse()
+        val wanted = manifest.workouts.associateBy { it.id }
+        for (w in manifest.workouts) {
+            if (w.id == used.workoutId) continue
+            dao.putWorkout(PlanWorkoutEntity(w.id, profileId, w.version, w.name, w.note, w.steps))
+        }
+        for (held in dao.workouts()) if (held.id !in wanted && held.id != used.workoutId) dao.deleteWorkout(held.id)
+
+        val wantedRoutes = manifest.routes.associateBy { it.id }
+        for (r in manifest.routes) {
+            if (r.id == used.routeId) continue
+            val held = dao.route(r.id)
+            val points = if (held != null && held.version == r.version) held.points else api.routePoints(r.id).json
+            dao.putRoute(PlanRouteEntity(r.id, profileId, r.version, r.name, r.distance, r.gain, r.loss, r.isLoop, r.hasElevation, points))
+        }
+        for (held in dao.routes()) if (held.id !in wantedRoutes && held.id != used.routeId) dao.deleteRoute(held.id)
+
+        val workouts = dao.workouts().filter { it.profileId == profileId }
+        val routes = dao.routes().filter { it.profileId == profileId }
+        api.planReceipt(
+            profileId, device,
+            workouts.map { HeldItem(HeldItem.WORKOUT, it.id, it.version) } + routes.map { HeldItem(HeldItem.ROUTE, it.id, it.version) },
+        )
+        return PlanCount(workouts.size, routes.size)
+    }
+
+    private fun RunEntity.hasNotes() = title.isNotBlank() || note.isNotBlank() || rpe != null || context != null
 
     companion object {
         const val MISSING_FILE = "Le fichier de la sortie est introuvable sur le téléphone."

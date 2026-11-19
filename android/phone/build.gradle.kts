@@ -39,6 +39,12 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }
+
+    // The exported schemas let the migration test build each version of the database. Robolectric
+    // reads the variant's assets, not the test source set's: they ship in debug builds only.
+    sourceSets {
+        getByName("debug").assets.directories.add("$projectDir/schemas")
+    }
 }
 
 ksp {
@@ -74,4 +80,5 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.room.testing)
 }
