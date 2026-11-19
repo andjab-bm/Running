@@ -1,0 +1,38 @@
+# The running tracker on a Raspberry Pi, from the image GitHub builds: nothing is compiled on the Pi
+# and the repository does not need to be cloned. Copy this file into a directory of its own
+# (for example ~/running/compose.yaml), then:
+#
+#   docker compose pull && docker compose up -d
+#
+# The web app and the API answer on http://<address-of-the-pi>:8080 on the home network.
+# There is no sign-in: never forward this port from the router or publish it on the internet.
+#
+# The data (database and original files) lives in /srv/running on the Pi. Create it once:
+#
+#   sudo mkdir -p /srv/running && sudo chown 65532:65532 /srv/running
+#
+# Upgrade: back up /srv/running, then `docker compose pull && docker compose up -d` again.
+services:
+  running:
+    image: ghcr.io/andjab-bm/running:latest
+    container_name: running
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Largest accepted file, in megabytes.
+      MAX_UPLOAD_MB: "50"
+      # Map background of the web app and the phone (a MapLibre style URL). As shown, commented out:
+      # the public OpenFreeMap styles. Uncomment to use your own style URLs, or leave them "" to have
+      # no background and no map request at all.
+      # MAP_STYLE_URL: ""
+      # MAP_STYLE_URL_DARK: ""
+    volumes:
+      - /srv/running:/data
+    # The image checks itself every 30 s (`running-server healthcheck`); `docker compose ps` shows "healthy".
+    # Small logs: an SD card wears with every write.
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"

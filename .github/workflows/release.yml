@@ -1,0 +1,65 @@
+name: Release
+
+# A version tag publishes the phone and watch apps, and the Raspberry Pi compose file, on the
+# repository's Releases page, with the installation guide as its notes:
+#
+#   git tag v0.2.0 && git push origin v0.2.0
+#
+# The APKs are signed with the key kept in the repository secrets (see docs/install-android.md), so
+# each new release installs over the previous one and the phone and the watch recognise each other.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    env:
+      VERSION_NAME: ${{ github.ref_name }}
+      # Grows with every release run, so Android accepts each one as an update.
+      VERSION_CODE: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+      - name: Signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::The signing secrets are missing: see docs/install-android.md, 'Publishing a release'."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          # Without the leading "v": 0.2.0.
+          echo "VERSION_NAME=${VERSION_NAME#v}" >> "$GITHUB_ENV"
+      - name: Build the apps
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew :core:test :phone:testDebugUnitTest :phone:assembleRelease :wear:assembleRelease
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/out"
+          cp phone/build/outputs/apk/release/phone-release.apk "$RUNNER_TEMP/out/running-phone-$VERSION_NAME.apk"
+          cp wear/build/outputs/apk/release/wear-release.apk "$RUNNER_TEMP/out/running-watch-$VERSION_NAME.apk"
+          cp ../deploy/pi/compose.yaml "$RUNNER_TEMP/out/compose.yaml"
+          gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP"/out/* \
+            --title "Running $VERSION_NAME" \
+            --notes-file ../docs/install-android.md \
+            --verify-tag

@@ -5,6 +5,12 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Published builds (GitHub Releases, .github/workflows/release.yml) get their version and signing key
+// from the environment; a local build keeps version 1 and signs its release build with the debug key.
+val publishedVersionCode = providers.environmentVariable("VERSION_CODE").orNull?.toInt() ?: 1
+val publishedVersionName = providers.environmentVariable("VERSION_NAME").orNull ?: "0.1.0"
+val releaseKeystore = providers.environmentVariable("ANDROID_KEYSTORE").orNull
+
 android {
     namespace = "dev.wellbeing.phone"
     compileSdk {
@@ -16,8 +22,8 @@ android {
         applicationId = "dev.wellbeing.app"
         minSdk = 34
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = publishedVersionCode
+        versionName = publishedVersionName
         // MapLibre ships native code for four architectures: the Pixel 8 needs arm64, the emulator x86_64.
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
@@ -32,9 +38,20 @@ android {
         buildConfig = true
     }
 
+    signingConfigs {
+        if (releaseKeystore != null) create("published") {
+            storeFile = file(releaseKeystore)
+            storePassword = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD").get()
+            keyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS").get()
+            keyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD").get()
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            // The phone and the watch must share their signing key: the Data Layer only links apps signed alike.
+            signingConfig = signingConfigs.findByName("published") ?: signingConfigs.getByName("debug")
         }
     }
 

@@ -91,6 +91,8 @@ Versions were taken from Google Maven, Maven Central and services.gradle.org on 
 
 ## Installing on the devices
 
+To install the apps without building them, take the signed APKs of a release: see [install-android.md](install-android.md), which also explains how a release is published. What follows is for builds made on a computer.
+
 Debug builds are signed with the local debug key of the machine that built them. Installing a build signed by another machine requires uninstalling first, which deletes the runs stored on the phone — sync or share them before.
 
 **Phone**: enable developer options and USB debugging, plug the phone in, then from `android/`:
