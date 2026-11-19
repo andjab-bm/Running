@@ -69,7 +69,7 @@ When the runner reaches the end of the route, the app SHALL announce it. The run
 - **THEN** the arrival is announced and recording continues
 
 ### Requirement: Basemap source and consent
-The basemap SHALL be loaded from the map style configured on the home server, as last retrieved by the phone, and from nowhere else. A "basemap during the run" setting SHALL control it; the setting SHALL state that map requests reveal the viewed area to the map provider. With the setting off, or no map style configured, the map screen SHALL show the route and the trace on a plain background and make no network request.
+The basemap SHALL be loaded from the map style configured on the home server, as last retrieved by the phone, and from nowhere else. A "basemap during the run" setting SHALL control it; the setting SHALL state that map requests reveal the viewed area to the map provider. With the setting off, or no map style configured, the map screen and the mini-map SHALL show the route and the trace on a plain background and make no network request.
 
 #### Scenario: Basemap on
 - **WHEN** the setting is on and the phone has mobile data
@@ -91,7 +91,7 @@ The map screen SHALL keep working without network: the route, the trace, the pos
 - **THEN** the route, the trace and the alerts keep working, and the basemap shows what it has and stays blank elsewhere
 
 ### Requirement: Map only when looked at
-The map SHALL NOT load basemap data, nor redraw, while the screen is off or another live screen is shown, so that recording a run with the map available costs no more battery or data than without it.
+The map screen SHALL NOT load basemap data, nor redraw, while the screen is off or another live screen is shown. The mini-map SHALL load basemap data only while the screen is on and the main screen is shown, and only when the area it shows changes. Recording a run with the screen off SHALL therefore cost no more battery or data than without a map.
 
 #### Scenario: Screen off for the whole run
 - **WHEN** a run is recorded with a route selected and the screen off throughout

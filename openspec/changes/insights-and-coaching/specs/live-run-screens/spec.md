@@ -22,7 +22,7 @@ During a run the phone SHALL show a main screen with large, glanceable figures i
 - **THEN** distance is shown in miles and pace in min/mi
 
 ### Requirement: Mini-map area
-The combined bottom field SHALL show moving time and distance beside an area reserved for a mini-map. That area SHALL show the shape of the trace recorded so far and, when a route is followed, the route under it, without basemap, and SHALL make no network request. Touching it SHALL open the map screen.
+The combined bottom field SHALL show moving time and distance beside an area reserved for a mini-map. That area SHALL show the shape of the trace recorded so far and, when a route is followed, the route under it. It SHALL show the basemap under them under the same conditions as the map screen — the "basemap during the run" setting on and a map style configured on the home server — and otherwise a plain background with no network request. Touching it SHALL open the map screen.
 
 #### Scenario: Trace so far
 - **WHEN** the runner has covered 2 km
@@ -35,6 +35,14 @@ The combined bottom field SHALL show moving time and distance beside an area res
 #### Scenario: Route in the mini-map
 - **WHEN** a route is followed
 - **THEN** the mini-map area shows the shape of the route with the trace so far over it
+
+#### Scenario: Basemap in the mini-map
+- **WHEN** the "basemap during the run" setting is on and the server has a map style
+- **THEN** the mini-map area shows the basemap of the area under the trace
+
+#### Scenario: Mini-map without basemap
+- **WHEN** the setting is off or the server has no map style
+- **THEN** the mini-map area draws the trace on a plain background and makes no network request
 
 ### Requirement: Choose the displayed fields
 The runner SHALL be able to choose, in the settings, which metric appears in each field of the main screen from: moving time, elapsed time, distance, current pace, average pace, lap pace, heart rate, cadence, elevation gain, time of day, time ahead or behind the pace target, and target pace; the bottom field SHALL also offer the combined field, named "Temps, distance et mini-carte". The choice SHALL be remembered.

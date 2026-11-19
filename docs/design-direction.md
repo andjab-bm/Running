@@ -170,6 +170,34 @@ Abbreviations used on the phone to fit half-width fields: "FC" for heart rate, "
 - Maps are drawn stand-ins; the real pages reuse the existing map component.
 - The dark theme was walked at 360 px only before approval; the 1440 px dark rendering is checked when the pages are built (tasks 9.5 and 10.6).
 
+## Coaching on the phone and the watch (change `insights-and-coaching`)
+
+**Status: approved by the owner on 2026-11-19** ("J'approuve le prototype avec le fait que tu intègres le fond de la carte sur la mini-map"), on the first iteration of the mobile coaching prototype, with that one change made before approval was recorded.
+
+- Prototype source: [`prototype/mobile-coaching.html`](../prototype/mobile-coaching.html) (one self-contained page, fictional sessions and routes, simulated run; built on `prototype/mobile-recording.html`).
+- Published copy: private Claude artifact "Running — prototype coaching (téléphone et montre)".
+
+### Decisions
+
+- **No new colour token.** The pairing stays: lavender for efforts and pace targets, sky for routes and recoveries, mint for warm-up, "ahead" and "in target", peach for cool-down and "behind", rose for off route, butter for paused and waiting states. The step kinds use the zone colours as solid fills in outlines (mint `#6FD0A3` warm-up, accent effort, sky `#7DB7F0` recovery, peach `#FFAE70` cool-down), as on the web.
+- **Phone tabs**: Courir · Plan · Historique · Réglages. Plan lists the sessions (outline and totals) and routes (trace, distance, climb) held by the phone; it explains where they come from when empty. Réglages has two parts, Général and Coaching.
+- **Ready screen**: position and watch as two compact cards, then one card with three rows — séance, parcours, allure cible — each with "Choisir" or a remove cross. The pace target is a stepper (pace, or finishing time on a route), with the strategy as a two-choice switch (effort régulier / allure constante) and a per-kilometre table. With a session, the pace row is greyed and says why. "Ouvrir sur la montre" appears while the watch has not joined.
+- **Live pages**: étape (guided runs only, first), métriques, tour, carte; the dot indicator follows. With a session, the lap button reads "Étape suivante".
+- **Step screen**: kind pill, "Répétition n sur m", "Étape n sur m"; a large remaining time or distance on the kind's pastel with a progress bar (elapsed time and a hint for an open-ended step); a countdown disc in the last five seconds; the target tile shows the current value, a word verdict with an arrow ("✓ Dans la cible", "▲ Trop vite", "▼ Trop lent") and a range bar; "Ensuite" names the next step.
+- **Pacer**: a band above the main fields — mint and an up arrow when ahead, peach and a down arrow when behind, signed time and the words "d'avance" / "de retard", target pace on the right, "approximatif" off route.
+- **Map screen**: three figures (temps total, distance, allure) and a column of round buttons (orientation, zoom in and out, whole route, recentre) over the map; route in the sky ink with a surface casing and direction chevrons, the part done faded, trace in the accent, start as a mint dot and end as a dark square; "Reste" chip at the bottom; off route and arrival as rose and mint banners.
+- **Mini-map** (owner's change): the combined field "Temps, distance et mini-carte" shows the basemap under the route and the trace when the basemap setting is on, on the `--map-*` colours; plain otherwise. Its "Carte" label sits on a small surface pill so it stays readable on the map.
+- **Cues**: a dark bubble at the top of the phone shows the spoken sentence (or the vibration pattern when voice is off) for a few seconds; on the watch a lavender ring flashes with the cue's name.
+- **End-of-run summary**: titled "Course arrêtée · pas encore enregistrée"; the pacer result in a mint or peach card; the steps with a mint (met) or peach (missed) dot, an interrupted step marked, steps not run in the tertiary ink; "Reprendre la course" between save and discard.
+- **Coaching settings**: channels (voix, sons, vibrations) with a notice when no French voice is installed, "Essayer" chips per cue, the regular announcement (interval 0,5 / 1 / 2 / 5 km, average pace and heart rate as options), alerts, watch vibrations, start from the watch (sheet explaining the two grants), basemap with its privacy sentence.
+- **Watch**: a coaching page to the left of the metrics, controls to the right. The coaching page shows the step kind and repeat in the kind's colour, the remaining figure large, the target and a coloured verdict; or the pacer's signed gap with its words; the route line ("RESTE …", "HORS PARCOURS · 60 m", "ARRIVÉE") under it. Start from the wrist: offer, spinner while the phone starts, refusal with "OK"; without the option, "Prépare la course" with "Ouvrir sur le téléphone". After a stop: "Course arrêtée", not yet saved, with the time heart rate is still measured. Tile: "En course" with time, distance, heart rate and their age; a start button outside a run; "Rejoindre" when the phone runs without the watch.
+
+### What the prototype does not decide
+
+- The "Aller à un écran" chips, the simulation switches and the cue log exist only in the prototype.
+- The map and the mini-map are drawn stand-ins; the phone uses MapLibre and a snapshot of the configured style (design Decision 10).
+- Tone lengths and vibration patterns are named, not tuned; they are settled on the devices (task 13.4).
+
 ## Built page compared with the prototype (task 8.7)
 
 Captured on 2026-11-16 by `web/e2e/design.spec.ts` from the built app (a three-lap test run, default basemap) and from the prototype (its fictional run), in both themes at 360 px and 1440 px. The run differs, so figures and trace differ; layout, colours, type and components are what is compared.

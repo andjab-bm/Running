@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Running — prototype coaching (téléphone et montre)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Same tokens as web/src/lib/tokens.css (approved direction). The phone follows the theme switch;
+   the watch is always dark on true black. */
+:root{
+  --bg:#F4F3F9; --surface:#FFFFFF; --surface-2:#EFEEF7; --surface-3:#E6E4F2;
+  --ink:#1E1B2E; --ink-2:#54506B; --ink-3:#6A6682;
+  --accent:#6252DE; --accent-soft:#E7E3FC; --on-accent:#FFFFFF;
+  --p-lav:#E7E3FC; --p-mint:#D6F3E5; --p-peach:#FFE4D3; --p-sky:#D8EAFB; --p-butter:#FBF1C9; --p-rose:#FCDFE7;
+  --i-lav:#5446C9; --i-mint:#1B7550; --i-peach:#A94F1C; --i-sky:#1D639F; --i-butter:#7D6000; --i-rose:#A82C5A;
+  --z1:#A3ABC8; --z2:#7DB7F0; --z3:#6FD0A3; --z4:#FFAE70; --z5:#F58AA5;
+  --shadow:0 12px 32px rgba(70,58,140,.07); --pop:0 16px 48px rgba(40,30,90,.18);
+  --font-display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --font-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r-xl:28px; --r-lg:20px; --r-md:14px;
+  --zone-ink:#1E1B2E; /* ink used on zone colours in both themes */
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121118; --surface:#1B1A25; --surface-2:#252431; --surface-3:#302F3F;
+    --ink:#F2F0FA; --ink-2:#BDB9D1; --ink-3:#9F9BB6;
+    --accent:#A99BFF; --accent-soft:#2D2A4B; --on-accent:#15122B;
+    --p-lav:#2C2949; --p-mint:#1C372E; --p-peach:#3F2D20; --p-sky:#1C2F44; --p-butter:#38321A; --p-rose:#40222E;
+    --i-lav:#BDB2FF; --i-mint:#8FE0BB; --i-peach:#FFC39C; --i-sky:#9CCBF7; --i-butter:#EFD877; --i-rose:#F7AFC3;
+    --shadow:none; --pop:0 16px 48px rgba(0,0,0,.5); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121118; --surface:#1B1A25; --surface-2:#252431; --surface-3:#302F3F;
+  --ink:#F2F0FA; --ink-2:#BDB9D1; --ink-3:#9F9BB6;
+  --accent:#A99BFF; --accent-soft:#2D2A4B; --on-accent:#15122B;
+  --p-lav:#2C2949; --p-mint:#1C372E; --p-peach:#3F2D20; --p-sky:#1C2F44; --p-butter:#38321A; --p-rose:#40222E;
+  --i-lav:#BDB2FF; --i-mint:#8FE0BB; --i-peach:#FFC39C; --i-sky:#9CCBF7; --i-butter:#EFD877; --i-rose:#F7AFC3;
+  --shadow:none; --pop:0 16px 48px rgba(0,0,0,.5); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:28px;font-weight:600;line-height:1.1}
+h2{font-size:20px;font-weight:600}
+h3{font-size:16px;font-weight:600}
+p{margin:0}
+.num{font-family:var(--font-display);font-variant-numeric:tabular-nums}
+.ic{flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.muted{color:var(--ink-2)}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.row{display:flex;align-items:center;gap:10px}
+.grow{flex:1;min-width:0}
+
+/* ---------- review page ---------- */
+.page{display:grid;grid-template-columns:minmax(260px,330px) auto auto;gap:36px;align-items:start;justify-content:center;padding:28px 28px 56px;max-width:1400px;margin:0 auto}
+.panel{display:flex;flex-direction:column;gap:16px;position:sticky;top:20px}
+.brand{font:700 22px var(--font-display);display:flex;align-items:center;gap:10px}
+.brand-mark{width:36px;height:36px;border-radius:12px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center}
+.card{background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow);padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:999px;padding:4px;gap:2px}
+.seg button{padding:6px 14px;border-radius:999px;color:var(--ink-2);font-size:13.5px;font-weight:600;min-height:32px;display:inline-flex;align-items:center;gap:6px;transition:background .15s,color .15s}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:6px 12px;border-radius:999px;background:var(--surface-2);font-size:13px;font-weight:600;color:var(--ink-2);transition:background .15s,color .15s}
+.chip:hover{background:var(--accent-soft);color:var(--accent)}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;font-weight:600;font-size:14px;padding:4px 0}
+.switch small{display:block;font-weight:500;color:var(--ink-3);font-size:12.5px;line-height:1.3}
+.switch i{flex:none;width:44px;height:26px;border-radius:999px;background:var(--surface-3);position:relative;transition:background .15s}
+.switch i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.switch[aria-checked="true"] i{background:var(--accent)}
+.switch[aria-checked="true"] i::after{transform:translateX(18px)}
+.switch:disabled{opacity:.45;cursor:not-allowed}
+.device{display:flex;flex-direction:column;align-items:center;gap:12px}
+.device>.eyebrow{align-self:flex-start}
+
+/* ---------- phone ---------- */
+.phone{width:436px;border-radius:52px;padding:12px;background:#0d0c12;box-shadow:var(--pop)}
+.screen{position:relative;width:412px;height:860px;border-radius:40px;overflow:hidden;background:var(--bg);display:flex;flex-direction:column}
+.status{flex:none;height:34px;display:flex;align-items:center;justify-content:space-between;padding:6px 26px 0;font:600 13px var(--font-body);color:var(--ink-2)}
+.view{flex:1;min-height:0;display:flex;flex-direction:column}
+.scroll{flex:1;min-height:0;overflow-y:auto;padding:10px 18px 22px;display:flex;flex-direction:column;gap:14px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.tabs{flex:none;display:flex;gap:4px;padding:8px 14px 14px;background:var(--surface)}
+.tabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;border-radius:var(--r-md);font-size:12px;font-weight:600;color:var(--ink-3);transition:background .15s,color .15s}
+.tabs button:hover{background:var(--surface-2)}
+.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
+.pcard{background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow);padding:16px 18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:999px;font-weight:600;background:var(--surface-2);min-height:48px;transition:background .15s,transform .15s}
+.btn:hover{background:var(--surface-3)}
+.btn.primary{background:var(--accent);color:var(--on-accent)}
+.btn.primary:hover{background:var(--accent);transform:translateY(-1px)}
+.btn.danger{background:var(--p-rose);color:var(--i-rose)}
+.btn.block{width:100%}
+.iconbtn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--surface);color:var(--ink-2);box-shadow:var(--shadow);transition:background .15s,color .15s}
+.iconbtn:hover{background:var(--accent-soft);color:var(--accent)}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:600;background:var(--p-butter);color:var(--i-butter);white-space:nowrap}
+.tag.mint{background:var(--p-mint);color:var(--i-mint)}.tag.rose{background:var(--p-rose);color:var(--i-rose)}.tag.sky{background:var(--p-sky);color:var(--i-sky)}.tag.lav{background:var(--p-lav);color:var(--i-lav)}.tag.plain{background:var(--surface-2);color:var(--ink-2)}
+
+/* ready */
+.ready{flex:1;display:flex;flex-direction:column;padding:14px 22px 20px;gap:14px}
+.ready h1{margin-top:6px}
+.stat{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow)}
+.stat .dot{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:var(--surface-2);color:var(--ink-3);flex:none}
+.stat.ok .dot{background:var(--p-mint);color:var(--i-mint)}
+.stat.wait .dot{background:var(--p-butter);color:var(--i-butter)}
+.stat b{display:block;font-weight:600;line-height:1.25}
+.stat small{color:var(--ink-2);font-size:13px;line-height:1.3;display:block}
+.go{align-self:center;width:148px;height:148px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font:700 22px var(--font-display);box-shadow:0 14px 34px rgba(98,82,222,.35);transition:transform .15s}
+.go:hover{transform:scale(1.04)}
+.go span{display:flex;flex-direction:column;align-items:center;gap:2px}
+.pulse{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+
+/* live */
+.live{flex:1;min-height:0;display:flex;flex-direction:column}
+.livebar{flex:none;display:flex;align-items:center;gap:8px;padding:6px 18px 8px}
+.state{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;font-weight:700;font-size:13px;background:var(--p-mint);color:var(--i-mint)}
+.state::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.state.pause{background:var(--p-butter);color:var(--i-butter)}
+.minis{margin-left:auto;display:flex;gap:10px;color:var(--ink-3)}
+.minis .on{color:var(--i-mint)}.minis .off{opacity:.4}
+.pages{flex:1;min-height:0;overflow:hidden;touch-action:pan-y}
+.track{display:flex;width:200%;height:100%;transition:transform .28s ease}
+.track>section{width:50%;padding:0 14px;display:flex;flex-direction:column;gap:10px}
+.tile{border-radius:var(--r-xl);padding:12px 18px;display:flex;flex-direction:column;justify-content:center;min-width:0;background:var(--surface);transition:background .3s,opacity .2s}
+.tile .lbl{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2)}
+.tile .v{font:600 54px/1.02 var(--font-display);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink)}
+.tile .v small{font:600 16px var(--font-body);color:var(--ink-2);margin-left:6px}
+.tile.hero{flex:1.25}.tile.hero .v{font-size:92px}
+.tile.wide{flex:1}.tile.wide .v{font-size:72px}
+.tile.hero:has(.kmbars){flex:1.7;justify-content:flex-start;padding-top:14px}
+.tile.hero:has(.kmbars) .v{font-size:76px}
+.kmbars{flex:1;min-height:0;display:flex;align-items:stretch;gap:6px;margin-top:8px}
+.kmbars>span{flex:1;max-width:44px;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;min-width:0}
+.kmbars b{font:600 11px var(--font-display);font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.kmbars i{width:100%;border-radius:8px 8px 4px 4px;background:var(--accent);transition:height .3s}
+.kmbars .cur i{background:var(--i-lav);opacity:.4}
+.kmbars em{font:600 11px var(--font-body);color:var(--ink-2)}
+.kmhint{align-self:flex-end;font-size:13px;color:var(--ink-2)}
+.tile.combo{flex-direction:row;align-items:stretch;gap:14px;flex:1.15}
+.tile.combo .cvals{display:flex;flex-direction:column;justify-content:center;min-width:0}
+.tile.combo .v{font-size:44px}
+.minimap{flex:1;min-width:0;position:relative;border-radius:var(--r-lg);background:var(--surface);opacity:.92;display:grid;place-items:center;overflow:hidden}
+.minimap svg{width:100%;height:100%}
+.minimap path{fill:none;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
+.minimap .bg{stroke:var(--surface-3);stroke-dasharray:1 7}
+.minimap .fg{stroke:var(--accent);stroke-dasharray:0 100}
+.minimap em{position:absolute;right:8px;bottom:6px;font:600 11px var(--font-body);color:var(--ink-3)}
+.duo{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:0}
+.t-mint{background:var(--p-mint)}.t-mint .lbl{color:var(--i-mint)}
+.t-sky{background:var(--p-sky)}.t-sky .lbl{color:var(--i-sky)}
+.t-lav{background:var(--p-lav)}.t-lav .lbl{color:var(--i-lav)}
+.t-rose{background:var(--p-rose)}.t-rose .lbl{color:var(--i-rose)}
+.t-butter{background:var(--p-butter)}.t-butter .lbl{color:var(--i-butter)}
+.tile[data-zone]{color:var(--zone-ink)}
+.tile[data-zone] .lbl,.tile[data-zone] .v,.tile[data-zone] .v small{color:var(--zone-ink)}
+.tile[data-zone="1"]{background:var(--z1)}.tile[data-zone="2"]{background:var(--z2)}.tile[data-zone="3"]{background:var(--z3)}.tile[data-zone="4"]{background:var(--z4)}.tile[data-zone="5"]{background:var(--z5)}
+.zbadge{margin-left:auto;padding:2px 10px;border-radius:999px;background:rgba(30,27,46,.14);font:700 14px var(--font-display);letter-spacing:0}
+.zbar{display:flex;gap:4px;margin-top:6px}
+.zbar i{flex:1;height:6px;border-radius:3px;background:rgba(30,27,46,.16)}
+.zbar i.on{background:var(--zone-ink)}
+.dim .tile{opacity:.62}
+.laprow{display:flex;justify-content:space-between;align-items:baseline;padding:9px 12px;border-radius:var(--r-md);font-size:14px}
+.laprow:nth-child(odd){background:var(--surface-2)}
+.laprow b{font:600 16px var(--font-display);font-variant-numeric:tabular-nums}
+.dots{flex:none;display:flex;justify-content:center;gap:8px;padding:10px 0 2px}
+.dots button{width:26px;height:16px;display:grid;place-items:center}
+.dots i{width:8px;height:8px;border-radius:50%;background:var(--surface-3);transition:all .2s}
+.dots [aria-pressed="true"] i{width:22px;border-radius:4px;background:var(--accent)}
+.controls{flex:none;display:flex;align-items:center;justify-content:center;gap:26px;padding:8px 18px 22px;min-height:132px}
+.rbtn{position:relative;width:76px;height:76px;border-radius:50%;background:var(--surface);box-shadow:var(--shadow);display:grid;place-items:center;color:var(--ink);transition:transform .12s,background .15s;touch-action:none;user-select:none}
+.rbtn:hover{background:var(--surface-3)}
+.rbtn:active{transform:scale(.96)}
+.rbtn.big{width:104px;height:104px;background:var(--accent);color:var(--on-accent);box-shadow:0 12px 28px rgba(98,82,222,.32)}
+.rbtn.stop{background:var(--p-rose);color:var(--i-rose)}
+.rbtn em{position:absolute;top:calc(100% + 4px);left:50%;transform:translateX(-50%);font:600 12px var(--font-body);color:var(--ink-2);white-space:nowrap}
+.ring{position:absolute;inset:-5px;width:calc(100% + 10px);height:calc(100% + 10px);transform:rotate(-90deg);pointer-events:none}
+.ring circle{fill:none;stroke:currentColor;stroke-width:4;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100;opacity:0}
+.holding .ring circle{opacity:1;stroke-dashoffset:0;transition:stroke-dashoffset 1.1s linear}
+.banner{margin:0 14px 8px;padding:10px 14px;border-radius:var(--r-md);background:var(--p-butter);color:var(--i-butter);font-weight:600;font-size:14px;display:flex;gap:8px;align-items:center}
+.unlock{position:relative;display:flex;align-items:center;gap:10px;padding:16px 26px;border-radius:999px;background:var(--surface);box-shadow:var(--shadow);font-weight:600;overflow:hidden;touch-action:none;user-select:none}
+.unlock::before{content:"";position:absolute;inset:0;background:var(--accent-soft);transform:scaleX(0);transform-origin:left}
+.unlock.holding::before{transform:scaleX(1);transition:transform 1.1s linear}
+.unlock>*{position:relative}
+.shield{position:absolute;inset:34px 0 132px;z-index:5}
+.toast{position:absolute;left:50%;bottom:150px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-weight:600;font-size:13px;z-index:30;white-space:nowrap;pointer-events:none;animation:fade 1.6s forwards}
+@keyframes fade{0%,70%{opacity:1}100%{opacity:0}}
+
+/* summary, history, run, settings */
+.field{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.field input,.field textarea,.field select{background:var(--surface-2);border:0;border-radius:var(--r-md);padding:12px 14px;font-size:15px;font-weight:500;color:var(--ink);width:100%}
+.field textarea{resize:none;height:76px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mt{border-radius:var(--r-lg);padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.mt .lbl{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.mt .v{font:600 26px/1.1 var(--font-display);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mt .v small{font:600 13px var(--font-body);color:var(--ink-2);margin-left:4px}
+.rpe{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.rpe button{height:38px;border-radius:12px;background:var(--surface-2);font:600 15px var(--font-display);color:var(--ink-2);transition:background .15s,color .15s}
+.rpe button:hover{background:var(--surface-3)}
+.rpe button[aria-pressed="true"]{background:var(--p-peach);color:var(--i-peach)}
+.item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow);text-align:left;width:100%;transition:transform .15s,background .15s}
+.item:hover{transform:translateY(-2px);background:var(--surface)}
+.thumb{width:54px;height:54px;border-radius:16px;background:var(--surface-2);flex:none;color:var(--accent)}
+.item b{display:block;font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item small{display:block;color:var(--ink-2);font-size:13px;line-height:1.35}
+.totals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.trace{width:100%;height:190px;border-radius:var(--r-lg);background:var(--surface-2);color:var(--accent)}
+.sheetwrap{position:absolute;inset:0;background:rgba(18,17,24,.45);z-index:40;display:flex;align-items:flex-end}
+.sheet{width:100%;background:var(--surface);border-radius:var(--r-xl) var(--r-xl) 0 0;padding:22px 22px 26px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--pop)}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.radio{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r-md);width:100%;text-align:left;font-weight:600;transition:background .15s}
+.radio:hover{background:var(--surface-2)}
+.radio[aria-checked="true"]{background:var(--accent-soft);color:var(--accent)}
+.avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font:600 14px var(--font-display);color:#1E1B2E;flex:none}
+
+/* ---------- watch (always dark) ---------- */
+.watch{--w:396px;padding:14px;border-radius:50%;background:#1c1b22;box-shadow:var(--pop)}
+.wscreen{position:relative;width:var(--w);height:var(--w);border-radius:50%;overflow:hidden;background:#000;color:#fff;container-type:size;font-family:var(--font-display);user-select:none;touch-action:pan-y}
+.wv{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:14cqw;gap:2cqw}
+.wv p{font:600 5.4cqw/1.3 var(--font-body);color:#BDB9D1}
+.wv h4{margin:0;font:600 8cqw/1.1 var(--font-display)}
+.wico{width:16cqw;height:16cqw;color:#A99BFF}
+.wbtn{position:relative;width:24cqw;height:24cqw;border-radius:50%;background:#1f1e29;color:#fff;display:grid;place-items:center;touch-action:none}
+.wbtn svg.ic{width:10cqw;height:10cqw}
+.wbtn.main{width:32cqw;height:32cqw;background:#A99BFF;color:#15122B}
+.wbtn.main svg.ic{width:13cqw;height:13cqw}
+.wbtn.stop{background:#40222E;color:#F7AFC3}
+.wbtn .ring{inset:-1.2cqw;width:calc(100% + 2.4cqw);height:calc(100% + 2.4cqw)}
+.wlabel{font:600 4.4cqw var(--font-body);color:#9F9BB6}
+.wface .t{font:600 26cqw/1 var(--font-display);font-variant-numeric:tabular-nums}
+.wface .d{font:600 5cqw var(--font-body);color:#9F9BB6}
+.wapp{margin-top:5cqw;display:flex;flex-direction:column;align-items:center;gap:1.5cqw}
+.wapp i{width:19cqw;height:19cqw;border-radius:50%;background:#A99BFF;color:#15122B;display:grid;place-items:center}
+.wapp i svg{width:10cqw;height:10cqw}
+.wring{position:absolute;inset:0;width:100%;height:100%}
+.wring path{fill:none;stroke:#23222c;stroke-width:3;stroke-linecap:round}
+.wm{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5cqw;padding-bottom:3cqw}
+.wm .top{font:600 10cqw/1 var(--font-display);color:#8FE0BB;font-variant-numeric:tabular-nums}
+.wm .sub small{font:600 4.2cqw var(--font-body);color:#9F9BB6;margin-left:1cqw}
+.wm .time{font:600 27cqw/1 var(--font-display);font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:#BDB2FF}
+.wm .sub{display:flex;align-items:baseline;gap:7cqw;font:600 11cqw/1 var(--font-display);font-variant-numeric:tabular-nums}
+.wm .dist{color:#9CCBF7}
+.wm .st{font:700 4.4cqw var(--font-body);letter-spacing:.1em;color:#EFD877;height:6cqw}
+.wctl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:4cqw}
+.wctl>div{display:flex;flex-direction:column;align-items:center;gap:2cqw}
+.wdots{position:absolute;bottom:5cqw;left:0;right:0;display:flex;justify-content:center;gap:2cqw}
+.wdots button{width:5cqw;height:5cqw;display:grid;place-items:center}
+.wdots i{width:2cqw;height:2cqw;border-radius:50%;background:#44424f}
+.wdots [aria-pressed="true"] i{background:#fff}
+.wmsg{position:absolute;top:13cqw;left:0;right:0;text-align:center;font:700 4.6cqw var(--font-body);color:#8FE0BB;animation:fade 1.4s forwards}
+.wmsg.bad{color:#F7AFC3}
+.ambient .wm *{color:#8c8a96 !important}
+.ambient .wm .time{font-weight:500}
+.ambient .wring,.ambient .wdots{display:none}
+
+@media (max-width:1240px){.page{grid-template-columns:auto auto}.panel{grid-column:1/-1;position:static;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start}}
+@media (max-width:920px){.page{grid-template-columns:minmax(0,1fr);padding:18px 14px 40px;gap:24px}}
+@media (max-width:480px){
+  .page{padding:14px 0 32px}.panel{padding:0 14px}
+  .phone{width:100%;padding:0;border-radius:0;background:none;box-shadow:none}
+  .screen{width:100%;border-radius:0;height:820px}
+  .device>.eyebrow{padding-left:14px}
+  .watch{--w:min(396px,calc(100vw - 48px)) !important}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+
+/* ---------- additions for coaching (change insights-and-coaching) ---------- */
+:root{--map-land:#ECEBF4;--map-park:#D9F0E2;--map-water:#D3E6FA;--map-road:#FFFFFF;--map-label:#6A6682;--route:#1D639F;--trace:#6252DE;--k-warm:#6FD0A3;--k-effort:#6252DE;--k-rec:#7DB7F0;--k-cool:#FFAE70}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--map-land:#191822;--map-park:#1B2E29;--map-water:#1B2A40;--map-road:#292836;--map-label:#9F9BB6;--route:#9CCBF7;--trace:#A99BFF;--k-effort:#A99BFF}}
+:root[data-theme="dark"]{--map-land:#191822;--map-park:#1B2E29;--map-water:#1B2A40;--map-road:#292836;--map-label:#9F9BB6;--route:#9CCBF7;--trace:#A99BFF;--k-effort:#A99BFF}
+.panel{max-height:calc(100vh - 40px);overflow-y:auto;scrollbar-width:thin;padding-bottom:4px}
+.chips .chip[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.chipgroup{display:flex;flex-direction:column;gap:6px}
+.chipgroup>span{font-size:12px;font-weight:700;color:var(--ink-3)}
+.log{display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:1.35}
+.log .e{padding:8px 10px;border-radius:12px;background:var(--surface-2)}
+.log .e b{font-weight:700}
+.log .e .meta{display:flex;gap:8px;align-items:center;color:var(--ink-2);font-size:12px;margin-bottom:2px}
+.log .e .pat{font-family:ui-monospace,Consolas,monospace;letter-spacing:.06em;color:var(--ink-2)}
+.log .empty{color:var(--ink-3)}
+
+/* ready screen */
+.ready{overflow-y:auto;scrollbar-width:none;gap:12px}
+.ready::-webkit-scrollbar{display:none}
+.duostat{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cstat{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--shadow);font-size:13px;line-height:1.3;min-width:0}
+.cstat .dot{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--surface-2);color:var(--ink-3);flex:none}
+.cstat.ok .dot{background:var(--p-mint);color:var(--i-mint)}
+.cstat.wait .dot{background:var(--p-butter);color:var(--i-butter)}
+.cstat b{display:block;font-weight:600;font-size:14px}
+.cstat small{color:var(--ink-2);font-size:12.5px}
+.att{background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--shadow);padding:4px 6px}
+.arow{display:flex;align-items:center;gap:12px;padding:10px 8px}
+.arow+.arow,.arow+.acfg,.acfg+.arow{border-top:1px solid var(--surface-2)}
+.arow .dot{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;flex:none}
+.arow b{display:block;font-weight:600;line-height:1.25}
+.arow small{display:block;color:var(--ink-2);font-size:13px;line-height:1.35}
+.acfg{display:flex;flex-direction:column;gap:10px;padding:4px 8px 12px 60px}
+.linkbtn{color:var(--accent);font-weight:700;font-size:14px;padding:8px 12px;border-radius:999px;white-space:nowrap;transition:background .15s}
+.linkbtn:hover{background:var(--accent-soft)}
+.xbtn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:var(--ink-2);flex:none;transition:background .15s}
+.xbtn:hover{background:var(--surface-2)}
+.stepper{display:inline-flex;align-items:center;gap:4px;background:var(--surface-2);border-radius:999px;padding:3px;align-self:flex-start}
+.stepper button{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;transition:background .15s}
+.stepper button:hover{background:var(--surface-3)}
+.stepper b{font:600 18px var(--font-display);font-variant-numeric:tabular-nums;min-width:86px;text-align:center}
+.sw-only{width:auto;padding:0}
+.go.sm{width:116px;height:116px;font-size:19px}
+.btn.sm{min-height:38px;padding:8px 14px;font-size:14px}
+.outline{display:flex;align-items:flex-end;gap:2px;height:26px;margin-top:6px}
+.outline i{display:block;border-radius:4px 4px 2px 2px;min-width:3px}
+.note{display:flex;gap:10px;align-items:flex-start;padding:11px 14px;border-radius:var(--r-md);background:var(--p-butter);color:var(--i-butter);font-weight:600;font-size:13.5px;line-height:1.4}
+.note.sky{background:var(--p-sky);color:var(--i-sky)}
+.note.mint{background:var(--p-mint);color:var(--i-mint)}
+.note.rose{background:var(--p-rose);color:var(--i-rose)}
+
+/* live: step screen */
+.track>section{min-height:0}
+.steph{flex:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:30px}
+.kind{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;font-weight:700;font-size:13px}
+.k-warm{background:var(--p-mint);color:var(--i-mint)}.k-effort{background:var(--p-lav);color:var(--i-lav)}.k-rec{background:var(--p-sky);color:var(--i-sky)}.k-cool{background:var(--p-peach);color:var(--i-peach)}
+.t-peach{background:var(--p-peach)}.t-peach .lbl{color:var(--i-peach)}
+.tile.stephero{flex:1.35;position:relative}
+.tile.stephero .v{font-size:96px}
+.tile.tgt{flex:1}
+.tile.tgt .v{font-size:58px}
+.tile.next{flex:.55;flex-direction:row;align-items:center;gap:12px}
+.tile.next b{font:600 20px var(--font-display);display:block;line-height:1.2}
+.tile.next small{color:var(--ink-2);font-size:13.5px;font-weight:600}
+.prog{height:8px;border-radius:4px;background:color-mix(in srgb,var(--ink) 12%,transparent);overflow:hidden;margin-top:10px}
+.prog i{display:block;height:100%;width:0;background:var(--ink);border-radius:4px;transition:width .3s}
+.hint{font-size:14px;font-weight:600;color:var(--ink-2);margin-top:6px}
+.cd{position:absolute;right:16px;top:14px;width:70px;height:70px;border-radius:50%;background:var(--ink);color:var(--bg);display:none;place-items:center;font:700 38px var(--font-display)}
+.cd.on{display:grid;animation:tick 1s ease-in-out infinite}
+@keyframes tick{0%{transform:scale(1)}15%{transform:scale(1.12)}100%{transform:scale(1)}}
+.verdict{margin-left:auto;display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:999px;font:700 14px var(--font-body);letter-spacing:0;text-transform:none;background:var(--surface);color:var(--ink)}
+.verdict.fast,.verdict.slow{background:var(--ink);color:var(--bg)}
+.range{position:relative;height:12px;border-radius:6px;background:color-mix(in srgb,var(--ink) 12%,transparent);margin-top:12px}
+.range .ok{position:absolute;top:0;bottom:0;left:30%;right:30%;background:color-mix(in srgb,var(--ink) 35%,transparent);border-radius:6px}
+.range .me{position:absolute;top:-6px;width:6px;height:24px;border-radius:3px;background:var(--ink);transform:translateX(-50%);transition:left .3s}
+.range-l{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--ink-2);margin-top:4px}
+.donebox{flex:1;border-radius:var(--r-xl);background:var(--p-mint);color:var(--i-mint);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;padding:20px}
+.donebox h2{color:var(--ink);font-size:30px}
+.donebox p{color:var(--ink);max-width:300px}
+
+/* live: pacer */
+.pacerbar{flex:none;display:flex;align-items:center;gap:12px;border-radius:var(--r-xl);padding:10px 16px;background:var(--surface)}
+.pacerbar.ahead{background:var(--p-mint)}.pacerbar.behind{background:var(--p-peach)}
+.pacerbar .pi{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--surface);color:var(--ink);flex:none}
+.pacerbar .up,.pacerbar .dn,.pacerbar .eq{display:none}
+.pacerbar.ahead .up,.pacerbar.behind .dn,.pacerbar.none .eq{display:block}
+.pacerbar .v{font:600 42px/1 var(--font-display);font-variant-numeric:tabular-nums;color:var(--ink)}
+.pacerbar .w{display:block;font-weight:700;font-size:14px;color:var(--ink)}
+.pacerbar .tp{margin-left:auto;text-align:right;font-size:12.5px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.04em}
+.pacerbar .tp b{display:block;font:600 24px var(--font-display);color:var(--ink);text-transform:none;letter-spacing:0}
+.pacerbar .tp em{display:block;font-style:normal;text-transform:none;letter-spacing:0;color:var(--ink)}
+.tile.hero.withpacer .v{font-size:66px}
+.tile.hero.withpacer:has(.kmbars){flex:1.25}
+.tile.hero.withpacer:has(.kmbars) .v{font-size:58px}
+.track>section .tile,.track>section .duo{min-height:0}
+.track>section .tile{overflow:hidden}
+
+/* live: map */
+.mapsec{padding:0 14px}
+.mapview{position:relative;flex:1;min-height:0;border-radius:var(--r-xl);overflow:hidden;background:var(--map-land);touch-action:none;cursor:grab}
+.mapview.plain{background:var(--surface-2)}
+.mapview svg.m{position:absolute;inset:0;width:100%;height:100%}
+.mfig{position:absolute;left:10px;top:10px;right:64px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;pointer-events:none}
+.mfig>div{background:var(--surface);border-radius:16px;padding:6px 10px;box-shadow:var(--shadow);min-width:0}
+.mfig>div>span{display:block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2)}
+.mfig b{font:600 21px/1.15 var(--font-display);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mbtns{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:8px}
+.mbtns button{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--surface);color:var(--ink);box-shadow:var(--shadow);font:700 15px var(--font-display);transition:background .15s}
+.mbtns button:hover{background:var(--accent-soft)}
+.mbtns button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.mchip{position:absolute;left:10px;bottom:10px;display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--surface);box-shadow:var(--shadow);font-weight:600;font-size:14px;pointer-events:none}
+.mchip b{font:600 18px var(--font-display);font-variant-numeric:tabular-nums}
+.mban{position:absolute;left:10px;right:10px;top:74px;padding:10px 14px;border-radius:var(--r-md);font-weight:700;font-size:14px;display:flex;gap:8px;align-items:center;pointer-events:none}
+.mban.off{background:var(--p-rose);color:var(--i-rose)}
+.mban.arr{background:var(--p-mint);color:var(--i-mint)}
+.mban.plainnote{background:var(--surface);color:var(--ink-2);font-weight:600;font-size:13px}
+.attr{position:absolute;right:10px;bottom:8px;font-size:10.5px;color:var(--map-label);pointer-events:none}
+.maplbl{font:600 11px var(--font-body);fill:var(--map-label)}
+
+/* mini-map */
+.minimap svg{width:100%;height:100%}
+.minimap{cursor:pointer}
+.minimap.withmap{background:var(--map-land);opacity:1}
+.minimap.withmap em{background:var(--surface);color:var(--ink-2);padding:1px 7px;border-radius:999px}
+.minimap em{left:8px;right:auto}
+
+/* cue bubble */
+.cuebub{position:absolute;left:14px;right:14px;top:38px;z-index:35;background:var(--ink);color:var(--bg);border-radius:18px;padding:10px 14px;display:flex;gap:10px;align-items:flex-start;font-weight:600;font-size:14px;line-height:1.35;box-shadow:var(--pop);animation:fade 3.4s forwards;pointer-events:none}
+.cuebub small{display:block;font-weight:600;font-size:12px;opacity:.75}
+
+/* summary, plan */
+.srow{display:grid;grid-template-columns:12px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;font-size:14px}
+.srow:nth-child(odd){background:var(--surface-2)}
+.srow b{font:600 15px var(--font-display);font-variant-numeric:tabular-nums;text-align:right}
+.srow .d{width:10px;height:10px;border-radius:50%}
+.d.met{background:var(--i-mint)}.d.miss{background:var(--i-peach)}.d.none{background:var(--surface-3)}
+.srow.skip{color:var(--ink-3)}
+.srow small{display:block;color:var(--ink-2);font-size:12px}
+.srow.skip small{color:var(--ink-3)}
+.legend{display:flex;gap:14px;font-size:12.5px;color:var(--ink-2);margin-top:6px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sech{display:flex;align-items:baseline;justify-content:space-between;margin-top:4px}
+.emptybox{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;padding:20px 18px}
+.emptybox .big{width:64px;height:64px;border-radius:22px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.emptybox p{color:var(--ink-2);max-width:320px}
+.rthumb{width:54px;height:54px;border-radius:16px;background:var(--surface-2);flex:none}
+.splits{width:100%;border-collapse:collapse;font-size:14px}
+.splits th{font-size:12px;text-align:left;color:var(--ink-2);font-weight:700;padding:6px 8px}
+.splits td{padding:7px 8px;font-variant-numeric:tabular-nums}
+.splits tr:nth-child(even) td{background:var(--surface-2)}
+.splits td.up{color:var(--i-peach);font-weight:700}
+.splits td.dn{color:var(--i-mint);font-weight:700}
+.sheet{max-height:88%;overflow-y:auto}
+.steplist{display:flex;flex-direction:column;gap:6px}
+.steplist .rep{border-radius:var(--r-md);background:var(--p-lav);padding:8px;display:flex;flex-direction:column;gap:6px}
+.steplist .rep>span{font-weight:700;font-size:13px;color:var(--i-lav)}
+.steplist .st{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--surface-2);font-size:14px}
+.steplist .rep .st{background:var(--surface)}
+.steplist .st i{width:10px;height:28px;border-radius:4px;flex:none}
+.check{display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;padding:4px 0}
+.check input{width:20px;height:20px;accent-color:var(--accent)}
+.tabs button{font-size:11.5px}
+
+/* watch additions */
+.wcoach{gap:1.2cqw}
+.wcoach .k{font:700 4.8cqw var(--font-body);letter-spacing:.08em}
+.wcoach .big{font:600 22cqw/1 var(--font-display);font-variant-numeric:tabular-nums}
+.wcoach .tg{font:600 6.2cqw var(--font-display);color:#BDB9D1;font-variant-numeric:tabular-nums}
+.wcoach .vd{font:700 4.8cqw var(--font-body);padding:1cqw 3.4cqw;border-radius:99px;background:#1f1e29}
+.wroute{font:700 4.4cqw var(--font-body);letter-spacing:.06em;color:#9CCBF7;margin-top:1cqw}
+.wroute.bad{color:#F7AFC3}
+.wbuzz{position:absolute;inset:0;border-radius:50%;box-shadow:inset 0 0 0 2.6cqw #A99BFF;animation:fade 1.6s forwards;pointer-events:none;z-index:4}
+.wbuzz span{position:absolute;top:16cqw;left:24%;right:24%;text-align:center;font:700 4.2cqw var(--font-body);color:#BDB2FF}
+.wspin{width:15cqw;height:15cqw;border-radius:50%;border:1.6cqw solid #2c2b38;border-top-color:#A99BFF;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.wpill{display:inline-flex;align-items:center;gap:2cqw;padding:3cqw 5cqw;border-radius:99px;background:#1f1e29;color:#fff;font:600 4.8cqw var(--font-body);margin-top:2cqw}
+.wpill svg.ic{width:6cqw;height:6cqw}
+.wtile{gap:1.4cqw}
+.wtile .tt{font:600 19cqw/1 var(--font-display);font-variant-numeric:tabular-nums;color:#8FE0BB}
+.wtile .ts{display:flex;gap:6cqw;font:600 8.5cqw/1 var(--font-display);font-variant-numeric:tabular-nums}
+.wtile .ts small{font:600 4cqw var(--font-body);color:#9F9BB6;margin-left:1cqw}
+.wtile .tag{background:#1C372E;color:#8FE0BB;font-size:4.2cqw;padding:.8cqw 3cqw}
+.wtabsel{font:700 4cqw var(--font-body);letter-spacing:.1em;color:#9F9BB6}
+.wv.wcoach,.wv.wtile{padding:13cqw}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-logo" viewBox="0 0 24 24"><path d="M3 17c4 0 4-10 9-10s4 10 9 10"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+<symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+<symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/></symbol>
+<symbol id="i-gauge" viewBox="0 0 24 24"><path d="M12 14l4-4M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></symbol>
+<symbol id="i-steps" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+<symbol id="i-mountain" viewBox="0 0 24 24"><path d="M8 3l4 8 5-5 5 15H2L8 3z"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8V4z"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 4v16M16 4v16"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 22V4M5 4h13l-2.5 4L18 12H5"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+<symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2.5"/></symbol>
+<symbol id="i-watch" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><path d="M9 6.6L9.6 3h4.8l.6 3.6M9 17.4l.6 3.6h4.8l.6-3.6M12 9.8V12l1.4 1"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+<symbol id="i-cloud" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6M3.5 9a9 9 0 0 1 14.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+<symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></symbol>
+<symbol id="i-vib" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M3 8v8M21 8v8"/></symbol>
+<symbol id="i-repeat" viewBox="0 0 24 24"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+<symbol id="i-expand" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></symbol>
+<symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+<symbol id="i-chevr" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14M19 12l-7 7-7-7"/></symbol>
+<symbol id="i-eq" viewBox="0 0 24 24"><path d="M5 9h14M5 15h14"/></symbol>
+<symbol id="i-nav" viewBox="0 0 24 24"><path d="M12 2l7 19-7-4-7 4 7-19z"/></symbol>
+<symbol id="i-map" viewBox="0 0 24 24"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4zM8 2v16M16 6v16"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+</defs></svg>
+
+<div class="page">
+  <aside class="panel">
+    <div class="card">
+      <div class="brand"><span class="brand-mark"><svg class="ic" width="20" height="20"><use href="#i-logo"/></svg></span>Running · coaching</div>
+      <p class="muted">Prototype des écrans de coaching du téléphone et de la montre : séance guidée, parcours, allure cible, carte, annonces, départ depuis la montre et tuile. Données fictives, course simulée.</p>
+      <div class="seg" role="group" aria-label="Thème" id="themeseg">
+        <button data-act="theme" data-v="light"><svg class="ic" width="16" height="16"><use href="#i-sun"/></svg>Clair</button>
+        <button data-act="theme" data-v="dark"><svg class="ic" width="16" height="16"><use href="#i-moon"/></svg>Sombre</button>
+        <button data-act="theme" data-v="system"><svg class="ic" width="16" height="16"><use href="#i-monitor"/></svg>Système</button>
+      </div>
+    </div>
+    <div class="card">
+      <span class="eyebrow">Aller à un écran · téléphone</span>
+      <div class="chipgroup"><span>Préparer</span><div class="chips">
+        <button class="chip" data-act="jump" data-v="ready">Prêt, rien d'attaché</button>
+        <button class="chip" data-act="jump" data-v="ready-w">Prêt avec séance</button>
+        <button class="chip" data-act="jump" data-v="ready-r">Prêt avec parcours et objectif</button>
+        <button class="chip" data-act="jump" data-v="plan">Plan</button>
+        <button class="chip" data-act="jump" data-v="plan-empty">Plan vide</button>
+      </div></div>
+      <div class="chipgroup"><span>Séance guidée</span><div class="chips">
+        <button class="chip" data-act="jump" data-v="step">Étape dans la cible</button>
+        <button class="chip" data-act="jump" data-v="fast">Trop vite</button>
+        <button class="chip" data-act="jump" data-v="open">Étape sans fin fixée</button>
+        <button class="chip" data-act="jump" data-v="countdown">Compte à rebours</button>
+        <button class="chip" data-act="jump" data-v="complete">Séance terminée</button>
+      </div></div>
+      <div class="chipgroup"><span>Allure cible et carte</span><div class="chips">
+        <button class="chip" data-act="jump" data-v="pacer">Écran principal avec allure</button>
+        <button class="chip" data-act="jump" data-v="map">Carte avec fond</button>
+        <button class="chip" data-act="jump" data-v="map-plain">Carte sans fond</button>
+        <button class="chip" data-act="jump" data-v="offroute">Hors parcours</button>
+        <button class="chip" data-act="jump" data-v="arrival">Arrivée</button>
+      </div></div>
+      <div class="chipgroup"><span>Après la course et réglages</span><div class="chips">
+        <button class="chip" data-act="jump" data-v="sum-w">Résumé d'une séance</button>
+        <button class="chip" data-act="jump" data-v="sum-p">Résumé avec allure cible</button>
+        <button class="chip" data-act="jump" data-v="coach-set">Réglages du coaching</button>
+        <button class="chip" data-act="jump" data-v="fields">Choix des champs</button>
+      </div></div>
+    </div>
+    <div class="card">
+      <span class="eyebrow">Aller à un écran · montre</span>
+      <div class="chips">
+        <button class="chip" data-act="jump" data-v="w-offer">Départ proposé</button>
+        <button class="chip" data-act="jump" data-v="w-starting">Démarrage…</button>
+        <button class="chip" data-act="jump" data-v="w-refused">Départ refusé</button>
+        <button class="chip" data-act="jump" data-v="w-prepare">Ouvrir sur le téléphone</button>
+        <button class="chip" data-act="jump" data-v="w-step">Coaching · étape</button>
+        <button class="chip" data-act="jump" data-v="w-pacer">Coaching · allure</button>
+        <button class="chip" data-act="jump" data-v="w-off">Hors parcours</button>
+        <button class="chip" data-act="jump" data-v="w-stopped">Arrêtée, non enregistrée</button>
+        <button class="chip" data-act="jump" data-v="tile-run">Tuile · en course</button>
+        <button class="chip" data-act="jump" data-v="tile-none">Tuile · pas de course</button>
+        <button class="chip" data-act="jump" data-v="tile-unjoined">Tuile · course non rejointe</button>
+      </div>
+    </div>
+    <div class="card">
+      <span class="eyebrow">Simulation</span>
+      <div class="row"><span class="grow" style="font-weight:600;font-size:14px">Vitesse du temps</span>
+        <div class="seg" role="group" aria-label="Vitesse" id="speedseg"><button data-act="speed" data-v="1">×1</button><button data-act="speed" data-v="10">×10</button><button data-act="speed" data-v="60">×60</button></div></div>
+      <div class="row"><span class="grow" style="font-weight:600;font-size:14px">Allure du coureur</span>
+        <div class="seg" role="group" aria-label="Allure du coureur" id="biasseg"><button data-act="bias" data-v="in">Juste</button><button data-act="bias" data-v="fast">Vite</button><button data-act="bias" data-v="slow">Lent</button></div></div>
+      <button class="switch" role="switch" data-act="still" id="sw-still"><span>Arrêt au feu rouge<small>Pause automatique, sauf pendant un effort court</small></span><i></i></button>
+      <button class="switch" role="switch" data-act="leave" id="sw-leave"><span>Quitter le parcours<small>Le coureur rate un virage</small></span><i></i></button>
+      <button class="switch" role="switch" data-act="call" id="sw-call"><span>Appel en cours<small>Seule la vibration est donnée</small></span><i></i></button>
+      <button class="switch" role="switch" data-act="home" id="sw-home"><span>Wi-Fi de la maison<small>Le serveur répond : synchronisation</small></span><i></i></button>
+      <button class="switch" role="switch" data-act="link" id="sw-link"><span>Montre hors de portée<small>Coupure du lien avec le téléphone</small></span><i></i></button>
+      <button class="switch" role="switch" data-act="ambient" id="sw-amb"><span>Montre en veille<small>Écran atténué (mode ambiant)</small></span><i></i></button>
+      <button class="switch" role="switch" data-act="refuse" id="sw-refuse"><span>Le téléphone refuse le départ<small>Autorisation de position retirée</small></span><i></i></button>
+      <button class="switch" role="switch" data-act="voiceok" id="sw-voice"><span>Voix française installée<small>Synthèse vocale hors ligne du téléphone</small></span><i></i></button>
+      <button class="switch" role="switch" data-act="mapstyle" id="sw-style"><span>Fond de carte sur le serveur<small>MAP_STYLE_URL configuré</small></span><i></i></button>
+    </div>
+    <div class="card">
+      <div class="row"><span class="eyebrow grow">Signaux donnés</span><button class="chip" data-act="clearlog">Effacer</button></div>
+      <div class="log" id="cuelog"></div>
+    </div>
+  </aside>
+
+  <div class="device">
+    <span class="eyebrow">Téléphone · Pixel 8</span>
+    <div class="phone"><div class="screen" id="phone"></div></div>
+  </div>
+
+  <div class="device">
+    <div class="row" style="align-self:stretch;justify-content:space-between;flex-wrap:wrap">
+      <span class="eyebrow">Montre · Galaxy Watch 4</span>
+      <div class="row" style="gap:6px">
+        <div class="seg" role="group" aria-label="Écran de la montre" id="wviewseg"><button data-act="wview" data-v="app">App</button><button data-act="wview" data-v="tile">Tuile</button></div>
+        <div class="seg" role="group" aria-label="Taille de la montre" id="sizeseg"><button data-act="wsize" data-v="396">40 mm</button><button data-act="wsize" data-v="450">44 mm</button></div>
+      </div>
+    </div>
+    <div class="watch" id="watchframe"><div class="wscreen" id="watch"></div></div>
+    <p class="muted" style="max-width:380px;text-align:center;font-size:13px">La montre ne mesure que la fréquence cardiaque : le téléphone enregistre, guide et lui envoie l'étape, l'avance ou le retard et les signaux à faire vibrer.</p>
+  </div>
+</div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const ic = (n, s = 22) => `<svg class="ic" width="${s}" height="${s}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const ring = '<svg class="ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15.9" pathLength="100"/></svg>';
+
+/* ---------- formatting ---------- */
+const p2 = n => String(n).padStart(2, '0');
+const fTime = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}:${p2(m)}:${p2(s % 60)}` : `${m}:${p2(s % 60)}`; };
+const fPace = s => (s && isFinite(s) && s < 1200) ? `${Math.floor(s / 60)}:${p2(Math.round(s) % 60)}` : '—';
+const fKm = (m, d = 2) => (m / 1000).toFixed(d).replace('.', ',');
+const fDist = m => m < 1000 ? `${Math.round(m)} m` : `${fKm(m)} km`;
+const zoneOf = hr => hr == null ? 0 : hr < 113 ? 1 : hr < 132 ? 2 : hr < 151 ? 3 : hr < 170 ? 4 : 5;
+const sMin = s => { s = Math.round(s); const m = Math.floor(s / 60), r = s % 60; return m ? `${m} minute${m > 1 ? 's' : ''}${r ? ' ' + r : ''}` : `${r} secondes`; };
+const sPace = s => { s = Math.round(s); const m = Math.floor(s / 60), r = s % 60; return `${m} minutes${r ? ' ' + r : ''}`; };
+const gapText = g => g == null ? '—' : (g >= 0 ? '+' : '−') + fTime(Math.abs(g));
+const gapWord = g => g == null ? 'position attendue' : Math.abs(g) < 1 ? "dans l'objectif" : g > 0 ? "d'avance" : 'de retard';
+
+/* ---------- sessions ---------- */
+const T = v => ({ t: 'time', v }), D = v => ({ t: 'dist', v }), L = { t: 'lap' };
+const PT = (lo, hi) => ({ type: 'pace', lo, hi }), HZ = z => ({ type: 'hr', zone: z });
+const st = (kind, end, target) => ({ kind, end, target: target || null });
+const KIND = { warm: { l: 'Échauffement', c: 'mint', h: 55 }, effort: { l: 'Effort', c: 'lav', h: 100 }, rec: { l: 'Récupération', c: 'sky', h: 32 }, cool: { l: 'Retour au calme', c: 'peach', h: 55 } };
+const WORKOUTS = [
+  { id: 'w1', name: '6 × 400 m', items: [st('warm', T(600)), { repeat: 6, steps: [st('effort', D(400), PT(300, 315)), st('rec', T(90))] }, st('cool', T(600))], total: 'environ 41 min · 6,8 km', since: 'hier · 21:14' },
+  { id: 'w2', name: 'Seuil 3 × 8 min', items: [st('warm', T(900)), { repeat: 3, steps: [st('effort', T(480), PT(290, 300)), st('rec', T(120))] }, st('cool', T(600))], total: '55 min', since: 'lun. 16 nov. · 20:02' },
+  { id: 'w3', name: 'Fartlek au feeling', items: [st('warm', T(900)), { repeat: 5, steps: [st('effort', T(120), HZ(4)), st('rec', L)] }, st('cool', L)], total: 'au moins 25 min', since: 'lun. 16 nov. · 20:02' },
+];
+const wk = id => WORKOUTS.find(w => w.id === id);
+const unfold = w => { const out = []; w.items.forEach(it => { if (it.repeat) for (let r = 1; r <= it.repeat; r++) it.steps.forEach(s => out.push({ ...s, rep: r, of: it.repeat })); else out.push({ ...it }); }); return out; };
+const lenText = s => s.end.t === 'time' ? fTime(s.end.v) : s.end.t === 'dist' ? fDist(s.end.v) : "jusqu'à « Étape suivante »";
+const tgtText = t => !t ? 'sans cible' : t.type === 'pace' ? `${fPace(t.lo)}–${fPace(t.hi)} /km` : `zone ${t.zone}`;
+const estSecs = s => s.end.t === 'time' ? s.end.v : s.end.t === 'dist' ? s.end.v / 1000 * (s.target?.type === 'pace' ? (s.target.lo + s.target.hi) / 2 : 360) : 150;
+function outline(w, h = 26) {
+  const steps = unfold(w), tot = steps.reduce((a, s) => a + estSecs(s), 0);
+  return `<span class="outline" style="height:${h}px" aria-hidden="true">${steps.map(s => `<i style="flex:${(estSecs(s) / tot * 100).toFixed(2)};height:${KIND[s.kind].h}%;background:var(--k-${s.kind})"></i>`).join('')}</span>`;
+}
+
+/* ---------- routes (local metres, y towards the south) ---------- */
+function mkRoute(id, name, len, gen, ele, away, since) {
+  const N = 480; let pts = [], cum = [0];
+  for (let i = 0; i <= N; i++) pts.push(gen(i / N));
+  for (let i = 1; i <= N; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const k = len / cum[N]; pts = pts.map(p => [p[0] * k, p[1] * k]); cum = cum.map(c => c * k);
+  let gain = 0, loss = 0;
+  if (ele) for (let d = 50; d <= len; d += 50) { const e = ele(d) - ele(d - 50); if (e > 0) gain += e; else loss -= e; }
+  return { id, name, len, pts, cum, ele, away, since, gain: Math.round(gain), loss: Math.round(loss), loop: true };
+}
+const eleCanal = d => d < 2000 ? 32 + 19 * d / 1000 : d < 6000 ? 70 + 6 * Math.sin((d - 2000) / 600) : d < 7200 ? 70 - 38 * (d - 6000) / 1200 : 32 + 5 * Math.sin((d - 7200) / 500);
+const ROUTES = [
+  mkRoute('r1', 'Boucle du canal', 10200, u => { const a = 2 * Math.PI * u, r = 1 + .22 * Math.sin(3 * a + 1) + .08 * Math.cos(5 * a); return [Math.cos(a) * r * 1.5, Math.sin(a) * r]; }, eleCanal, 600, 'hier · 21:14'),
+  mkRoute('r2', 'Huit des Buttes', 8100, u => { const a = 2 * Math.PI * u + .4; return [Math.sin(a) * 1.6, Math.sin(a) * Math.cos(a) * 1.2]; }, d => 55 + 14 * Math.sin(d / 650), 0, 'lun. 16 nov. · 20:02'),
+  mkRoute('r3', 'Tour du parc', 6400, u => { const a = 2 * Math.PI * u, r = 1 + .12 * Math.sin(4 * a); return [Math.cos(a) * r * .9 + .6, Math.sin(a) * r * .7 - .5]; }, null, 1800, null),
+];
+const FREE = mkRoute('free', '', 6000, u => { const a = 2 * Math.PI * u, r = 1 + .15 * Math.sin(2 * a + 2) + .1 * Math.cos(3 * a); return [Math.cos(a) * r, Math.sin(a) * r * 1.3]; }, null, 0);
+const route = id => ROUTES.find(r => r.id === id);
+function at(r, d) {
+  d = Math.max(0, Math.min(r.len, d)); let lo = 0, hi = r.cum.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (r.cum[m] <= d) lo = m; else hi = m; }
+  const f = (d - r.cum[lo]) / ((r.cum[hi] - r.cum[lo]) || 1), a = r.pts[lo], b = r.pts[hi], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  return { x: a[0] + (b[0] - a[0]) * f, y: a[1] + (b[1] - a[1]) * f, hx: (b[0] - a[0]) / L, hy: (b[1] - a[1]) / L };
+}
+function thumbPath(pts, size = 100, pad = 12) {
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const s = Math.min((size - 2 * pad) / ((x1 - x0) || 1), (size - 2 * pad) / ((y1 - y0) || 1));
+  const ox = (size - (x1 - x0) * s) / 2, oy = (size - (y1 - y0) * s) / 2;
+  const P = p => [ox + (p[0] - x0) * s, oy + (p[1] - y0) * s];
+  return { P, s, d: pts.map((p, i) => (i ? 'L' : 'M') + P(p).map(v => v.toFixed(1)).join(' ')).join('') };
+}
+const routeThumb = (r, cls = 'rthumb') => `<svg class="${cls}" viewBox="0 0 100 100" aria-hidden="true"><path d="${thumbPath(r.pts.filter((_, i) => i % 4 === 0)).d}" fill="none" stroke="var(--route)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+function eleSvg(r, w = 320, h = 70) {
+  if (!r.ele) return '<p class="muted" style="font-size:13px">Fichier sans altitude : pas de profil.</p>';
+  const n = 80, v = Array.from({ length: n + 1 }, (_, i) => r.ele(r.len * i / n)), lo = Math.min(...v) - 4, hi = Math.max(...v) + 4;
+  const d = v.map((e, i) => `${i ? 'L' : 'M'}${(i / n * w).toFixed(1)} ${(h - (e - lo) / (hi - lo) * h).toFixed(1)}`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px" aria-label="Profil d'altitude"><path d="${d}L${w} ${h}L0 ${h}Z" fill="var(--p-sky)"/><path d="${d}" fill="none" stroke="var(--route)" stroke-width="2"/></svg>`;
+}
+
+/* basemap features, drawn only when the basemap is on */
+const BASE = (() => {
+  const roads = [], rot = .21, c = Math.cos(rot), s = Math.sin(rot), R = (x, y) => [x * c - y * s, x * s + y * c];
+  for (let v = -3300; v <= 3300; v += 330) { roads.push([R(v, -3300), R(v, 3300), v % 990 === 0]); roads.push([R(-3300, v), R(3300, v), v % 990 === 0]); }
+  const water = []; for (let x = -3600; x <= 3600; x += 120) water.push([x, 1350 + 260 * Math.sin(x / 700)]);
+  return { roads, water, parks: [[-900, -650, 520, 340], [1350, 700, 420, 300], [250, -1450, 380, 260], [-1900, 900, 300, 420]], labels: [[-900, -650, 'Parc des Tilleuls'], [-200, 1420, 'Canal Saint-Pierre'], [1350, 700, 'Jardin du Moulin']] };
+})();
+
+/* ---------- state ---------- */
+const S = {
+  tab: 'run', phase: 'ready', page: 0, locked: false, setTab: 'general',
+  t: 0, mov: 0, dist: 0, gain: 0, hr: null, pace: null, cad: null, hrSum: 0, hrN: 0,
+  laps: [], lapD0: 0, lapM0: 0, kms: [], kmM0: 0, track: [],
+  still: false, stillFor: 0, moveFor: 0, gps: 3, fix: true, fixT: 0,
+  wopen: false, link: true, ambient: false, wpage: 'metrics', wview: 'app', home: false, speed: 1, bias: 'in',
+  att: { w: null, r: null, pacer: false }, pacerTarget: 360, routeTarget: 3480, strategy: 'grade', plan: null,
+  steps: [], si: 0, sT0: 0, sD0: 0, wdone: false, stepLog: [], tstate: 'in', outFor: 0, inSecs: 0, lastAlert: -99, cdGiven: false,
+  rp: 0, leaving: false, offDist: 0, offFor: 0, off: false, lastOff: -99, arrived: false, pacerFinal: null, lastPacerAlert: -99, nextAnn: 1000,
+  zoom: 1, north: false, whole: false, free: null,
+  ch: { voice: true, sound: true, vib: true }, ann: { on: false, every: 1, avg: false, hr: false },
+  alerts: { target: true, pacer: false, margin: 30, off: true }, wvib: true, basemap: true, sfw: false,
+  voiceOk: true, mapStyle: true, call: false, refuse: false, planEmpty: false,
+  wstart: null, ended: false, stopFor: 0, silent: false, queue: [], cues: [],
+  fields: ['avgpace', 'cad', 'hr', 'combo'], autopause: true, keepOn: true, profile: 'Andjab',
+  openRun: null, period: 'week', sheet: null, sheetArg: null, draft: { title: '', rpe: 0, note: '' }, edit: null,
+  hist: [
+    { id: 6, title: '6 × 400 m', date: 'mar. 10 nov. · 18:35', dist: 6820, mov: 2463, gain: 24, hr: 151, state: 'synced', rpe: 7, note: '', week: 1, month: 1, seed: 3, laps: [[1620, 600], [400, 124], [210, 90]] },
+    { id: 4, title: 'Sortie matinale', date: 'jeu. 5 nov. · 07:04', dist: 5020, mov: 1856, gain: 31, hr: 144, state: 'synced', rpe: 4, note: '', week: 0, month: 1, seed: 11, laps: [[5020, 1856]] },
+    { id: 3, title: 'Sortie longue au canal', date: 'dim. 1 nov. · 10:20', dist: 14060, mov: 5340, gain: 96, hr: 149, state: 'synced', rpe: 6, note: 'Bonnes sensations.', week: 0, month: 1, seed: 5, laps: [[5000, 1890], [5000, 1905], [4060, 1545]] },
+  ],
+};
+const FIELDS = {
+  time: { l: 'Temps', i: 'clock', c: 'mint', v: () => fTime(S.mov) },
+  elapsed: { l: 'Temps total', i: 'clock', c: 'mint', v: () => fTime(S.t) },
+  dist: { l: 'Distance', i: 'route', c: 'sky', u: 'km', v: () => fKm(S.dist) },
+  pace: { l: 'Allure', i: 'gauge', c: 'lav', u: '/km', v: () => fPace(S.pace) },
+  avgpace: { l: 'Allure moy.', i: 'gauge', c: 'lav', u: '/km', v: () => fPace(S.dist > 20 ? S.mov / (S.dist / 1000) : null) },
+  lappace: { l: 'Allure tour', i: 'flag', c: 'lav', u: '/km', v: () => fPace(lapNow().d > 20 ? lapNow().m / (lapNow().d / 1000) : null) },
+  hr: { l: 'FC', i: 'heart', c: 'rose', u: 'bpm', v: () => hrNow() ?? '—' },
+  cad: { l: 'Cadence', i: 'steps', c: 'mint', u: 'ppm', v: () => S.cad ?? '—' },
+  gain: { l: 'Dénivelé +', i: 'mountain', c: 'sky', u: 'm', v: () => Math.round(S.gain) },
+  clock: { l: 'Heure', i: 'clock', c: 'butter', v: () => { const m = 18 * 60 + 42 + Math.floor(S.t / 60); return `${Math.floor(m / 60) % 24}:${p2(m % 60)}`; } },
+  ahead: { l: 'Avance / retard', i: 'target', c: 'mint', v: () => gapText(gapNow()) },
+  tpace: { l: 'Allure cible', i: 'target', c: 'lav', u: '/km', v: () => S.plan ? fPace(S.plan.pace(progress())) : '—' },
+  combo: { l: 'Temps, distance et mini-carte', i: 'route', c: 'sky', wideOnly: true, v: () => '' },
+};
+const lapNow = () => ({ d: S.dist - S.lapD0, m: S.mov - S.lapM0 });
+const hrNow = () => (S.wopen && S.link && S.hr != null && !(S.phase === 'summary' && S.stopFor >= 300)) ? Math.round(S.hr) : null;
+const active = () => ['run', 'pause', 'auto'].includes(S.phase);
+const session = () => active() || (S.phase === 'ready' && S.tab === 'run');
+const curStep = () => (S.att.w && !S.wdone) ? S.steps[S.si] : null;
+const coachOn = () => !!(S.att.w || S.att.pacer || S.att.r);
+
+/* ---------- pacer plan ---------- */
+const minetti = g => 155.4 * g ** 5 - 30.4 * g ** 4 - 43.3 * g ** 3 + 46.3 * g ** 2 + 19.5 * g + 3.6;
+function rebuildPlan() {
+  const a = S.att; S.plan = null;
+  if (!a.pacer || a.w) return;
+  if (a.r) {
+    const r = route(a.r), grade = S.strategy === 'grade' && r.ele, n = Math.ceil(r.len / 100), cost = [], cum = [0];
+    for (let i = 0; i < n; i++) { const d0 = i * 100, l = Math.min(100, r.len - d0); let f = 1; if (grade) f = Math.min(1.3, Math.max(.7, minetti((r.ele(d0 + l) - r.ele(d0)) / l) / 3.6)); cost.push(l * f); }
+    const k = S.routeTarget / cost.reduce((x, y) => x + y, 0); cost.forEach((c, i) => cum.push(cum[i] + c * k));
+    S.plan = { route: true, total: S.routeTarget, T: d => { d = Math.max(0, Math.min(r.len, d)); const i = Math.min(n - 1, Math.floor(d / 100)); return cum[i] + (cum[i + 1] - cum[i]) * (d - i * 100) / Math.min(100, r.len - i * 100); }, pace: d => { const i = Math.min(n - 1, Math.max(0, Math.floor(d / 100))); return (cum[i + 1] - cum[i]) / Math.min(100, r.len - i * 100) * 1000; } };
+  } else S.plan = { route: false, T: d => d / 1000 * S.pacerTarget, pace: () => S.pacerTarget };
+}
+const progress = () => S.att.r && !S.off ? S.rp : S.dist;
+function gapNow() { if (!S.plan || !active() && S.phase !== 'summary') return null; if (S.pacerFinal != null) return S.pacerFinal; if (S.dist < 1) return null; return S.plan.T(progress()) - S.mov; }
+const approx = () => S.att.r && S.off && S.plan;
+
+/* ---------- cues ---------- */
+const CUEK = {
+  step: { l: "Changement d'étape", p: 1, vib: '━━ ▪ ━━' }, countdown: { l: 'Compte à rebours', p: 1, vib: '▪ ▪ ▪' }, done: { l: 'Séance terminée', p: 1, vib: '━━ ━━ ━━' },
+  arrive: { l: 'Arrivée', p: 1, vib: '━━ ▪ ▪ ━━' }, pause: { l: 'Pause', p: 1, vib: '━━' }, resume: { l: 'Reprise', p: 1, vib: '▪ ━━' },
+  target: { l: 'Alerte de cible', p: 2, vib: '▪ ▪ ▪ ▪' }, pacer: { l: "Alerte d'allure", p: 2, vib: '▪ ━━ ▪' }, off: { l: 'Hors parcours', p: 2, vib: '━━━ ━━━' }, back: { l: 'De retour sur le parcours', p: 2, vib: '▪ ▪' },
+  km: { l: 'Annonce régulière', p: 3, vib: '▪' },
+};
+function cue(kind, text, test) {
+  if (S.silent && !test) return;
+  if (!test && ['pause', 'auto'].includes(S.phase) && !['pause', 'resume'].includes(kind)) return;
+  S.queue.push({ kind, text, test, at: S.t });
+  if (test) flush();
+}
+function flush() {
+  if (!S.queue.length) return;
+  const q = S.queue.sort((a, b) => CUEK[a.kind].p - CUEK[b.kind].p); S.queue = [];
+  q.forEach((c, i) => {
+    const used = Object.keys(S.ch).filter(k => S.ch[k] && (!S.call || k === 'vib') && !(k === 'voice' && !S.voiceOk));
+    S.cues.unshift({ ...c, used, time: fTime(S.t) }); S.cues = S.cues.slice(0, 8);
+    if (i === 0) setTimeout(() => bubble(c, used));
+    if (!c.test && S.wopen && S.link && S.wvib && c.kind !== 'km') setTimeout(() => wbuzz(c.kind));
+  });
+  renderLog();
+}
+function bubble(c, used) {
+  const k = CUEK[c.kind], icon = used.includes('voice') ? 'volume' : used.length ? 'vib' : 'bell';
+  const how = used.length ? used.map(u => ({ voice: 'voix', sound: 'son', vib: 'vibration' })[u]).join(' · ') : 'aucun canal actif : écran seulement';
+  S.bub = { html: `<div class="cuebub" role="status">${ic(icon, 20)}<span><small>${k.l} · ${how}</small>${used.includes('voice') ? '« ' + c.text + ' »' : k.vib}</span></div>`, at: Date.now() };
+  showOverlays();
+}
+/* cue bubble and watch vibration survive re-renders until they have faded */
+function showOverlays() {
+  const put = (root, sel, o, ms) => { root.querySelector(sel)?.remove(); if (!o || Date.now() - o.at > ms) return; root.insertAdjacentHTML('beforeend', o.html); root.lastElementChild.style.animationDelay = `-${Date.now() - o.at}ms`; };
+  put($('#phone'), '.cuebub', S.bub, 3400); put($('#watch'), '.wbuzz', S.wview === 'app' ? S.buzz : null, 1600);
+}
+function renderLog() {
+  const el = $('#cuelog'); if (!el) return;
+  const N = { voice: 'volume', sound: 'bell', vib: 'vib' };
+  el.innerHTML = S.cues.length ? S.cues.map(c => `<div class="e"><div class="meta"><b>${CUEK[c.kind].l}</b>${c.test ? '<span class="tag plain">essai</span>' : `<span>${c.time}</span>`}<span style="margin-left:auto;display:inline-flex;gap:4px">${c.used.map(u => ic(N[u], 14)).join('') || 'aucun canal'}</span></div>${c.text}<div class="pat">${CUEK[c.kind].vib}</div></div>`).join('') : '<p class="empty">Les annonces, sons et vibrations de la course apparaissent ici.</p>';
+}
+const stepSpeech = s => `${KIND[s.kind].l}${s.rep ? ` ${s.rep} sur ${s.of}` : ''}. ${s.end.t === 'time' ? sMin(s.end.v) : s.end.t === 'dist' ? s.end.v + ' mètres' : "Appuie sur étape suivante pour passer à la suite"}${s.target?.type === 'pace' ? `, entre ${sPace(s.target.lo)} et ${sPace(s.target.hi)} au kilomètre` : s.target?.type === 'hr' ? `, en zone ${s.target.zone}` : ''}.`;
+const tgtSpeech = t => t.type === 'pace' ? `entre ${sPace(t.lo)} et ${sPace(t.hi)}` : `la zone ${t.zone}`;
+
+/* ---------- simulation ---------- */
+function simPace() {
+  const s = curStep(), n = 9 * Math.sin(S.mov / 11) + 6 * Math.sin(S.mov / 37);
+  if (s) {
+    if (s.kind === 'effort') { if (s.target?.type === 'pace') { const t = s.target; return S.bias === 'fast' ? t.lo - 22 + n * .3 : S.bias === 'slow' ? t.hi + 22 + n * .3 : (t.lo + t.hi) / 2 + n * .3; } return 292 + n * .5; }
+    return s.kind === 'rec' ? 430 + n : s.kind === 'warm' ? 385 + n : 400 + n;
+  }
+  if (S.plan) return S.plan.pace(progress()) - 3 + n * .6 + (S.bias === 'slow' ? 25 : S.bias === 'fast' ? -25 : 0);
+  return 356 + 22 * Math.sin(S.mov / 47) + n;
+}
+function shortEffort() { const s = curStep(); return !!s && s.kind === 'effort' && estSecs(s) < 120 && s.end.t !== 'lap'; }
+function posNow() {
+  const r = S.att.r && route(S.att.r);
+  if (r) { const p = at(r, S.rp); return { x: p.x - p.hy * S.offDist, y: p.y + p.hx * S.offDist, th: Math.atan2(p.hy, p.hx) }; }
+  const p = at(FREE, S.dist % FREE.len); return { x: p.x, y: p.y, th: Math.atan2(p.hy, p.hx) };
+}
+function step() {
+  if (S.phase === 'ready' && S.tab === 'run') S.gps++;
+  if (S.phase === 'summary') { S.t++; S.stopFor++; if (S.stopFor === 300) dirty = true; }
+  if (active()) S.t++;
+  if (S.phase === 'run') {
+    let dd = 0;
+    if (!S.fix && ++S.fixT >= 6) { S.fix = true; dirty = true; }
+    if (S.still) {
+      S.stillFor++; S.pace = null; S.cad = null;
+      if (S.autopause && !shortEffort() && S.stillFor >= 5) { S.phase = 'auto'; S.moveFor = 0; dirty = true; cue('pause', 'Pause automatique.'); }
+      else S.mov++;
+    } else {
+      S.stillFor = 0; S.mov++; S.pace = simPace();
+      if (S.fix) {
+        dd = 1000 / S.pace; S.dist += dd;
+        if (Math.floor(S.dist / 1000) > S.kms.length) { S.kms.push(S.mov - S.kmM0); S.kmM0 = S.mov; }
+        if (S.ann.on && S.dist >= S.nextAnn) { cue('km', kmSpeech()); S.nextAnn += S.ann.every * 1000; }
+      }
+      S.gain += Math.max(0, Math.sin(S.mov / 90)) * .12; S.cad = 168 + Math.round(4 * Math.sin(S.mov / 23));
+    }
+    routeTick(dd); guidedTick(); pacerTick();
+    if (S.fix && S.mov % 3 === 0) { const p = posNow(); S.track.push([p.x, p.y]); if (S.track.length > 3000) S.track = S.track.filter((_, i) => i % 2 === 0); }
+  } else if (S.phase === 'auto') { if (!S.still && ++S.moveFor >= 3) { S.phase = 'run'; S.stillFor = 0; dirty = true; cue('resume', 'Reprise.'); } }
+  if (S.wopen && (S.phase !== 'summary' || S.stopFor < 300)) {
+    const s = curStep(), moving = S.phase === 'run' && !S.still;
+    const target = !moving ? 96 : s ? { effort: 164, rec: 138, warm: 136, cool: 132 }[s.kind] : 150 + 11 * Math.sin(S.mov / 70) - 50 * Math.exp(-S.mov / 150);
+    S.hr = S.hr == null ? 74 : S.hr + (target - S.hr) * .07;
+    if (S.phase === 'run') { S.hrSum += S.hr; S.hrN++; }
+  }
+  if (S.home) for (const r of S.hist) if (r.state === 'pending' && ++r.syncT >= 3) { r.state = 'synced'; dirty = true; }
+}
+function kmSpeech() {
+  const u = S.nextAnn / 1000, last = S.kms.at(-1);
+  let t = `${String(u).replace('.', ',')} kilomètre${u > 1 ? 's' : ''}. Temps ${sMin(S.mov)}.${last ? ` Dernier kilomètre en ${sPace(last)}.` : ''}`;
+  if (S.ann.avg) t += ` Allure moyenne ${sPace(S.mov / (S.dist / 1000))}.`;
+  if (S.ann.hr && hrNow()) t += ` Fréquence cardiaque ${hrNow()}.`;
+  const g = gapNow(); if (g != null) t += ` ${sMin(Math.abs(g))} ${g >= 0 ? "d'avance" : 'de retard'}.`;
+  return t;
+}
+function routeTick(dd) {
+  const r = S.att.r && route(S.att.r); if (!r) return;
+  S.offDist = S.leaving ? Math.min(85, S.offDist + 6) : Math.max(0, S.offDist - 9);
+  if (!S.leaving && S.offDist === 0 && !S.arrived) S.rp = Math.min(r.len, S.rp + dd);
+  if (S.offDist > 40) {
+    S.offFor++;
+    if (!S.off && S.offFor >= 10) { S.off = true; dirty = true; S.lastOff = S.t; if (S.alerts.off) cue('off', `Hors parcours. Le parcours est à ${Math.round(S.offDist / 10) * 10} mètres.`); }
+    else if (S.off && S.alerts.off && S.t - S.lastOff >= 60) { S.lastOff = S.t; cue('off', `Toujours hors parcours, à ${Math.round(S.offDist / 10) * 10} mètres.`); }
+  } else { S.offFor = 0; if (S.off && S.offDist < 20) { S.off = false; dirty = true; cue('back', 'De retour sur le parcours.'); } }
+  if (!S.arrived && S.rp >= r.len - 30) { S.arrived = true; dirty = true; if (S.plan) S.pacerFinal = S.plan.T(r.len) - S.mov; cue('arrive', `Arrivée. Parcours terminé${S.pacerFinal != null ? `, avec ${sMin(Math.abs(S.pacerFinal))} ${S.pacerFinal >= 0 ? "d'avance" : 'de retard'}` : ''}. L'enregistrement continue.`); }
+}
+function targetState(s) {
+  if (!s?.target) return null;
+  if (s.target.type === 'pace') { if (S.pace == null) return 'in'; return S.pace < s.target.lo ? 'fast' : S.pace > s.target.hi ? 'slow' : 'in'; }
+  const z = zoneOf(hrNow()); if (!z) return 'na'; return z > s.target.zone ? 'fast' : z < s.target.zone ? 'slow' : 'in';
+}
+function guidedTick() {
+  const s = curStep(); if (!s) return;
+  const sm = S.mov - S.sT0, sd = S.dist - S.sD0, ts = targetState(s);
+  if (ts && ts !== 'na' && !S.still) {
+    if (ts !== S.tstate) { S.tstate = ts; dirty = true; }
+    if (ts === 'in') { S.inSecs++; S.outFor = 0; }
+    else if (++S.outFor >= 15 && S.alerts.target && S.mov - S.lastAlert >= 30) { S.lastAlert = S.mov; cue('target', `${ts === 'fast' ? (s.target.type === 'hr' ? 'Au-dessus de la zone' : 'Trop vite') : (s.target.type === 'hr' ? 'Sous la zone' : 'Trop lent')}. Vise ${tgtSpeech(s.target)}.`); }
+  } else if (ts === 'na' && S.tstate !== 'na') { S.tstate = 'na'; dirty = true; }
+  const rem = remSecs(s, sm, sd), long = s.end.t === 'time' ? s.end.v >= 30 : s.end.t === 'dist' ? s.end.v >= 200 : false;
+  if (long && rem != null && rem <= 5 && rem > 0 && !S.cdGiven) { S.cdGiven = true; cue('countdown', 'Bip, bip, bip : prépare-toi.'); }
+  if ((s.end.t === 'time' && sm >= s.end.v) || (s.end.t === 'dist' && sd >= s.end.v)) nextStep();
+}
+const remSecs = (s, sm, sd) => s.end.t === 'time' ? s.end.v - sm : s.end.t === 'dist' ? (s.end.v - sd) / (1000 / (S.pace || 400)) : null;
+function nextStep() {
+  const s = S.steps[S.si], t = S.mov - S.sT0;
+  S.stepLog.push({ s, t, d: S.dist - S.sD0, met: s.target && S.tstate !== 'na' ? S.inSecs / Math.max(1, t) >= .6 : null });
+  lap(); S.si++;
+  if (S.si >= S.steps.length) { S.wdone = true; cue('done', "Séance terminée. Bravo ! La course continue jusqu'à ce que tu l'arrêtes."); }
+  else { Object.assign(S, { sT0: S.mov, sD0: S.dist, cdGiven: false, outFor: 0, inSecs: 0, tstate: 'in', lastAlert: -99 }); cue('step', stepSpeech(S.steps[S.si])); }
+  dirty = true;
+}
+function pacerTick() {
+  const g = gapNow(); if (g == null || !S.alerts.pacer || S.pacerFinal != null) return;
+  if (Math.abs(g) >= S.alerts.margin && S.mov - S.lastPacerAlert >= 60) { S.lastPacerAlert = S.mov; cue('pacer', `${sMin(Math.abs(g))} ${g >= 0 ? "d'avance" : 'de retard'}.`); }
+}
+function beginRun() {
+  S.phase = 'run'; S.page = 0; S.fix = S.gps >= 3; S.fixT = 0; S.nextAnn = S.ann.every * 1000; S.ended = false; S.wpage = 'metrics';
+  rebuildPlan();
+  if (S.att.w) { S.steps = unfold(wk(S.att.w)); Object.assign(S, { si: 0, sT0: 0, sD0: 0, wdone: false, stepLog: [], tstate: 'in', outFor: 0, inSecs: 0, cdGiven: false }); cue('step', stepSpeech(S.steps[0])); }
+}
+let dirty = false;
+setInterval(() => {
+  const before = S.gps >= 3;
+  for (let i = 0; i < S.speed; i++) step();
+  if (S.free && Date.now() - S.free.at > 10000) { S.free = null; dirty = true; }
+  if ((S.gps >= 3) !== before) dirty = true;
+  flush();
+  if (dirty) { dirty = false; if (!S.sheet && !isTyping()) render(); else { renderWatch(); showOverlays(); } }
+  update();
+}, 1000);
+const isTyping = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+function reset(keepAtt) {
+  Object.assign(S, { phase: 'ready', page: 0, locked: false, t: 0, mov: 0, dist: 0, gain: 0, pace: null, cad: null, hr: S.wopen ? S.hr : null, hrSum: 0, hrN: 0, laps: [], lapD0: 0, lapM0: 0, kms: [], kmM0: 0, track: [], still: false, stillFor: 0, moveFor: 0, gps: 3, fix: true,
+    steps: [], si: 0, wdone: false, stepLog: [], rp: 0, leaving: false, offDist: 0, offFor: 0, off: false, arrived: false, pacerFinal: null, lastPacerAlert: -99, zoom: 1, north: false, whole: false, free: null,
+    wpage: 'metrics', stopFor: 0, wstart: null, ended: false, plan: null, draft: { title: '', rpe: 0, note: '' } });
+  if (!keepAtt) S.att = { w: null, r: null, pacer: false };
+}
+function lap() { const l = lapNow(); S.laps.push([l.d, l.m]); S.lapD0 = S.dist; S.lapM0 = S.mov; }
+function runUntil(cond, max = 9000) { for (let i = 0; i < max && !cond(); i++) { step(); if (!S.silent) flush(); } }
+
+/* ---------- phone rendering ---------- */
+const mini = (k, v, u, c) => `<div class="mt t-${c}"><span class="lbl" style="color:var(--i-${c})">${k}</span><span class="v">${v}${u ? `<small>${u}</small>` : ''}</span></div>`;
+function tracePath(seed, w, h) { let d = ''; for (let i = 0; i <= 80; i++) { const a = i / 80 * Math.PI * 2, r = .32 + .09 * Math.sin(a * 3 + seed) + .05 * Math.cos(a * 5 + seed * 2); d += (i ? 'L' : 'M') + (w / 2 + Math.cos(a) * r * w * (1 + .15 * Math.sin(seed))).toFixed(1) + ' ' + (h / 2 + Math.sin(a) * r * h).toFixed(1); } return d; }
+const traceSvg = (seed, cls, sw) => `<svg class="${cls}" viewBox="0 0 100 100" aria-hidden="true"><path d="${tracePath(seed, 100, 100)}" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const syncTag = r => ({ synced: `<span class="tag mint">${ic('check', 13)}Synchronisée</span>`, pending: `<span class="tag">${ic('clock', 13)}En attente</span>`, failed: `<span class="tag rose">${ic('alert', 13)}Échec</span>` }[r.state]);
+const tile = (key, cls) => {
+  const f = FIELDS[key];
+  if (key === 'combo') return `<div class="tile ${cls} combo t-sky" data-f="combo">
+    <div class="cvals"><span class="lbl">${ic('clock', 16)}Temps</span><span class="v"><span data-b="time"></span></span>
+      <span class="lbl" style="margin-top:6px">${ic('route', 16)}Distance</span><span class="v"><span data-b="dist"></span><small>km</small></span></div>
+    <button class="minimap" data-act="tomap" aria-label="Ouvrir la carte"><svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" data-mini aria-hidden="true"></svg><em>Carte</em></button></div>`;
+  return `<div class="tile ${cls} t-${f.c}" data-f="${key}"><span class="lbl">${ic(f.i, 16)}${f.l}${key === 'hr' ? '<span class="zbadge" data-b="zone"></span>' : ''}</span>
+    <span class="v"><span data-b="${key}"></span>${f.u ? `<small>${f.u}</small>` : ''}</span>${key === 'hr' ? '<div class="zbar">' + '<i></i>'.repeat(5) + '</div>' : ''}${key === 'avgpace' && cls.includes('hero') ? '<div class="kmbars" data-kmbars></div>' : ''}</div>`;
+};
+function kmBars() {
+  const cur = S.dist - S.kms.length * 1000 > 30 ? (S.mov - S.kmM0) / ((S.dist - S.kms.length * 1000) / 1000) : null;
+  const all = S.kms.map((p, i) => ({ p, n: i + 1 })).concat(cur ? [{ p: cur, n: S.kms.length + 1, cur: true }] : []).slice(-8);
+  if (!all.length) return '<span class="kmhint">Allure de chaque kilomètre</span>';
+  const lo = Math.min(...all.map(b => b.p)) - 8, hi = Math.max(...all.map(b => b.p)) + 8;
+  return all.map(b => `<span class="${b.cur ? 'cur' : ''}"><b>${fPace(b.p)}</b><i style="height:${Math.round(30 + 70 * (hi - b.p) / (hi - lo))}%"></i><em>${b.n}</em></span>`).join('');
+}
+
+function vReady() {
+  const ok = S.gps >= 3, w = S.wopen && S.link, a = S.att, W = a.w && wk(a.w), R = a.r && route(a.r);
+  const pacer = W
+    ? `<div class="arow"><span class="dot" style="background:var(--surface-2);color:var(--ink-3)">${ic('target')}</span><span class="grow"><b>Allure cible</b><small>Indisponible avec une séance : ce sont les cibles des étapes qui s'appliquent.</small></span></div>`
+    : `<div class="arow"><span class="dot t-lav" style="color:var(--i-lav)">${ic('target')}</span><span class="grow"><b>Allure cible</b><small>${a.pacer ? (R ? `Objectif de temps sur ${R.name}` : 'Allure régulière, sur la distance courue') : "Désactivée · tu peux courir contre un chrono"}</small></span><button class="switch sw-only" role="switch" aria-checked="${a.pacer}" data-act="att-pacer" aria-label="Allure cible"><i></i></button></div>
+      ${a.pacer ? `<div class="acfg">${R
+        ? `<div class="stepper" role="group" aria-label="Temps visé"><button data-act="rt" data-v="-60" aria-label="Une minute de moins">${ic('minus', 18)}</button><b>${fTime(S.routeTarget)}</b><button data-act="rt" data-v="60" aria-label="Une minute de plus">${ic('plus', 18)}</button></div>
+           <small class="muted" style="font-size:13px">Soit ${fPace(S.routeTarget / (R.len / 1000))} /km en moyenne sur ${fKm(R.len, 1)} km.</small>
+           ${R.ele ? `<div class="seg" role="group" aria-label="Stratégie"><button data-act="strat" data-v="grade" aria-pressed="${S.strategy === 'grade'}">Effort régulier</button><button data-act="strat" data-v="even" aria-pressed="${S.strategy === 'even'}">Allure constante</button></div>
+           <small class="muted" style="font-size:13px">${S.strategy === 'grade' ? 'Plus lent en montée, plus vite en descente, même temps à l’arrivée.' : 'La même allure du départ à l’arrivée.'}</small>` : `<small class="muted" style="font-size:13px">Parcours sans altitude : allure constante seulement.</small>`}
+           <button class="linkbtn" data-act="preview" style="align-self:flex-start;padding-left:0">${ic('list', 16)} Voir le détail par kilomètre</button>`
+        : `<div class="stepper" role="group" aria-label="Allure visée"><button data-act="pt" data-v="-5" aria-label="5 secondes plus vite">${ic('minus', 18)}</button><b>${fPace(S.pacerTarget)} /km</b><button data-act="pt" data-v="5" aria-label="5 secondes plus lent">${ic('plus', 18)}</button></div>`}</div>` : ''}`;
+  return `<div class="ready">
+    <div><span class="eyebrow">${S.profile} · profil actif</span><h1>Prêt à courir</h1></div>
+    <div class="duostat">
+      <div class="cstat ${ok ? 'ok' : 'wait'}"><span class="dot ${ok ? '' : 'pulse'}">${ic('pin', 18)}</span><span class="grow"><b>${ok ? 'Position' : 'Recherche…'}</b><small>${ok ? 'Précision ± 6 m' : 'Reste à découvert'}</small></span></div>
+      <div class="cstat ${w ? 'ok' : ''}"><span class="dot">${ic('watch', 18)}</span><span class="grow"><b>${w ? 'Montre' : 'Montre absente'}</b><small>${w ? '<span data-b="hr"></span> bpm' : 'Pas de FC'}</small></span></div>
+    </div>
+    ${!S.wopen ? `<button class="btn sm" data-act="open-watch" style="align-self:flex-start">${ic('watch', 18)}Ouvrir sur la montre</button>` : ''}
+    <div class="att" aria-label="Ce qui accompagne la course">
+      <div class="arow"><span class="dot t-mint" style="color:var(--i-mint)">${ic('repeat')}</span><span class="grow">${W ? `<b>${W.name}</b><small>${W.total} · ${unfold(W).length} étapes</small>${outline(W)}` : '<b>Séance</b><small>Aucune · course libre</small>'}</span>${W ? `<button class="xbtn" data-act="att-clear" data-v="w" aria-label="Retirer la séance">${ic('x', 18)}</button>` : `<button class="linkbtn" data-act="pick" data-v="w">Choisir</button>`}</div>
+      <div class="arow"><span class="dot t-sky" style="color:var(--i-sky)">${ic('route')}</span><span class="grow">${R ? `<b>${R.name}</b><small>${fKm(R.len, 1)} km${R.ele ? ` · ${R.gain} m D+` : ''} · ${R.away ? `départ à ${fDist(R.away)} d'ici` : 'tu es au départ'}</small>` : '<b>Parcours</b><small>Aucun</small>'}</span>${R ? `<button class="xbtn" data-act="att-clear" data-v="r" aria-label="Retirer le parcours">${ic('x', 18)}</button>` : `<button class="linkbtn" data-act="pick" data-v="r">Choisir</button>`}</div>
+      ${pacer}
+    </div>
+    <div class="grow"></div>
+    <button class="go ${a.w || a.r || a.pacer ? 'sm' : ''}" data-act="start" aria-label="Démarrer la course"><span>${ic('play', 30)}Démarrer</span></button>
+    <p class="muted" style="text-align:center;font-size:13px">${ok ? (a.w ? 'La course commence par l’échauffement.' : 'Tu peux aussi démarrer depuis la montre.') : 'La distance sera comptée dès que la position sera trouvée.'}</p>
+  </div>`;
+}
+
+const pagesList = () => [...(S.att.w ? ['step'] : []), 'main', 'lap', 'map'];
+const PAGE_NAMES = { step: 'Étape en cours', main: 'Métriques', lap: 'Tour en cours', map: 'Carte' };
+function vLive() {
+  const P = pagesList(), n = P.length; if (S.page >= n) S.page = 0;
+  const paused = S.phase !== 'run', guided = S.att.w && !S.wdone;
+  const lapBtn = `<button class="rbtn" data-act="lap" aria-label="${guided ? 'Passer à l’étape suivante' : 'Marquer un tour'}">${ic(guided ? 'chevr' : 'flag', 28)}<em>${guided ? 'Étape suivante' : 'Tour'}</em></button>`;
+  const controls = S.locked
+    ? `<button class="unlock" data-hold="unlock">${ic('lock', 20)}<span>Maintenir pour déverrouiller</span></button>`
+    : paused
+      ? `<button class="rbtn stop" data-hold="stop" aria-label="Terminer la course (maintenir)">${ring}${ic('stop', 28)}<em>Maintenir</em></button>
+         <button class="rbtn big" data-act="resume" aria-label="Reprendre">${ic('play', 40)}</button>
+         <button class="rbtn" data-act="lock" aria-label="Verrouiller l'écran">${ic('lock', 26)}<em>Verrouiller</em></button>`
+      : `${lapBtn}<button class="rbtn big" data-act="pause" aria-label="Mettre en pause">${ic('pause', 40)}</button>
+         <button class="rbtn" data-act="lock" aria-label="Verrouiller l'écran">${ic('lock', 26)}<em>Verrouiller</em></button>`;
+  const V = { step: vStepPage, main: vMainPage, lap: vLapPage, map: vMapPage };
+  return `<div class="live ${paused ? 'dim' : ''}">
+    <div class="livebar">
+      <span class="state ${paused ? 'pause' : ''}">${S.phase === 'run' ? 'En course' : S.phase === 'auto' ? 'Pause auto' : 'En pause'}</span>
+      ${S.locked ? `<span class="tag plain">${ic('lock', 13)}Verrouillé</span>` : ''}
+      ${S.att.w ? `<span class="tag lav">${ic('repeat', 13)}${wk(S.att.w).name}</span>` : S.att.r ? `<span class="tag sky">${ic('route', 13)}${route(S.att.r).name}</span>` : ''}
+      <span class="minis"><span class="${S.fix ? 'on' : 'off pulse'}" title="${S.fix ? 'Position précise' : 'Recherche de la position'}">${ic('pin', 18)}</span><span class="${S.wopen && S.link ? 'on' : 'off'}" title="Montre">${ic('watch', 18)}</span></span>
+    </div>
+    ${S.phase === 'auto' ? `<div class="banner">${ic('pause', 18)}Pause automatique · reprise dès que tu repars</div>` : ''}
+    ${S.phase === 'pause' ? `<div class="banner">${ic('pause', 18)}En pause · l'étape et le chrono de l'objectif sont figés</div>` : ''}
+    ${S.phase === 'run' && S.still && shortEffort() ? `<div class="banner">${ic('info', 18)}Pas de pause automatique pendant un effort court</div>` : ''}
+    <div class="pages" id="pages"><div class="track" style="width:${n * 100}%;transform:translateX(-${S.page * 100 / n}%)">
+      ${P.map(p => `<section class="${p === 'map' ? 'mapsec' : ''}" style="width:${100 / n}%">${V[p]()}</section>`).join('')}
+    </div></div>
+    <div class="dots">${P.map((p, i) => `<button data-act="page" data-v="${i}" aria-label="${PAGE_NAMES[p]}" aria-pressed="${S.page === i}"><i></i></button>`).join('')}</div>
+    <div class="controls">${controls}</div>
+    ${S.locked ? '<div class="shield" data-act="shield"></div>' : ''}
+  </div>`;
+}
+function pacerBar() {
+  if (!S.plan) return '';
+  return `<div class="pacerbar none" data-pacer><span class="pi">${ic('up', 22).replace('class="ic"', 'class="ic up"')}${ic('down', 22).replace('class="ic"', 'class="ic dn"')}${ic('eq', 22).replace('class="ic"', 'class="ic eq"')}</span>
+    <div><span class="v" data-b="gap"></span><span class="w" data-b="gapw"></span></div>
+    <div class="tp">Allure cible<b><span data-b="tpace"></span> /km</b><em data-b="approx"></em></div></div>`;
+}
+function vMainPage() { const f = S.fields; return `${pacerBar()}${tile(f[0], 'hero' + (S.plan ? ' withpacer' : ''))}<div class="duo">${tile(f[1], '')}${tile(f[2], '')}</div>${tile(f[3], 'wide')}`; }
+function vLapPage() {
+  const prev = S.laps.at(-1), guided = !!S.att.w;
+  return `<div class="tile hero t-lav"><span class="lbl">${ic('flag', 16)}${guided ? 'Étape' : 'Tour'} ${S.laps.length + 1}</span><span class="v"><span data-b="laptime"></span></span></div>
+    <div class="duo"><div class="tile t-sky"><span class="lbl">Distance</span><span class="v"><span data-b="lapdist"></span><small>km</small></span></div>
+      <div class="tile t-lav"><span class="lbl">Allure tour</span><span class="v"><span data-b="lappace"></span><small>/km</small></span></div></div>
+    <div class="tile wide" style="justify-content:flex-start;padding-top:14px;gap:4px;overflow:hidden">
+      <span class="lbl">${prev ? (guided ? 'Étapes précédentes' : 'Tours précédents') : 'Aucun tour marqué'}</span>
+      ${S.laps.slice(-3).reverse().map((l, i) => `<div class="laprow"><span>${guided ? 'Étape' : 'Tour'} ${S.laps.length - i}</span><b>${fTime(l[1])}</b><b>${fPace(l[1] / (l[0] / 1000))} /km</b></div>`).join('') || '<p class="muted" style="font-size:14px">Appuie sur Tour pour découper ta sortie.</p>'}
+    </div>`;
+}
+function vStepPage() {
+  if (S.wdone) return `<div class="donebox">${ic('check', 40)}<h2>Séance terminée</h2><p>${wk(S.att.w).name} : les ${S.steps.length} étapes sont faites. Le temps et la distance continuent jusqu'à ce que tu arrêtes la course.</p></div>
+    <div class="duo" style="flex:.6">${tile('time', '')}${tile('dist', '')}</div>`;
+  const s = curStep(), k = KIND[s.kind], nx = S.steps[S.si + 1], open = s.end.t === 'lap';
+  const t = s.target, hrT = t?.type === 'hr';
+  const tgt = t
+    ? `<div class="tile tgt t-${hrT ? 'rose' : 'lav'}"><span class="lbl">${ic('target', 16)}Cible · ${tgtText(t)}<span class="verdict" data-verdict></span></span>
+        <span class="v"><span data-b="${hrT ? 'hr' : 'pace'}"></span><small>${hrT ? 'bpm' : '/km'}</small></span>
+        ${hrT && !hrNow() ? '<span class="hint">Pas de fréquence cardiaque : cible affichée sans suivi.</span>' : `<div class="range" aria-hidden="true"><span class="ok"></span><span class="me" data-range></span></div><div class="range-l"><span>${hrT ? 'plus bas' : 'plus lent'}</span><span>${hrT ? 'plus haut' : 'plus vite'}</span></div>`}</div>`
+    : `<div class="tile tgt t-lav"><span class="lbl">${ic('gauge', 16)}Allure · sans cible</span><span class="v"><span data-b="pace"></span><small>/km</small></span><span class="hint">Cours à ton rythme.</span></div>`;
+  return `<div class="steph"><span class="kind k-${s.kind}">${k.l}</span>${s.rep ? `<span class="tag plain">Répétition ${s.rep} sur ${s.of}</span>` : ''}<span class="muted" style="margin-left:auto;font-size:13px;font-weight:700">Étape ${S.si + 1} sur ${S.steps.length}</span></div>
+    <div class="tile stephero t-${k.c}"><span class="lbl">${ic(open ? 'clock' : s.end.t === 'dist' ? 'route' : 'clock', 16)}${open ? "Depuis le début de l'étape" : 'Reste'}</span>
+      <span class="v"><span data-b="srem"></span></span>
+      ${open ? '<span class="hint">Appuie sur « Étape suivante » quand tu es prêt.</span>' : '<div class="prog"><i data-prog></i></div>'}
+      <span class="cd" data-cd></span></div>
+    ${tgt}
+    <div class="tile next"><span class="kind k-${nx ? nx.kind : 'cool'}" style="flex:none">${ic(nx ? 'chevr' : 'flag', 16)}</span><span class="grow"><small>Ensuite</small><b>${nx ? `${KIND[nx.kind].l} · ${lenText(nx)}` : 'Fin de la séance'}</b>${nx?.target ? `<small>${tgtText(nx.target)}</small>` : ''}</span></div>`;
+}
+function vMapPage() {
+  const plain = !S.basemap || !S.mapStyle, r = S.att.r && route(S.att.r);
+  return `<div class="mapview ${plain ? 'plain' : ''}" id="mapview" aria-label="Carte de la course">
+    <svg class="m" id="mapsvg" aria-hidden="true"></svg>
+    <div class="mfig"><div><span>Temps total</span><b data-b="elapsed"></b></div><div><span>Distance</span><b><span data-b="dist"></span></b></div><div><span>Allure</span><b data-b="pace"></b></div></div>
+    <div class="mbtns">
+      <button data-act="north" aria-label="${S.north ? 'Nord en haut' : 'Sens de la course en haut'}" title="${S.north ? 'Nord en haut' : 'Sens de la course en haut'}">${S.north ? 'N' : ic('nav', 20)}</button>
+      <button data-act="zoom" data-v="1.5" aria-label="Zoomer">${ic('plus', 20)}</button>
+      <button data-act="zoom" data-v="0.667" aria-label="Dézoomer">${ic('minus', 20)}</button>
+      ${r ? `<button data-act="whole" aria-label="Voir tout le parcours" aria-pressed="${S.whole}">${ic('expand', 18)}</button>` : ''}
+      <button data-act="recenter" aria-label="Revenir sur ma position" aria-pressed="${!!S.free}">${ic('locate', 20)}</button>
+    </div>
+    ${S.off ? `<div class="mban off">${ic('alert', 18)}Hors parcours · le parcours est à <span data-b="offd"></span></div>` : S.arrived ? `<div class="mban arr">${ic('flag', 18)}Arrivée · parcours terminé${S.pacerFinal != null ? ` avec ${fTime(Math.abs(S.pacerFinal))} ${S.pacerFinal >= 0 ? "d'avance" : 'de retard'}` : ''}</div>` : plain ? `<div class="mban plainnote">${ic('map', 16)}${S.mapStyle ? 'Fond de carte désactivé : aucune demande au fournisseur.' : 'Pas de fond de carte configuré sur le serveur.'}</div>` : ''}
+    ${r ? `<div class="mchip">${ic('route', 16)}Reste <b data-b="remain"></b></div>` : ''}
+    ${plain ? '' : '<span class="attr">© OpenStreetMap</span>'}
+  </div>`;
+}
+function drawMap() {
+  const el = $('#mapview'), svg = $('#mapsvg'); if (!el || !svg) return;
+  const W = el.clientWidth, H = el.clientHeight; if (!W) return;
+  const r = S.att.r && route(S.att.r), pos = posNow(), plain = !S.basemap || !S.mapStyle;
+  let cx = pos.x, cy = pos.y, sc = .2 * S.zoom, rot = S.north ? 0 : -Math.PI / 2 - pos.th, oy = H * .62;
+  if (S.whole && r) { const xs = r.pts.map(p => p[0]), ys = r.pts.map(p => p[1]); cx = (Math.min(...xs) + Math.max(...xs)) / 2; cy = (Math.min(...ys) + Math.max(...ys)) / 2; sc = Math.min((W - 60) / (Math.max(...xs) - Math.min(...xs)), (H - 170) / (Math.max(...ys) - Math.min(...ys))); rot = 0; oy = H / 2 + 20; }
+  const ox = W / 2 + (S.free?.dx || 0); oy += (S.free?.dy || 0);
+  const c = Math.cos(rot), s = Math.sin(rot);
+  const P = (x, y) => { const dx = (x - cx) * sc, dy = (y - cy) * sc; return [ox + dx * c - dy * s, oy + dx * s + dy * c]; };
+  const path = pts => pts.map((p, i) => (i ? 'L' : 'M') + P(p[0], p[1]).map(v => v.toFixed(1)).join(' ')).join('');
+  let h = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`;
+  if (!plain) {
+    h += `<path d="${path(BASE.water)}" fill="none" stroke="var(--map-water)" stroke-width="${Math.max(10, 90 * sc)}" stroke-linecap="round"/>`;
+    for (const [x, y, rx, ry] of BASE.parks) h += `<path d="${path(Array.from({ length: 25 }, (_, i) => [x + rx * Math.cos(i / 24 * 6.283), y + ry * Math.sin(i / 24 * 6.283)]))}Z" fill="var(--map-park)"/>`;
+    for (const [a, b, major] of BASE.roads) h += `<path d="${path([a, b])}" stroke="var(--map-road)" stroke-width="${major ? 7 : 3.5}"/>`;
+    for (const [x, y, t] of BASE.labels) { const [px, py] = P(x, y); h += `<text class="maplbl" x="${px.toFixed(0)}" y="${py.toFixed(0)}" text-anchor="middle">${t}</text>`; }
+  }
+  if (r) {
+    const i = r.cum.findIndex(d => d > S.rp), k = i < 0 ? r.pts.length : i, done = r.pts.slice(0, k).concat([[at(r, S.rp).x, at(r, S.rp).y]]), ahead = [[at(r, S.rp).x, at(r, S.rp).y]].concat(r.pts.slice(k));
+    h += `<path d="${path(ahead)}" fill="none" stroke="var(--surface)" stroke-width="11" stroke-linejoin="round" stroke-linecap="round"/><path d="${path(ahead)}" fill="none" stroke="var(--route)" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    h += `<path d="${path(done)}" fill="none" stroke="var(--route)" stroke-opacity=".32" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    for (let d = Math.ceil((S.rp + 200) / 600) * 600; d < r.len - 150; d += 600) { const p = at(r, d), [px, py] = P(p.x, p.y), a = (Math.atan2(p.hy, p.hx) + rot) * 180 / Math.PI; h += `<path d="M-3.5 -4L1.5 0L-3.5 4" transform="translate(${px.toFixed(1)} ${py.toFixed(1)}) rotate(${a.toFixed(0)})" fill="none" stroke="var(--surface)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`; }
+    const [ex, ey] = P(r.pts.at(-1)[0], r.pts.at(-1)[1]), [sx, sy] = P(r.pts[0][0], r.pts[0][1]);
+    h += `<rect x="${(ex - 8).toFixed(1)}" y="${(ey - 8).toFixed(1)}" width="16" height="16" rx="4" fill="var(--ink)" stroke="var(--surface)" stroke-width="3"/><circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="7" fill="var(--i-mint)" stroke="var(--surface)" stroke-width="3"/>`;
+    if (S.offDist > 2) { const q = at(r, S.rp), [qx, qy] = P(q.x, q.y), [px, py] = P(pos.x, pos.y); h += `<path d="M${qx.toFixed(1)} ${qy.toFixed(1)}L${px.toFixed(1)} ${py.toFixed(1)}" stroke="var(--i-rose)" stroke-width="3" stroke-dasharray="5 5"/>`; }
+  }
+  if (S.track.length > 1) h += `<path d="${path(S.track.concat([[pos.x, pos.y]]))}" fill="none" stroke="var(--trace)" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const [px, py] = P(pos.x, pos.y), ha = (pos.th + rot) * 180 / Math.PI + 90;
+  h += `<path d="M0 -24L9 -7H-9Z" transform="translate(${px.toFixed(1)} ${py.toFixed(1)}) rotate(${ha.toFixed(0)})" fill="var(--trace)" opacity=".35"/><circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="9" fill="var(--trace)" stroke="var(--surface)" stroke-width="3.5"/>`;
+  svg.innerHTML = h + '</svg>';
+}
+function drawMini(svg) {
+  const r = S.att.r && route(S.att.r), pos = posNow(), base = r ? r.pts : S.track.length > 1 ? S.track.concat([[pos.x, pos.y]]) : null;
+  if (!base) { svg.innerHTML = `<text x="50" y="54" text-anchor="middle" style="font:600 9px var(--font-body);fill:var(--ink-2)">en attente</text>`; return; }
+  const { P, s, d } = thumbPath(base.filter((_, i) => i % 3 === 0 || i === base.length - 1));
+  // Same basemap as the map screen, under the same setting; plain when it is off or not configured.
+  const basemap = S.basemap && S.mapStyle;
+  svg.closest('.minimap')?.classList.toggle('withmap', basemap);
+  let h = '';
+  if (basemap) {
+    const line = pts => pts.map((p, i) => (i ? 'L' : 'M') + P(p).map(v => v.toFixed(1)).join(' ')).join('');
+    h += `<path d="${line(BASE.water)}" fill="none" stroke="var(--map-water)" stroke-width="${Math.max(3, 90 * s).toFixed(1)}" stroke-linecap="round"/>`;
+    for (const [x, y, rx, ry] of BASE.parks) h += `<path d="${line(Array.from({ length: 25 }, (_, i) => [x + rx * Math.cos(i / 24 * 6.283), y + ry * Math.sin(i / 24 * 6.283)]))}Z" fill="var(--map-park)"/>`;
+    for (const [a, b, major] of BASE.roads) h += `<path d="${line([a, b])}" stroke="var(--map-road)" stroke-width="${major ? 1.1 : 0.55}"/>`;
+  }
+  h += r ? `<path d="${d}" fill="none" stroke="var(--route)" stroke-opacity=".45" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>` : '';
+  if (S.track.length > 1) h += `<path d="${S.track.concat([[pos.x, pos.y]]).filter((_, i, a) => i % 3 === 0 || i === a.length - 1).map((p, i) => (i ? 'L' : 'M') + P(p).map(v => v.toFixed(1)).join(' ')).join('')}" fill="none" stroke="var(--trace)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const [x, y] = P([pos.x, pos.y]); h += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="var(--trace)" stroke="var(--surface)" stroke-width="2"/>`;
+  svg.innerHTML = h;
+}
+
+function vSummary() {
+  const d = S.draft, hr = S.hrN ? Math.round(S.hrSum / S.hrN) : null, short = S.mov < 10 || S.dist < 20, r = S.att.r && route(S.att.r);
+  let steps = '';
+  if (S.att.w) {
+    const cur = !S.wdone ? [{ s: S.steps[S.si], t: S.mov - S.sT0, d: S.dist - S.sD0, met: null, cut: true }] : [];
+    const rows = S.stepLog.concat(cur).map(e => `<div class="srow"><span class="d ${e.met == null ? 'none' : e.met ? 'met' : 'miss'}"></span><span>${KIND[e.s.kind].l}${e.s.rep ? ` ${e.s.rep}/${e.s.of}` : ''}${e.cut ? ' · interrompue' : ''}<small>${e.s.target ? tgtText(e.s.target) : lenText(e.s)}</small></span><b>${fTime(e.t)}</b><b>${e.s.kind === 'effort' && e.d > 50 ? fPace(e.t / (e.d / 1000)) + ' /km' : fDist(e.d)}</b></div>`);
+    const left = S.steps.slice(S.si + (S.wdone ? 0 : 1)).map(s => `<div class="srow skip"><span class="d none"></span><span>${KIND[s.kind].l}${s.rep ? ` ${s.rep}/${s.of}` : ''}<small>non courue</small></span><b></b><b></b></div>`);
+    steps = `<div class="pcard"><div class="sech"><h3>${wk(S.att.w).name}</h3><span class="muted" style="font-size:13px">${S.stepLog.length} étape${S.stepLog.length > 1 ? 's' : ''} sur ${S.steps.length}</span></div>${rows.join('')}${left.join('')}
+      <div class="legend"><span><i class="d met" style="display:inline-block;width:10px;height:10px;border-radius:50%"></i>cible tenue</span><span><i class="d miss" style="display:inline-block;width:10px;height:10px;border-radius:50%"></i>cible manquée</span></div></div>`;
+  }
+  const g = gapNow();
+  const pacer = S.plan ? `<div class="pcard" style="background:${g == null ? 'var(--surface)' : g >= 0 ? 'var(--p-mint)' : 'var(--p-peach)'};box-shadow:none"><span class="eyebrow">Allure cible</span>
+    <p style="font-weight:600;margin-top:4px">${r ? `Objectif ${fTime(S.routeTarget)} sur ${r.name}` : `Objectif ${fPace(S.pacerTarget)} /km`}</p>
+    <p class="num" style="font-size:30px;font-weight:600">${gapText(g)} <span style="font:600 16px var(--font-body)">${gapWord(g)}${S.pacerFinal != null ? " à l'arrivée" : ' à l’arrêt'}</span></p></div>` : '';
+  const routeCard = r ? `<div class="pcard row">${routeThumb(r)}<span class="grow"><b>${r.name}</b><small class="muted" style="display:block;font-size:13px">${S.arrived ? 'Suivi jusqu’à l’arrivée' : `Arrêté à ${fKm(S.rp, 1)} km sur ${fKm(r.len, 1)} km`}</small></span></div>` : '';
+  return `<div class="scroll">
+    <div><span class="eyebrow">Course arrêtée · pas encore enregistrée</span><h1>${fKm(S.dist)} km</h1></div>
+    ${short ? `<div class="banner" style="margin:0">${ic('alert', 18)}Sortie très courte : elle sera sans doute à supprimer.</div>` : ''}
+    <div class="grid2">${mini('Temps', fTime(S.mov), '', 'mint')}${mini('Allure moy.', fPace(S.dist > 20 ? S.mov / (S.dist / 1000) : null), '/km', 'lav')}${mini('Dénivelé +', Math.round(S.gain), 'm', 'sky')}${mini('FC moy.', hr ?? '—', hr ? 'bpm' : '', 'rose')}</div>
+    ${pacer}${steps}${routeCard}
+    <div class="pcard" style="display:flex;flex-direction:column;gap:12px">
+      <label class="field">Titre<input id="d-title" placeholder="${S.att.w ? wk(S.att.w).name : 'Sortie du soir'}" value="${d.title}"></label>
+      <div class="field">Ressenti de l'effort ${d.rpe ? `· ${d.rpe}/10` : ''}<div class="rpe">${Array.from({ length: 10 }, (_, i) => `<button data-act="rpe" data-v="${i + 1}" aria-pressed="${d.rpe === i + 1}">${i + 1}</button>`).join('')}</div></div>
+      <label class="field">Note<textarea id="d-note" placeholder="Sensations, météo, parcours…">${d.note}</textarea></label>
+    </div>
+    ${S.att.w ? '' : `<div class="pcard"><h3 style="margin-bottom:8px">Tours</h3>${S.laps.map((l, i) => `<div class="laprow"><span>Tour ${i + 1} · ${fKm(l[0])} km</span><b>${fTime(l[1])}</b><b>${fPace(l[1] / (l[0] / 1000))} /km</b></div>`).join('')}</div>`}
+    <button class="btn primary block" data-act="save">${ic('check', 20)}Enregistrer</button>
+    <button class="btn block" data-act="resume-run">${ic('play', 18)}Reprendre la course</button>
+    <p class="muted" style="font-size:13px;text-align:center;margin-top:-6px">Arrêtée par erreur ? Le temps passé ici comptera comme une pause.</p>
+    <button class="btn danger block" data-act="ask-discard">${ic('trash', 18)}Supprimer cette sortie</button>
+  </div>`;
+}
+function vPlan() {
+  if (S.planEmpty) return `<div class="scroll"><h1>Plan</h1><div class="emptybox"><span class="big">${ic('cal', 30)}</span><h2>Rien sur le téléphone</h2>
+    <p>Les séances et les parcours se préparent dans l'application web, rubrique Planifier : marque-les « sur le téléphone » et ils arrivent ici quand le téléphone se synchronise à la maison.</p>
+    <button class="btn" data-act="sync">${ic('refresh', 18)}Synchroniser maintenant</button><button class="btn primary" data-act="tab" data-v="run">${ic('play', 18)}Courir sans plan</button></div></div>`;
+  return `<div class="scroll">
+    <div class="row"><h1 class="grow">Plan</h1><button class="iconbtn" data-act="sync" aria-label="Synchroniser maintenant">${ic('refresh', 20)}</button></div>
+    <p class="muted" style="font-size:13px;margin-top:-8px">Reçu de la maison · dernière synchronisation hier à 21:14. Utilisable sans réseau.</p>
+    <div class="sech"><h3>Séances</h3><span class="muted" style="font-size:13px">${WORKOUTS.length}</span></div>
+    ${WORKOUTS.map(w => `<button class="item" data-act="item" data-v="${w.id}"><span class="dot" style="width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:var(--p-lav);color:var(--i-lav);flex:none">${ic('repeat', 24)}</span><span class="grow"><b>${w.name}</b><small>${w.total} · ${unfold(w).length} étapes</small>${outline(w, 22)}</span>${ic('chevr', 18)}</button>`).join('')}
+    <div class="sech"><h3>Parcours</h3><span class="muted" style="font-size:13px">${ROUTES.length}</span></div>
+    ${ROUTES.map(r => `<button class="item" data-act="item" data-v="${r.id}">${routeThumb(r)}<span class="grow"><b>${r.name}</b><small class="num">${fKm(r.len, 1)} km${r.ele ? ` · ${r.gain} m D+` : ' · sans altitude'} · boucle</small></span>${ic('chevr', 18)}</button>`).join('')}
+    <p class="muted" style="font-size:13px">On ne les modifie pas ici : les changements faits sur le web arrivent à la prochaine synchronisation.</p>
+  </div>`;
+}
+function vHist() {
+  const set = S.hist.filter(r => r[S.period]), km = set.reduce((a, r) => a + r.dist, 0), tm = set.reduce((a, r) => a + r.mov, 0);
+  return `<div class="scroll">
+    <div class="row"><h1 class="grow">Historique</h1><button class="iconbtn" data-act="sync" aria-label="Synchroniser maintenant">${ic('refresh', 20)}</button></div>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:12px">
+      <div class="seg" role="group" aria-label="Période" style="align-self:flex-start"><button data-act="period" data-v="week" aria-pressed="${S.period === 'week'}">Cette semaine</button><button data-act="period" data-v="month" aria-pressed="${S.period === 'month'}">Ce mois</button></div>
+      <div class="totals">${mini('Sorties', set.length, '', 'butter')}${mini('Distance', (km / 1000).toFixed(1).replace('.', ','), 'km', 'sky')}${mini('Temps', fTime(tm), '', 'mint')}</div>
+    </div>
+    ${S.hist.map(r => `<button class="item" data-act="open" data-v="${r.id}">${traceSvg(r.seed, 'thumb', 5)}<span class="grow"><b>${r.title || 'Sortie du soir'}</b><small>${r.date}</small><small class="num">${fKm(r.dist)} km · ${fTime(r.mov)} · ${fPace(r.mov / (r.dist / 1000))} /km</small><span style="display:block;margin-top:5px">${syncTag(r)}</span></span>${ic('chevr', 18)}</button>`).join('')}
+  </div>`;
+}
+function vRun() {
+  const r = S.hist.find(x => x.id === S.openRun);
+  return `<div class="scroll">
+    <div class="row"><button class="iconbtn" data-act="back" aria-label="Retour">${ic('back', 20)}</button><span class="grow"></span>${syncTag(r)}<button class="iconbtn" data-act="edit" aria-label="Modifier le titre, le ressenti et la note">${ic('edit', 19)}</button></div>
+    <div><span class="eyebrow">${r.date}</span><h1>${r.title || 'Sortie du soir'}</h1></div>
+    ${traceSvg(r.seed, 'trace', 2.2)}
+    <div class="grid2">${mini('Distance', fKm(r.dist), 'km', 'sky')}${mini('Temps', fTime(r.mov), '', 'mint')}${mini('Allure moy.', fPace(r.mov / (r.dist / 1000)), '/km', 'lav')}${mini('FC moy.', r.hr ?? '—', r.hr ? 'bpm' : '', 'rose')}</div>
+    ${r.pacer ? `<div class="pcard"><span class="eyebrow">Allure cible</span><p style="font-weight:600">${r.pacer}</p></div>` : ''}
+    <p class="muted" style="font-size:13px">Sortie enregistrée : le titre, le ressenti et la note restent modifiables ; elle ne peut plus être reprise.</p>
+    <button class="btn danger block" data-act="ask-delete">${ic('trash', 18)}Supprimer du téléphone</button>
+  </div>`;
+}
+const sw = (act, on, t, s, dis) => `<button class="switch" role="switch" data-act="${act}" aria-checked="${on}" ${dis ? 'disabled' : ''}><span>${t}${s ? `<small>${s}</small>` : ''}</span><i></i></button>`;
+function vSet() {
+  const head = `<h1>Réglages</h1><div class="seg" role="group" aria-label="Rubrique" style="align-self:flex-start"><button data-act="settab" data-v="general" aria-pressed="${S.setTab === 'general'}">Général</button><button data-act="settab" data-v="coach" aria-pressed="${S.setTab === 'coach'}">Coaching</button></div>`;
+  if (S.setTab === 'coach') return `<div class="scroll">${head}${vCoach()}</div>`;
+  const slots = ['Grand champ du haut', 'Milieu gauche', 'Milieu droite', 'Champ du bas'];
+  return `<div class="scroll">${head}
+    <div class="pcard" style="display:flex;flex-direction:column;gap:12px"><div class="row"><h3 class="grow">Serveur à la maison</h3><span class="tag ${S.home ? 'mint' : 'plain'}">${S.home ? 'Connecté' : 'Injoignable'}</span></div>
+      <label class="field">Adresse<input value="http://192.168.1.20:8080" inputmode="url"></label></div>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:10px" id="fieldscard"><h3>Écran principal</h3>
+      ${slots.map((s, i) => `<label class="field">${s}<select data-slot="${i}">${Object.entries(FIELDS).filter(([, f]) => !f.wideOnly || i === 3).map(([k, f]) => `<option value="${k}" ${S.fields[i] === k ? 'selected' : ''}>${f.l}</option>`).join('')}</select></label>`).join('')}
+      <p class="muted" style="font-size:13px">« Temps » est le temps en mouvement, pauses exclues. Avec une allure cible, l'avance ou le retard s'ajoute en haut de l'écran sans rien régler.</p></div>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:8px"><h3>Pendant la course</h3>${sw('autopause', S.autopause, 'Pause automatique', "Met en pause à l'arrêt, sauf pendant un effort court")}${sw('keepon', S.keepOn, "Garder l'écran allumé", '')}</div>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:10px"><h3>Apparence</h3><div class="seg" role="group" aria-label="Apparence" style="align-self:flex-start">${[['light', 'Clair'], ['dark', 'Sombre'], ['system', 'Système']].map(([v, l]) => `<button data-act="theme" data-v="${v}" aria-pressed="${themeChoice === v}">${l}</button>`).join('')}</div></div>
+  </div>`;
+}
+function vCoach() {
+  const tests = [['step', "Changement d'étape", stepSpeech({ kind: 'effort', end: D(400), target: PT(300, 315), rep: 3, of: 6 })], ['target', 'Alerte de cible', 'Trop vite. Vise entre 5 minutes et 5 minutes 15.'], ['km', 'Annonce', '3 kilomètres. Temps 17 minutes 40. Dernier kilomètre en 5 minutes 52.'], ['off', 'Hors parcours', 'Hors parcours. Le parcours est à 60 mètres.']];
+  return `<div class="pcard" style="display:flex;flex-direction:column;gap:8px"><h3>Signaux pendant la course</h3>
+      ${sw('ch', S.ch.voice, 'Voix', 'Annonces parlées en français, par le moteur du téléphone').replace('data-act="ch"', 'data-act="ch" data-v="voice"')}
+      ${S.ch.voice && !S.voiceOk ? `<div class="note">${ic('alert', 18)}<span>Aucune voix française hors ligne sur ce téléphone. Installe-la dans Paramètres › Système › Langues › Synthèse vocale › Moteur Google › Installer les données vocales › Français. En attendant, le son et la vibration fonctionnent.</span></div>` : ''}
+      ${sw('ch', S.ch.sound, 'Sons', 'Un motif sonore par type de signal').replace('data-act="ch"', 'data-act="ch" data-v="sound"')}
+      ${sw('ch', S.ch.vib, 'Vibrations', 'Un motif par type, utile écran éteint').replace('data-act="ch"', 'data-act="ch" data-v="vib"')}
+      <p class="muted" style="font-size:13px">La musique baisse le temps d'une annonce puis reprend. Pendant un appel, seule la vibration est donnée.</p></div>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:10px"><h3>Essayer</h3><div class="chips">${tests.map(([k, l, t]) => `<button class="chip" data-act="test" data-v="${k}" data-t="${t}">${ic('play', 13)} ${l}</button>`).join('')}</div><p class="muted" style="font-size:13px">Avec les canaux choisis ci-dessus, sans démarrer de course.</p></div>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:10px"><h3>Annonce régulière</h3>
+      ${sw('ann', S.ann.on, 'Annoncer la distance', 'Distance, temps et allure de la dernière portion')}
+      <div class="seg" role="group" aria-label="Intervalle" style="align-self:flex-start">${[.5, 1, 2, 5].map(v => `<button data-act="every" data-v="${v}" aria-pressed="${S.ann.every === v}" ${S.ann.on ? '' : 'disabled'}>${String(v).replace('.', ',')} km</button>`).join('')}</div>
+      <label class="check"><input type="checkbox" data-chk="avg" ${S.ann.avg ? 'checked' : ''} ${S.ann.on ? '' : 'disabled'}>Ajouter l'allure moyenne</label>
+      <label class="check"><input type="checkbox" data-chk="hr" ${S.ann.hr ? 'checked' : ''} ${S.ann.on ? '' : 'disabled'}>Ajouter la fréquence cardiaque</label></div>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:8px"><h3>Alertes</h3>
+      ${sw('al', S.alerts.target, 'Hors de la cible d’une étape', 'Après 15 s hors cible, au plus toutes les 30 s').replace('data-act="al"', 'data-act="al" data-v="target"')}
+      ${sw('al', S.alerts.pacer, 'Avance ou retard sur l’objectif', `Au-delà de ${S.alerts.margin} s, au plus une fois par minute`).replace('data-act="al"', 'data-act="al" data-v="pacer"')}
+      ${S.alerts.pacer ? `<div class="seg" role="group" aria-label="Marge" style="align-self:flex-start">${[15, 30, 60].map(v => `<button data-act="margin" data-v="${v}" aria-pressed="${S.alerts.margin === v}">${v} s</button>`).join('')}</div>` : ''}
+      ${sw('al', S.alerts.off, 'Hors parcours', 'À plus de 40 m du parcours pendant 10 s').replace('data-act="al"', 'data-act="al" data-v="off"')}</div>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:8px"><h3>Montre</h3>
+      ${sw('wvib', S.wvib, 'Vibrations sur la montre', 'Étapes, alertes et hors parcours, même écran éteint')}
+      ${sw('sfw', S.sfw, 'Démarrer depuis la montre', S.sfw ? 'Activé : la montre propose de démarrer quand rien n’est préparé' : 'Le téléphone démarre une course libre à la demande de la montre, application fermée')}</div>
+    <div class="pcard" style="display:flex;flex-direction:column;gap:8px"><h3>Carte</h3>
+      ${sw('basemap', S.basemap && S.mapStyle, 'Fond de carte pendant la course', '', !S.mapStyle)}
+      <p class="muted" style="font-size:13px">${S.mapStyle ? 'Le fond vient du fournisseur de carte configuré sur le serveur de la maison : il voit la zone affichée, pas ta course. Désactivé, le parcours et la trace s’affichent sur un fond uni et aucune demande n’est faite.' : 'Le serveur n’a pas de fond de carte configuré : la carte s’affiche toujours sur un fond uni.'}</p></div>`;
+}
+function vSheet() {
+  const s = S.sheet; if (!s) return '';
+  const wrap = (label, body) => `<div class="sheetwrap" data-act="close"><div class="sheet" role="dialog" aria-modal="true" aria-label="${label}">${body}</div></div>`;
+  if (s === 'pick-w') return wrap('Choisir une séance', `<h2>Séance</h2>${S.planEmpty ? '<p class="muted">Aucune séance sur le téléphone. Prépare-les sur le web, rubrique Planifier.</p>' : WORKOUTS.map(w => `<button class="item" data-act="att-w" data-v="${w.id}"><span class="grow"><b>${w.name}</b><small>${w.total} · ${unfold(w).length} étapes</small>${outline(w, 22)}</span></button>`).join('')}<button class="btn block" data-act="close">Fermer</button>`);
+  if (s === 'pick-r') return wrap('Choisir un parcours', `<h2>Parcours</h2>${S.planEmpty ? '<p class="muted">Aucun parcours sur le téléphone.</p>' : ROUTES.map(r => `<button class="item" data-act="att-r" data-v="${r.id}">${routeThumb(r)}<span class="grow"><b>${r.name}</b><small class="num">${fKm(r.len, 1)} km${r.ele ? ` · ${r.gain} m D+` : ''}</small><small>${r.away ? `Départ à ${fDist(r.away)} d'ici` : 'Tu es au départ'}</small></span></button>`).join('')}<button class="btn block" data-act="close">Fermer</button>`);
+  if (s === 'preview') {
+    const r = route(S.att.r); rebuildPlan(); const n = Math.ceil(r.len / 1000), even = S.routeTarget / (r.len / 1000);
+    const rows = Array.from({ length: n }, (_, i) => { const a = i * 1000, b = Math.min(r.len, a + 1000), t = S.plan.T(b) - S.plan.T(a), p = t / ((b - a) / 1000); return `<tr><td>${b === r.len && b % 1000 ? fKm(b, 1) : i + 1}</td><td class="${p > even + 4 ? 'up' : p < even - 4 ? 'dn' : ''}">${fPace(p)} /km</td><td>${r.ele ? Math.round(r.ele(b) - r.ele(a)) + ' m' : '—'}</td><td>${fTime(S.plan.T(b))}</td></tr>`; }).join('');
+    return wrap('Détail par kilomètre', `<h2>Objectif ${fTime(S.routeTarget)}</h2><p class="muted">${r.name} · ${S.strategy === 'grade' && r.ele ? 'effort régulier : plus lent en montée, plus vite en descente' : 'allure constante'}</p>
+      ${eleSvg(r)}<table class="splits"><thead><tr><th>km</th><th>Allure visée</th><th>Dénivelé</th><th>Temps cumulé</th></tr></thead><tbody>${rows}</tbody></table><button class="btn primary block" data-act="close">OK</button>`);
+  }
+  if (s === 'grants') return wrap('Démarrer depuis la montre', `<h2>Démarrer depuis la montre</h2><p class="muted">Pour enregistrer une course lancée depuis la montre alors que l'application est fermée et l'écran éteint, Android demande deux autorisations :</p>
+    <div class="cstat"><span class="dot">${ic('pin', 18)}</span><span class="grow"><b>Position : « Toujours autoriser »</b><small>Utilisée seulement pendant une course.</small></span></div>
+    <div class="cstat"><span class="dot">${ic('refresh', 18)}</span><span class="grow"><b>Batterie : sans restriction</b><small>Sinon Android empêche le démarrage en arrière-plan.</small></span></div>
+    <p class="muted" style="font-size:13px">Sans elles, l'option reste désactivée et tout fonctionne comme avant.</p>
+    <button class="btn primary block" data-act="grant" data-v="yes">Autoriser</button><button class="btn block" data-act="grant" data-v="no">Refuser</button>`);
+  if (s === 'item') {
+    const w = wk(S.sheetArg), r = route(S.sheetArg);
+    if (w) return wrap(w.name, `<h2>${w.name}</h2><p class="muted">${w.total} · sur le téléphone depuis ${w.since}</p>${outline(w, 34)}
+      <div class="steplist">${w.items.map(it => it.repeat ? `<div class="rep"><span>${it.repeat} ×</span>${it.steps.map(stepLine).join('')}</div>` : stepLine(it)).join('')}</div>
+      <button class="btn primary block" data-act="use" data-v="${w.id}">${ic('play', 18)}Préparer une course avec</button><button class="btn block" data-act="close">Fermer</button>`);
+    return wrap(r.name, `<h2>${r.name}</h2><p class="muted num">${fKm(r.len, 1)} km${r.ele ? ` · ${r.gain} m D+ · ${r.loss} m D−` : ' · sans altitude'} · boucle${r.since ? ` · sur le téléphone depuis ${r.since}` : ' · arrivé à la dernière synchronisation'}</p>
+      ${routeThumb(r, 'trace')}${eleSvg(r)}<button class="btn primary block" data-act="use" data-v="${r.id}">${ic('play', 18)}Préparer une course avec</button><button class="btn block" data-act="close">Fermer</button>`);
+  }
+  const r = S.hist.find(x => x.id === S.openRun);
+  if (s === 'edit') { const d = S.edit; return wrap('Modifier la sortie', `<h2>Modifier la sortie</h2><label class="field">Titre<input id="e-title" value="${d.title}"></label>
+    <div class="field">Ressenti ${d.rpe ? `· ${d.rpe}/10` : ''}<div class="rpe">${Array.from({ length: 10 }, (_, i) => `<button data-act="erpe" data-v="${i + 1}" aria-pressed="${d.rpe === i + 1}">${i + 1}</button>`).join('')}</div></div>
+    <label class="field">Note<textarea id="e-note">${d.note}</textarea></label><button class="btn primary block" data-act="edit-save">${ic('check', 20)}Enregistrer</button><button class="btn block" data-act="close">Annuler</button>`); }
+  const body = { discard: ['Supprimer cette sortie ?', 'Elle sera effacée du téléphone et ne sera jamais envoyée au serveur.', 'do-discard', 'Supprimer'], delete: ['Supprimer du téléphone ?', 'La sortie reste sur le serveur.', 'do-delete', 'Supprimer du téléphone'] }[s];
+  return wrap(body[0], `<h2>${body[0]}</h2><p class="muted">${body[1]}</p><button class="btn danger block" data-act="${body[2]}">${body[3]}</button><button class="btn block" data-act="close">Annuler</button>`);
+}
+const stepLine = s => `<div class="st"><i style="background:var(--k-${s.kind})"></i><span class="grow"><b>${KIND[s.kind].l}</b> · ${lenText(s)}</span><span class="muted" style="font-size:13px">${tgtText(s.target)}</span></div>`;
+function renderPhone() {
+  const inRun = S.tab === 'run' && S.phase !== 'ready';
+  const view = S.tab === 'run' ? (S.phase === 'ready' ? vReady() : S.phase === 'summary' ? vSummary() : vLive()) : S.tab === 'plan' ? vPlan() : S.tab === 'hist' ? (S.openRun ? vRun() : vHist()) : vSet();
+  const tabs = [['run', 'play', 'Courir'], ['plan', 'cal', 'Plan'], ['hist', 'list', 'Historique'], ['set', 'sliders', 'Réglages']];
+  const scrollEl = $('#phone .scroll'), keep = scrollEl ? scrollEl.scrollTop : 0, sameView = $('#phone')?.dataset.view === S.tab + S.setTab + (S.openRun || '');
+  $('#phone').innerHTML = `<div class="status"><span class="num" data-b="clock"></span><span class="row" style="gap:6px">${ic('pin', 13)}<span>82 %</span></span></div>
+    <div class="view">${view}</div>
+    ${inRun ? '' : `<nav class="tabs" aria-label="Navigation">${tabs.map(([k, i, l]) => `<button data-act="tab" data-v="${k}" ${S.tab === k ? 'aria-current="page"' : ''}>${ic(i, 22)}${l}</button>`).join('')}</nav>`}
+    ${vSheet()}`;
+  $('#phone').dataset.view = S.tab + S.setTab + (S.openRun || '');
+  if (sameView && $('#phone .scroll')) $('#phone .scroll').scrollTop = keep;
+}
+
+/* ---------- watch ---------- */
+function arcs() {
+  const seg = i => { const a0 = (140 + i * 54) * Math.PI / 180, a1 = (140 + i * 54 + 44) * Math.PI / 180, r = 46.5; return `<path data-z="${i + 1}" d="M${50 + r * Math.cos(a0)} ${50 + r * Math.sin(a0)}A${r} ${r} 0 0 1 ${50 + r * Math.cos(a1)} ${50 + r * Math.sin(a1)}"/>`; };
+  return `<svg class="wring" viewBox="0 0 100 100" aria-hidden="true">${[0, 1, 2, 3, 4].map(seg).join('')}</svg>`;
+}
+const wPages = () => [...(coachOn() ? ['coach'] : []), 'metrics', 'controls'];
+const wIcon = (n, color) => ic(n).replace('class="ic"', `class="ic wico" style="color:${color}"`);
+const KC = { warm: '#8FE0BB', effort: '#BDB2FF', rec: '#9CCBF7', cool: '#FFC39C' };
+function wCoach() {
+  let main = '';
+  const s = curStep();
+  if (S.att.w) main = S.wdone ? `<span class="k" style="color:#8FE0BB">SÉANCE TERMINÉE</span><span class="tg">Course libre jusqu'à l'arrêt</span>`
+    : `<span class="k" style="color:${KC[s.kind]}">${KIND[s.kind].l.toUpperCase()}${s.rep ? ` · ${s.rep}/${s.of}` : ''}</span><span class="big" style="color:${KC[s.kind]}" data-b="srem"></span><span class="tg">${s.end.t === 'lap' ? 'Tour pour passer' : 'Reste'} · ${tgtText(s.target)}</span>${s.target ? '<span class="vd" data-wv></span>' : ''}`;
+  else if (S.plan) main = `<span class="k" style="color:#9F9BB6">CIBLE <span data-b="tpace"></span> /km</span><span class="big" data-b="gap" data-wgap></span><span class="vd" data-b="gapw"></span>`;
+  const r = S.att.r && route(S.att.r);
+  const rl = r ? (S.off ? `<span class="wroute bad">HORS PARCOURS · <span data-b="offd"></span></span>` : S.arrived ? `<span class="wroute" style="color:#8FE0BB">ARRIVÉE</span>` : `<span class="wroute">RESTE <span data-b="remain"></span></span>`) : '';
+  if (!main && r) main = S.off ? `<span class="k" style="color:#F7AFC3">HORS PARCOURS</span><span class="big" style="color:#F7AFC3" data-b="offdm"></span><span class="tg">du parcours</span>` : `<span class="k" style="color:#9CCBF7">${r.name.toUpperCase()}</span><span class="big" style="color:#9CCBF7" data-b="remainkm"></span><span class="tg">km restants</span>`;
+  return `<div class="wv wcoach">${main}${main.includes('HORS PARCOURS') ? '' : rl}</div>`;
+}
+function wTile() {
+  if (active() && S.wopen) return `<div class="wv wtile"><span class="wtabsel">RUNNING</span><span class="tag">● ${S.phase === 'run' ? 'En course' : 'En pause'}</span><span class="tt" data-b="time"></span><span class="ts"><span style="color:#9CCBF7"><span data-b="dist"></span><small>km</small></span><span class="hr" data-b="hr"></span></span><span class="wlabel">il y a <span data-b="tileage"></span></span><button class="wpill" data-act="tile-open">Ouvrir</button></div>`;
+  if (active()) return `<div class="wv wtile"><span class="wtabsel">RUNNING</span>${wIcon('phone', '#A99BFF')}<h4>Course en cours sur le téléphone</h4><p>La montre ne l'a pas rejointe : pas de chiffres ici.</p><button class="wpill" data-act="tile-open">${ic('watch')}Rejoindre</button></div>`;
+  return `<div class="wv wtile"><span class="wtabsel">RUNNING</span><p>Aucune course</p><button class="wbtn main" data-act="tile-start" aria-label="Démarrer une course">${ic('play')}</button><span class="wlabel">Démarrer</span></div>`;
+}
+function renderWatch() {
+  const w = $('#watch'); let h;
+  w.classList.toggle('ambient', S.ambient && S.wopen && active() && S.wview === 'app');
+  if (S.wview === 'tile') h = wTile();
+  else if (!S.wopen) h = `<div class="wv wface"><span class="d">mar. 17 nov.</span><span class="t" data-b="clock"></span><button class="wapp" data-act="wopen" aria-label="Ouvrir l'app Running"><i>${ic('logo')}</i><span class="wlabel">Ouvrir Running</span></button></div>`;
+  else if (!S.link) h = `<div class="wv">${wIcon('phone', '#F7AFC3')}<h4>Téléphone injoignable</h4><p>${active() ? 'La course continue sur le téléphone. Pas de vibration de coaching en attendant.' : 'Rapproche-toi du téléphone.'}</p></div>`;
+  else if (S.phase === 'summary') h = S.stopFor < 300
+    ? `<div class="wv">${wIcon('stop', '#EFD877')}<h4>Course arrêtée</h4><p>Pas encore enregistrée sur le téléphone. La FC reste mesurée <span class="num" data-b="wleft"></span> au cas où tu reprends.</p><p class="num" style="color:#F7AFC3">${ic('heart', 14)} <span data-b="hr"></span></p></div>`
+    : `<div class="wv">${wIcon('stop', '#9F9BB6')}<h4>Course arrêtée</h4><p>Mesure de la FC arrêtée. Enregistre ou reprends sur le téléphone.</p></div>`;
+  else if (S.ended) h = `<div class="wv">${wIcon('check', '#8FE0BB')}<h4>Course enregistrée</h4><p>Capteurs libérés.</p></div>`;
+  else if (S.wstart === 'asking') h = `<div class="wv"><span class="wspin" aria-hidden="true"></span><h4>Démarrage…</h4><p>Le téléphone lance la course.</p></div>`;
+  else if (S.wstart === 'refused') h = `<div class="wv">${wIcon('alert', '#F7AFC3')}<h4>Course non démarrée</h4><p>Le téléphone n'a pas pu démarrer. Démarre la course sur le téléphone.</p><button class="wpill" data-act="w-ok">OK</button></div>`;
+  else if (!session()) h = S.sfw
+    ? `<div class="wv" style="gap:2.5cqw"><h4>Aucune course préparée</h4><button class="wbtn main" data-act="w-startnew" aria-label="Démarrer une course">${ic('play')}</button><span class="wlabel">Démarrer une course libre</span></div>`
+    : `<div class="wv">${wIcon('phone', '#A99BFF')}<h4>Prépare la course</h4><p>sur le téléphone</p><button class="wpill" data-act="w-openphone">${ic('phone')}Ouvrir sur le téléphone</button></div>`;
+  else if (S.phase === 'ready') h = `<div class="wv" style="gap:3cqw"><p style="color:#F7AFC3" class="num">${ic('heart', 14)} <span data-b="hr"></span> bpm</p><button class="wbtn main" data-act="w-start" aria-label="Démarrer">${ic('play')}</button><span class="wlabel">${S.att.w ? wk(S.att.w).name : S.att.r ? route(S.att.r).name : 'Prêt'} · démarrer</span></div>`;
+  else {
+    const P = wPages(); if (!P.includes(S.wpage)) S.wpage = 'metrics';
+    const paused = S.phase !== 'run', pg = S.ambient ? 'metrics' : S.wpage;
+    h = pg === 'metrics'
+      ? `${arcs()}<div class="wm"><span class="st">${S.phase === 'pause' ? 'PAUSE' : S.phase === 'auto' ? 'PAUSE AUTO' : !S.fix ? 'RECHERCHE GPS' : S.off ? 'HORS PARCOURS' : ''}</span><span class="top" data-b="time"></span><span class="time"><span data-b="pace"></span></span><span class="sub"><span class="dist"><span data-b="dist"></span><small>km</small></span><span class="hr" data-b="hr"></span></span></div>`
+      : pg === 'coach' ? wCoach()
+      : `<div class="wctl"><div><button class="wbtn" data-act="w-lap" aria-label="${S.att.w && !S.wdone ? 'Étape suivante' : 'Tour'}" ${paused ? 'disabled style="opacity:.35"' : ''}>${ic(S.att.w && !S.wdone ? 'chevr' : 'flag')}</button><span class="wlabel">${S.att.w && !S.wdone ? 'Étape' : 'Tour'}</span></div>
+          <div><button class="wbtn main" data-act="${paused ? 'w-resume' : 'w-pause'}" aria-label="${paused ? 'Reprendre' : 'Pause'}">${ic(paused ? 'play' : 'pause')}</button><span class="wlabel">${paused ? 'Reprendre' : 'Pause'}</span></div>
+          <div><button class="wbtn stop" data-hold="wstop" aria-label="Terminer (maintenir)">${ring}${ic('stop')}</button><span class="wlabel">Maintenir</span></div></div>`;
+    if (!S.ambient) h += `<div class="wdots">${P.map(p => `<button data-act="wpage" data-v="${p}" aria-label="${{ coach: 'Coaching', metrics: 'Métriques', controls: 'Contrôles' }[p]}" aria-pressed="${S.wpage === p}"><i></i></button>`).join('')}</div>`;
+  }
+  w.innerHTML = h;
+}
+function wbuzz(kind) { S.buzz = { html: `<div class="wbuzz"><span>〰 ${CUEK[kind].l}</span></div>`, at: Date.now() }; showOverlays(); }
+function wmsg(msg, bad) { $('#watch .wmsg')?.remove(); $('#watch').insertAdjacentHTML('beforeend', `<div class="wmsg ${bad ? 'bad' : ''}">${msg}</div>`); }
+function toast(msg) { $('#phone .toast')?.remove(); $('#phone').insertAdjacentHTML('beforeend', `<div class="toast">${msg}</div>`); }
+
+/* ---------- live values ---------- */
+function update() {
+  const l = lapNow(), z = zoneOf(hrNow()), s = curStep(), g = gapNow(), r = S.att.r && route(S.att.r);
+  const vals = { laptime: fTime(l.m), lapdist: fKm(l.d), zone: z ? 'Z' + z : '', gap: gapText(g), gapw: gapWord(g), approx: approx() ? 'approximatif, hors parcours' : '', remain: r ? fDist(Math.max(0, r.len - S.rp)) : '', remainkm: r ? fKm(Math.max(0, r.len - S.rp), 1) : '', offd: `${Math.round(S.offDist / 5) * 5} m`, offdm: `${Math.round(S.offDist / 5) * 5} m`, tileage: `${(S.t % 30) + 5} s`, wleft: fTime(Math.max(0, 300 - S.stopFor)) };
+  for (const k in FIELDS) vals[k] = FIELDS[k].v();
+  if (s) { const sm = S.mov - S.sT0, sd = S.dist - S.sD0; vals.srem = s.end.t === 'lap' ? fTime(sm) : s.end.t === 'time' ? fTime(Math.max(0, s.end.v - sm)) : fDist(Math.max(0, s.end.v - sd));
+    const pct = s.end.t === 'time' ? sm / s.end.v : s.end.t === 'dist' ? sd / s.end.v : 0, rem = remSecs(s, sm, sd), long = s.end.t !== 'lap' && (s.end.t === 'time' ? s.end.v >= 30 : s.end.v >= 200);
+    for (const e of $$('[data-prog]')) e.style.width = Math.min(100, pct * 100).toFixed(1) + '%';
+    for (const e of $$('[data-cd]')) { const on = long && rem != null && rem > 0 && rem <= 5.5 && S.phase === 'run'; e.classList.toggle('on', on); e.textContent = on ? Math.ceil(rem) : ''; }
+    const ts = S.tstate, hrT = s.target?.type === 'hr', word = ts === 'na' ? 'Sans FC' : ts === 'in' ? '✓ Dans la cible' : ts === 'fast' ? (hrT ? '▲ Au-dessus' : '▲ Trop vite') : (hrT ? '▼ En dessous' : '▼ Trop lent');
+    for (const e of $$('[data-verdict]')) { e.textContent = s.target ? word : ''; e.className = 'verdict ' + ts; }
+    for (const e of $$('[data-wv]')) { e.textContent = word.replace('✓ ', ''); e.style.color = { in: '#8FE0BB', fast: '#FFC39C', slow: '#EFD877', na: '#9F9BB6' }[ts]; }
+    for (const e of $$('[data-range]')) { let f = .5; if (s.target?.type === 'pace' && S.pace) { const lo = s.target.lo - 30, hi = s.target.hi + 30; f = (hi - S.pace) / (hi - lo); } else if (hrT && hrNow()) { f = (hrNow() - 100) / 90; } e.style.left = (Math.min(.98, Math.max(.02, f)) * 100).toFixed(1) + '%'; }
+    for (const e of $$('.range .ok')) if (hrT) { e.style.left = '45%'; e.style.right = '35%'; }
+  }
+  for (const el of $$('[data-b]')) { const v = String(vals[el.dataset.b] ?? ''); if (el.textContent !== v) el.textContent = v; }
+  for (const e of $$('[data-pacer]')) e.className = 'pacerbar ' + (g == null || Math.abs(g) < 1 ? 'none' : g > 0 ? 'ahead' : 'behind');
+  for (const e of $$('[data-wgap]')) e.style.color = g == null ? '#fff' : g >= 0 ? '#8FE0BB' : '#FFC39C';
+  for (const c of $$('[data-kmbars]')) { const h = kmBars(); if (c.innerHTML !== h) c.innerHTML = h; }
+  for (const m of $$('[data-mini]')) drawMini(m);
+  for (const t of $$('.tile[data-f="hr"]')) { if (z) t.dataset.zone = z; else delete t.dataset.zone; $$('.zbar i', t).forEach((b, i) => b.classList.toggle('on', i + 1 === z)); }
+  const zc = ['', '#A3ABC8', '#7DB7F0', '#6FD0A3', '#FFAE70', '#F58AA5'];
+  for (const p of $$('.wring path')) p.style.stroke = +p.dataset.z === z ? zc[z] : '';
+  for (const e of $$('#watch .hr')) e.style.color = z ? zc[z] : '#9F9BB6';
+  if (S.tab === 'run' && active() && pagesList()[S.page] === 'map') drawMap();
+}
+function render() { renderPhone(); renderWatch(); showOverlays(); syncPanel(); update(); }
+function syncPanel() {
+  const set = (id, on, dis) => { const e = $(id); e.setAttribute('aria-checked', on); e.disabled = !!dis; };
+  set('#sw-still', S.still, !['run', 'auto'].includes(S.phase)); set('#sw-leave', S.leaving, !(S.att.r && active() && !S.arrived));
+  set('#sw-call', S.call); set('#sw-home', S.home); set('#sw-link', !S.link); set('#sw-amb', S.ambient); set('#sw-refuse', S.refuse); set('#sw-voice', S.voiceOk); set('#sw-style', S.mapStyle);
+  $$('#speedseg button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.v === S.speed));
+  $$('#biasseg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S.bias));
+  $$('#themeseg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === themeChoice));
+  $$('#sizeseg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === wsize));
+  $$('#wviewseg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S.wview));
+}
+
+/* ---------- theme ---------- */
+let themeChoice = 'system';
+try { themeChoice = localStorage.getItem('proto-theme') || 'system'; } catch (e) {}
+function setTheme(v) { themeChoice = v; if (v === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = v; try { localStorage.setItem('proto-theme', v); } catch (e) {} }
+setTheme(themeChoice);
+let wsize = '396';
+
+/* ---------- actions ---------- */
+function keepDraft() { const t = $('#d-title'), n = $('#d-note'); if (t) S.draft.title = t.value; if (n) S.draft.note = n.value; }
+function keepEdit() { const t = $('#e-title'), n = $('#e-note'); if (t) S.edit.title = t.value; if (n) S.edit.note = n.value; }
+function stopRun() { S.preStop = { d0: S.lapD0, m0: S.lapM0 }; if (!S.att.w) lap(); S.phase = 'summary'; S.stopFor = 0; S.locked = false; S.still = false; S.leaving = false; }
+function startFree() { reset(); S.tab = 'run'; S.gps = 0; beginRun(); }
+function scenario(att, cond, opts = {}) {
+  reset(); S.att = { w: null, r: null, pacer: false, ...att }; S.tab = 'run'; S.wopen = opts.wopen ?? true; S.link = true; S.wview = 'app'; S.bias = opts.bias || 'in'; S.basemap = opts.basemap ?? true;
+  S.silent = true; beginRun(); runUntil(cond); S.silent = false; S.queue = [];
+  if (opts.after) opts.after();
+}
+const A = {
+  theme: v => setTheme(v), speed: v => { S.speed = +v; }, bias: v => { S.bias = v; },
+  still: () => { S.still = !S.still; S.stillFor = 0; S.moveFor = 0; }, leave: () => { S.leaving = !S.leaving; },
+  call: () => { S.call = !S.call; }, home: () => { S.home = !S.home; }, link: () => { S.link = !S.link; }, ambient: () => { S.ambient = !S.ambient; },
+  refuse: () => { S.refuse = !S.refuse; }, voiceok: () => { S.voiceOk = !S.voiceOk; }, mapstyle: () => { S.mapStyle = !S.mapStyle; },
+  wsize: v => { wsize = v; $('#watchframe').style.setProperty('--w', v + 'px'); }, wview: v => { S.wview = v; },
+  clearlog: () => { S.cues = []; renderLog(); },
+  tab: v => { S.tab = v; S.openRun = null; S.ended = false; if (v === 'run' && S.phase === 'ready') S.gps = 0; },
+  settab: v => { S.setTab = v; },
+  start: () => { beginRun(); },
+  pause: () => { S.phase = 'pause'; cue('pause', 'Pause.'); },
+  resume: () => { S.phase = 'run'; S.still = false; S.stillFor = 0; cue('resume', 'Reprise.'); },
+  'resume-run': () => { keepDraft(); if (!S.att.w) { S.laps.pop(); S.lapD0 = S.preStop.d0; S.lapM0 = S.preStop.m0; } S.phase = 'run'; S.stopFor = 0; cue('resume', 'Reprise de la course.'); setTimeout(() => toast('Course reprise · l’arrêt compte comme une pause')); },
+  lap: () => { if (S.att.w && !S.wdone) { nextStep(); flush(); } else { lap(); setTimeout(() => toast(`Tour ${S.laps.length} · ${fTime(S.laps.at(-1)[1])}`)); } },
+  lock: () => { S.locked = true; }, shield: () => { toast('Écran verrouillé'); return false; },
+  page: v => { S.page = +v; }, tomap: () => { S.page = pagesList().indexOf('map'); },
+  north: () => { S.north = !S.north; }, zoom: v => { S.zoom = Math.max(.35, Math.min(5, S.zoom * +v)); S.whole = false; }, whole: () => { S.whole = !S.whole; S.free = null; }, recenter: () => { S.free = null; S.whole = false; },
+  pick: v => { S.sheet = 'pick-' + v; },
+  'att-w': v => { S.att.w = v; S.att.pacer = false; S.sheet = null; }, 'att-r': v => { S.att.r = v; S.sheet = null; if (!route(v).ele) S.strategy = 'even'; else S.strategy = 'grade'; },
+  'att-clear': v => { S.att[v] = null; }, 'att-pacer': () => { S.att.pacer = !S.att.pacer; },
+  rt: v => { S.routeTarget = Math.max(600, S.routeTarget + +v); }, pt: v => { S.pacerTarget = Math.max(180, Math.min(600, S.pacerTarget + +v)); }, strat: v => { S.strategy = v; },
+  preview: () => { S.sheet = 'preview'; },
+  'open-watch': () => { if (!S.link) { setTimeout(() => toast('Montre injoignable : ouvre Running sur la montre')); return; } S.wopen = true; S.wview = 'app'; setTimeout(() => toast('Running ouvert sur la montre')); },
+  rpe: v => { keepDraft(); S.draft.rpe = S.draft.rpe === +v ? 0 : +v; },
+  save: () => { keepDraft(); const g = gapNow(); S.hist.unshift({ id: Date.now(), title: S.draft.title || (S.att.w ? wk(S.att.w).name : ''), date: "aujourd'hui · 18:42", dist: S.dist, mov: S.mov, gain: Math.round(S.gain), hr: S.hrN ? Math.round(S.hrSum / S.hrN) : null, state: 'pending', syncT: 0, rpe: S.draft.rpe, note: S.draft.note, week: 1, month: 1, seed: 2, laps: S.laps.slice(), pacer: S.plan ? `${S.att.r ? 'Objectif ' + fTime(S.routeTarget) : fPace(S.pacerTarget) + ' /km'} · ${gapText(g)} ${gapWord(g)}` : null }); reset(); S.ended = true; S.tab = 'hist'; S.openRun = null; },
+  'ask-discard': () => { keepDraft(); S.sheet = 'discard'; }, 'do-discard': () => { S.sheet = null; reset(); S.ended = true; },
+  'ask-delete': () => { S.sheet = 'delete'; }, 'do-delete': () => { S.hist = S.hist.filter(r => r.id !== S.openRun); S.openRun = null; S.sheet = null; },
+  edit: () => { const r = S.hist.find(x => x.id === S.openRun); S.edit = { title: r.title, rpe: r.rpe || 0, note: r.note || '' }; S.sheet = 'edit'; },
+  erpe: v => { keepEdit(); S.edit.rpe = S.edit.rpe === +v ? 0 : +v; },
+  'edit-save': () => { keepEdit(); Object.assign(S.hist.find(x => x.id === S.openRun), S.edit); S.sheet = null; },
+  close: (v, e) => { if (e.target.closest('.sheet') && !e.target.closest('[data-act="close"].btn')) return false; S.sheet = null; },
+  open: v => { S.openRun = +v; }, back: () => { S.openRun = null; }, period: v => { S.period = v; },
+  sync: () => { setTimeout(() => toast(S.home ? (S.planEmpty ? 'Synchronisé · rien de prévu pour ce profil' : 'Synchronisé · 3 séances et 3 parcours à jour') : 'Serveur injoignable · le plan déjà reçu reste utilisable')); },
+  item: v => { S.sheet = 'item'; S.sheetArg = v; },
+  use: v => { if (wk(v)) { S.att.w = v; S.att.pacer = false; } else S.att.r = v; S.sheet = null; S.tab = 'run'; if (S.phase !== 'ready') reset(true); },
+  autopause: () => { S.autopause = !S.autopause; }, keepon: () => { S.keepOn = !S.keepOn; },
+  ch: v => { S.ch[v] = !S.ch[v]; }, ann: () => { S.ann.on = !S.ann.on; }, every: v => { S.ann.every = +v; }, al: v => { S.alerts[v] = !S.alerts[v]; }, margin: v => { S.alerts.margin = +v; },
+  wvib: () => { S.wvib = !S.wvib; }, basemap: () => { S.basemap = !S.basemap; },
+  sfw: () => { if (S.sfw) S.sfw = false; else S.sheet = 'grants'; },
+  grant: v => { S.sheet = null; if (v === 'yes') { S.sfw = true; setTimeout(() => toast('La montre peut démarrer une course')); } else setTimeout(() => toast('Option laissée désactivée')); },
+  test: (v, e) => { const el = e.target.closest('[data-t]'); cue(v, el.dataset.t, true); return false; },
+  wopen: () => { S.wopen = true; S.wpage = 'metrics'; }, wpage: v => { S.wpage = v; },
+  'w-start': () => wcmd(() => { beginRun(); S.tab = 'run'; }),
+  'w-pause': () => wcmd(() => { S.phase = 'pause'; cue('pause', 'Pause.'); }),
+  'w-resume': () => wcmd(() => { S.phase = 'run'; S.still = false; cue('resume', 'Reprise.'); }),
+  'w-lap': () => wcmd(() => A.lap(), () => S.att.w ? 'Étape suivante' : `Tour ${S.laps.length}`),
+  'w-startnew': () => { if (!S.link) { setTimeout(() => wmsg('Téléphone injoignable', true)); return false; } S.wstart = 'asking'; setTimeout(() => { if (S.wstart !== 'asking') return; if (S.refuse) S.wstart = 'refused'; else { startFree(); S.wopen = true; setTimeout(() => toast('Course démarrée depuis la montre')); } render(); }, 2600); },
+  'w-ok': () => { S.wstart = null; },
+  'w-openphone': () => { if (!S.link) { setTimeout(() => wmsg('Téléphone injoignable', true)); return false; } S.tab = 'run'; S.openRun = null; S.sheet = null; S.gps = 0; setTimeout(() => { toast('Ouvert depuis la montre'); wmsg('✓ Ouvert sur le téléphone'); }); },
+  'tile-open': () => { S.wview = 'app'; S.wopen = true; S.wpage = 'metrics'; },
+  'tile-start': () => { S.wview = 'app'; S.wopen = true; if (!session() && S.sfw) A['w-startnew'](); },
+  jump: v => {
+    S.sheet = null; S.openRun = null; S.wview = 'app'; S.wstart = null; S.bub = S.buzz = null;
+    const w1 = { w: 'w1' }, after = (fn) => ({ after: fn });
+    const map = () => { S.page = pagesList().indexOf('map'); };
+    const J = {
+      ready: () => { reset(); S.tab = 'run'; S.wopen = false; },
+      'ready-w': () => { reset(); S.tab = 'run'; S.att.w = 'w1'; S.wopen = true; },
+      'ready-r': () => { reset(); S.tab = 'run'; S.att = { w: null, r: 'r1', pacer: true }; S.strategy = 'grade'; S.wopen = true; },
+      plan: () => { if (active() || S.phase === 'summary') reset(); S.planEmpty = false; S.tab = 'plan'; },
+      'plan-empty': () => { if (active() || S.phase === 'summary') reset(); S.planEmpty = true; S.tab = 'plan'; },
+      step: () => scenario(w1, () => S.si === 5 && S.dist - S.sD0 >= 250),
+      fast: () => scenario(w1, () => S.si === 5 && S.dist - S.sD0 >= 30, { bias: 'fast', after: () => runUntil(() => S.outFor >= 16) }),
+      open: () => scenario({ w: 'w3' }, () => S.si === 2 && S.mov - S.sT0 >= 40),
+      countdown: () => { scenario(w1, () => S.si === 2 && S.mov - S.sT0 >= 84); runUntil(() => S.cdGiven); },
+      complete: () => scenario(w1, () => S.wdone && S.mov - S.sT0 >= 20),
+      pacer: () => scenario({ pacer: true }, () => S.mov >= 1060, { after: () => { S.page = 0; } }),
+      map: () => scenario({ r: 'r1', pacer: true }, () => S.rp >= 4300, { after: map }),
+      'map-plain': () => scenario({ r: 'r1', pacer: true }, () => S.rp >= 4300, { basemap: false, after: map }),
+      offroute: () => scenario({ r: 'r1', pacer: true }, () => S.rp >= 3200, { after: () => { S.leaving = true; runUntil(() => S.off); map(); } }),
+      arrival: () => scenario({ r: 'r2', pacer: true }, () => S.rp >= 8100 - 45, { after: () => { runUntil(() => S.arrived); runUntil(() => false, 8); map(); } }),
+      'sum-w': () => scenario(w1, () => S.si === 9 && S.mov - S.sT0 >= 30, { after: stopRun }),
+      'sum-p': () => scenario({ r: 'r2', pacer: true }, () => S.arrived && S.mov > 0, { after: () => { runUntil(() => false, 40); stopRun(); } }),
+      'coach-set': () => { if (active() || S.phase === 'summary') reset(); S.tab = 'set'; S.setTab = 'coach'; },
+      fields: () => { if (active() || S.phase === 'summary') reset(); S.tab = 'set'; S.setTab = 'general'; setTimeout(() => $('#fieldscard')?.scrollIntoView({ block: 'center' }), 30); },
+      'w-offer': () => { reset(); S.tab = 'hist'; S.sfw = true; S.wopen = true; },
+      'w-starting': () => { reset(); S.tab = 'hist'; S.sfw = true; S.wopen = true; S.wstart = 'asking'; setTimeout(() => { if (S.wstart === 'asking') { S.wstart = S.refuse ? 'refused' : null; if (!S.refuse) { startFree(); S.wopen = true; } render(); } }, 4000); },
+      'w-refused': () => { reset(); S.tab = 'hist'; S.sfw = true; S.wopen = true; S.wstart = 'refused'; },
+      'w-prepare': () => { reset(); S.tab = 'hist'; S.sfw = false; S.wopen = true; },
+      'w-step': () => { J.step(); S.wpage = 'coach'; },
+      'w-pacer': () => { J.pacer(); S.wpage = 'coach'; },
+      'w-off': () => { J.offroute(); S.wpage = 'coach'; },
+      'w-stopped': () => { J['sum-w'](); S.stopFor = 48; },
+      'tile-run': () => { J.pacer(); S.wview = 'tile'; },
+      'tile-none': () => { reset(); S.tab = 'hist'; S.wopen = false; S.wview = 'tile'; },
+      'tile-unjoined': () => { scenario({}, () => S.mov >= 600, { wopen: false }); S.wview = 'tile'; },
+    };
+    J[v]();
+  },
+};
+function wcmd(fn, label) { if (!S.link) { setTimeout(() => wmsg('Non appliqué', true)); return false; } fn(); setTimeout(() => wmsg('✓ ' + (label ? label() : 'Appliqué'))); }
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
+  if (S.locked && el.closest('#phone') && el.dataset.act !== 'shield') return;
+  if (S.dragged && el.closest('#mapview')) { S.dragged = false; return; }
+  if (A[el.dataset.act](el.dataset.v, e) !== false) render();
+  flush();
+});
+document.addEventListener('change', e => {
+  if (e.target.dataset.slot != null) S.fields[+e.target.dataset.slot] = e.target.value;
+  if (e.target.dataset.chk) { S.ann[e.target.dataset.chk] = e.target.checked; }
+});
+
+/* hold-to-confirm */
+let holdT = null;
+const HOLD = { stop: () => { stopRun(); }, unlock: () => { S.locked = false; }, wstop: () => { if (!S.link) { wmsg('Non appliqué', true); return false; } stopRun(); S.tab = 'run'; } };
+function holdStart(el) { holdEnd(); el.classList.add('holding'); holdT = setTimeout(() => { el.classList.remove('holding'); holdT = null; if (HOLD[el.dataset.hold]() !== false) render(); }, 1100); }
+function holdEnd() { if (holdT) { clearTimeout(holdT); holdT = null; } $$('.holding').forEach(x => x.classList.remove('holding')); }
+document.addEventListener('pointerdown', e => { const el = e.target.closest('[data-hold]'); if (el) { e.preventDefault(); holdStart(el); } });
+['pointerup', 'pointercancel', 'pointerleave'].forEach(t => document.addEventListener(t, holdEnd, true));
+document.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat && e.target.dataset?.hold) { e.preventDefault(); holdStart(e.target); } });
+document.addEventListener('keyup', e => { if (e.target.dataset?.hold) holdEnd(); });
+
+/* swipes between pages, map drag */
+let sx = null, sEl = null, drag = null;
+document.addEventListener('pointerdown', e => {
+  const mv = e.target.closest('#mapview');
+  if (mv && !S.locked && !e.target.closest('button')) { drag = { x: e.clientX, y: e.clientY, dx: S.free?.dx || 0, dy: S.free?.dy || 0 }; S.dragged = false; sx = null; return; }
+  sEl = e.target.closest('#pages, #watch'); sx = sEl ? e.clientX : null;
+});
+document.addEventListener('pointermove', e => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.hypot(dx, dy) > 4) { S.dragged = true; S.whole = false; S.free = { dx: drag.dx + dx, dy: drag.dy + dy, at: Date.now() }; drawMap(); } });
+document.addEventListener('pointerup', e => {
+  if (drag) { drag = null; if (S.dragged) render(); return; }
+  if (sx == null) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) < 40) return;
+  if (sEl.id === 'pages' && !S.locked) { const n = pagesList().length; S.page = Math.max(0, Math.min(n - 1, S.page + (dx < 0 ? 1 : -1))); render(); }
+  if (sEl.id === 'watch' && S.wview === 'app' && S.wopen && active() && S.link && !S.ambient) { const P = wPages(), i = P.indexOf(S.wpage); S.wpage = P[Math.max(0, Math.min(P.length - 1, i + (dx < 0 ? 1 : -1)))]; render(); }
+});
+renderLog();
+render();
+</script>
+</body>
+</html>
