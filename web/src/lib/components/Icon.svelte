@@ -32,7 +32,17 @@
 		timer: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/>',
 		chev: '<path d="M6 9l6 6 6-6"/>',
 		layers: '<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>',
-		bars: '<path d="M6 20v-8M12 20V4M18 20v-12"/>'
+		bars: '<path d="M6 20v-8M12 20V4M18 20v-12"/>',
+		trend: '<path d="M23 6l-9.5 9.5-5-5L1 18M17 6h6v6"/>',
+		trophy: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/>',
+		flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/>',
+		zap: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>',
+		info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+		phone: '<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>',
+		repeat: '<path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/>',
+		eyeoff: '<path d="M17.9 17.9A10.4 10.4 0 0 1 12 20C5 20 1 12 1 12a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9.6 9.6 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.2 3.2M1 1l22 22M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+		minus: '<path d="M5 12h14"/>',
+		up: '<path d="M18 15l-6-6-6 6"/>'
 	} as const;
 	export type IconName = keyof typeof ICONS;
 </script>

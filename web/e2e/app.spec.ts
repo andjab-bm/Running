@@ -196,8 +196,23 @@ test('settings recompute the zones and manage the household profiles', async ({ 
 	const activate = page.locator('.prow', { hasText: 'Sam' }).getByRole('button', { name: 'Activer' });
 	if (await activate.isVisible()) await activate.click();
 	await expect(page.locator('.prow', { hasText: 'Sam' }).getByText('Actif')).toBeVisible();
+	// With two profiles the list shows the whole household: Alex's runs are there while Sam is active.
 	await nav(page, 'Activités').click();
+	const people = page.getByRole('group', { name: 'Filtrer par personne' });
+	await expect(people.getByRole('button', { name: 'Tout le foyer' })).toHaveAttribute('aria-pressed', 'true');
+	await expect(page.locator('a.act')).toHaveCount(3);
+	await expect(page.locator('a.act .owners').first()).toContainText('Alex');
+	// "Mes activités" follows the active profile, and Sam has none yet.
+	await people.getByRole('button', { name: 'Mes activités' }).click();
 	await expect(page.getByRole('heading', { name: 'Aucune sortie pour Sam' })).toBeVisible();
+	// The choice is remembered on the device.
+	await page.reload();
+	await expect(page.getByRole('heading', { name: 'Aucune sortie pour Sam' })).toBeVisible();
+	await page.getByRole('button', { name: 'Voir tout le foyer' }).click();
+	await expect(page.locator('a.act')).toHaveCount(3);
+	// One member: Alex's runs, seen from Sam's profile.
+	await people.getByRole('button', { name: 'Alex' }).click();
+	await expect(page.locator('a.act')).toHaveCount(3);
 
 	// Back to the first profile for the next test.
 	await page.goto('/settings');
@@ -207,7 +222,10 @@ test('settings recompute the zones and manage the household profiles', async ({ 
 
 test('a run is copied without heart rate, moved, exported and deleted', async ({ page }) => {
 	await page.goto('/');
+	// Count Alex's own runs in this test; the household view is checked at the end.
+	await page.getByRole('group', { name: 'Filtrer par personne' }).getByRole('button', { name: 'Mes activités' }).click();
 	await page.locator('a.act', { hasText: 'Sortie à deux' }).click();
+	await expect(page.getByText('Ma course')).toBeVisible();
 
 	// The zones now use the maximum given in the settings.
 	await expect(page.getByRole('region', { name: 'Zones de fréquence cardiaque' }).getByText('Indiquez la vôtre')).toHaveCount(0);
@@ -251,6 +269,21 @@ test('a run is copied without heart rate, moved, exported and deleted', async ({
 	await expect(copy).toHaveCount(1);
 	await copy.click();
 	await expect(page.getByRole('group', { name: 'Couleur du tracé' }).getByRole('button', { name: 'FC' })).toBeDisabled();
+
+	// The household list shows the shared run once, under both names, and Sam's own run under his.
+	await page.goto('/');
+	await page.getByRole('group', { name: 'Filtrer par personne' }).getByRole('button', { name: 'Tout le foyer' }).click();
+	await expect(page.locator('a.act')).toHaveCount(2);
+	const shared = page.locator('a.act', { hasText: 'Sortie à deux' });
+	await expect(shared).toHaveCount(1);
+	await expect(shared.locator('.owners')).toContainText('Alex et Sam');
+	await expect(shared.getByText('Course à deux')).toBeVisible();
+	await expect(page.locator('a.act', { hasText: 'Ancienne' }).locator('.owners')).toContainText('Sam');
+	// Opening another member's run says whose it is.
+	await page.getByRole('button', { name: /Changer de profil/ }).first().click();
+	await dialog.getByRole('button', { name: /Alex/ }).click();
+	await page.locator('a.act', { hasText: 'Ancienne' }).click();
+	await expect(page.getByText('Course de Sam')).toBeVisible();
 });
 
 test('the trace is drawn on a plain background when the tile host is out of reach', async ({ page }) => {

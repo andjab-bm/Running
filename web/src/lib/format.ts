@@ -84,6 +84,33 @@ export function monthKey(unix: number, timezone?: string | null): string {
 	return safeFormat(unix, { month: 'long', year: 'numeric' }, timezone);
 }
 
+const MONTHS_SHORT = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
+/** `9 nov.` for the calendar date `2026-11-09`, and `nov.` for the month `2026-11`. */
+export function isoDayShort(iso: string): string {
+	const [, m, d] = iso.split('-').map(Number);
+	return d ? `${d} ${MONTHS_SHORT[m - 1]}` : MONTHS_SHORT[m - 1];
+}
+
+/** `Lundi 9 novembre 2026` for the calendar date `2026-11-09`. */
+export function isoDayLong(iso: string): string {
+	const [y, m, d] = iso.split('-').map(Number);
+	return capitalise(new Date(y, m - 1, d).toLocaleDateString(LOCALE, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }));
+}
+
+/** Name of a standard race distance given in metres. */
+export function raceName(metres: number): string {
+	if (metres === 21097.5) return 'Semi-marathon';
+	if (metres === 42195) return 'Marathon';
+	return metres < 1000 ? `${metres} m` : `${metres / 1000} km`;
+}
+
+/** `2 h 05` for a number of hours and minutes; `45 min` under an hour. */
+export function hoursMinutes(seconds: number): string {
+	const m = Math.round(seconds / 60);
+	return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`;
+}
+
 export const RPE_WORDS = ['', 'très facile', 'facile', 'facile', 'modéré', 'modéré', 'soutenu', 'difficile', 'très difficile', 'extrême', 'maximal'];
 export const ZONE_NAMES = ['Récupération', 'Endurance', 'Tempo', 'Seuil', 'VO₂ max'];
 

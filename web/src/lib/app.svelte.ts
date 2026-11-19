@@ -6,6 +6,7 @@ export type Theme = 'light' | 'dark' | 'system';
 const PROFILE_KEY = 'running-profile';
 const THEME_KEY = 'running-theme';
 const BASEMAP_KEY = 'running-basemap';
+const SCOPE_KEY = 'running-scope';
 
 function read(key: string): string | null {
 	try {
@@ -35,6 +36,8 @@ class AppState {
 	basemap = $state(true);
 	/** Whether the dark palette is in effect, whatever selected it. */
 	dark = $state(false);
+	/** Whose runs the activity list shows: `all` (the household), `mine`, or a profile id. */
+	scope = $state('all');
 	config = $state<ClientConfig | null>(null);
 	toast = $state<{ text: string; n: number } | null>(null);
 	/** Bumped whenever activities change, so open lists reload. */
@@ -48,6 +51,7 @@ class AppState {
 		const saved = read(THEME_KEY);
 		this.theme = saved === 'light' || saved === 'dark' ? saved : 'system';
 		this.basemap = read(BASEMAP_KEY) !== 'off';
+		this.scope = read(SCOPE_KEY) ?? 'all';
 		const media = window.matchMedia('(prefers-color-scheme: dark)');
 		const sync = () => (this.dark = this.theme === 'dark' || (this.theme === 'system' && media.matches));
 		media.addEventListener('change', sync);
@@ -95,6 +99,12 @@ class AppState {
 	get mapStyle(): string {
 		if (!this.basemap || !this.config) return '';
 		return this.dark ? this.config.map_style_url_dark : this.config.map_style_url;
+	}
+
+	/** Remembered on this device. `mine` follows the active profile; a member's id names that member. */
+	setScope(scope: string) {
+		this.scope = scope;
+		write(SCOPE_KEY, scope === 'all' ? null : scope);
 	}
 
 	setBasemap(on: boolean) {

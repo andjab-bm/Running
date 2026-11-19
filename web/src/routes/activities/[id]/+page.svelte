@@ -330,6 +330,10 @@
 				<div style="min-width:0;flex:1 1 320px">
 					<h1>{a.title}</h1>
 					<div class="meta">
+						{#if app.profiles.length > 1}
+							<!-- The list shows the whole household: say whose run this is. -->
+							<span class="whose"><span class="avatar sm" style:background={owner.color}>{owner.name.charAt(0).toUpperCase()}</span>{owner.id === app.activeId ? 'Ma course' : `Course de ${owner.name}`}</span>
+						{/if}
 						<span><Icon name="calendar" size={16} />{f.dateLong(a.start_time, tz)}</span>
 						<span><Icon name="clock" size={16} />{f.clock(a.start_time, tz)}</span>
 						{#each a.tags as t (t)}<span class="tag {f.tagColor(t)}">{t}</span>{/each}

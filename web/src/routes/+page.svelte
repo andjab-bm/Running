@@ -13,9 +13,17 @@
 	];
 	const PAGE = 24;
 
+	// Units and time zone are those of whoever is looking; the runs listed may be anyone's.
 	const profile = $derived(app.active!);
 	const units = $derived(profile.units);
 	const tz = $derived(profile.timezone);
+
+	// Whose runs are listed: the whole household, the active profile, or one other member.
+	// With a single profile there is no household to speak of: the list is simply that profile's.
+	const who = $derived(app.profiles.length < 2 || app.scope === 'mine' ? profile.id : app.scope === 'all' ? null : Number(app.scope));
+	const person = $derived(who === null ? null : (app.profiles.find((p) => p.id === who) ?? null));
+	const others = $derived(app.profiles.filter((p) => p.id !== profile.id));
+	const byId = (id: number) => app.profiles.find((p) => p.id === id);
 
 	let tag = $state<string | null>(null);
 	let period = $state<Period>('all');
@@ -39,7 +47,7 @@
 		const mine = reset ? ++generation : generation;
 		loading = true;
 		try {
-			const page = await api.activities(profile.id, { limit: PAGE, tag, from, cursor: reset ? null : cursor });
+			const page = await api.household({ profile_id: who, limit: PAGE, tag, from, cursor: reset ? null : cursor });
 			if (mine !== generation) return;
 			items = reset ? page.items : [...items, ...page.items];
 			cursor = page.next_cursor;
@@ -51,16 +59,21 @@
 		}
 	}
 
+	// A member chosen in the filter may have been deleted since: fall back to the whole household.
+	$effect(() => {
+		if (who !== null && !person) app.setScope('all');
+	});
+
 	// Reload from the top whenever a filter changes or activities were added or removed.
 	$effect(() => {
-		void [tag, from, app.revision];
+		void [who, tag, from, app.revision];
 		loadPage(true);
 	});
 
 	$effect(() => {
 		void app.revision;
 		api.tags(profile.id).then((t) => (tags = t), () => {});
-		api.activities(profile.id, { limit: 100, from: monthStart() }).then((p) => (month = p.items), () => {});
+		api.household({ profile_id: who, limit: 100, from: monthStart() }).then((p) => (month = p.items), () => {});
 	});
 
 	// Older activities load as the end of the list scrolls into view.
@@ -91,16 +104,37 @@
 		return out;
 	});
 	const filtered = $derived(tag !== null || period !== 'all');
+
+	/** Everyone a card belongs to: its owner, then the members the run was copied to. */
+	const owners = (a: ActivitySummary) =>
+		[a.profile_id, ...(a.shared_with ?? []).map((s) => s.profile_id)].map(byId).filter((p) => p !== undefined);
+	const whose = $derived(who === null ? 'du foyer' : who === profile.id ? `de ${profile.name}` : `de ${person?.name ?? ''}`);
 </script>
 
 <div class="view">
 	<div class="spread">
 		<div>
-			<div class="eyebrow">Profil de {profile.name}</div>
+			<div class="eyebrow">Courses {whose}</div>
 			<h1>Activités</h1>
 		</div>
 		<a class="btn primary" href="/import"><Icon name="upload" />Importer</a>
 	</div>
+
+	{#if app.profiles.length > 1}
+		<div class="filters" role="group" aria-label="Filtrer par personne">
+			<button class="fchip who" type="button" aria-pressed={app.scope === 'all'} onclick={() => app.setScope('all')}>
+				<span class="all"><Icon name="users" size={14} /></span>Tout le foyer
+			</button>
+			<button class="fchip who" type="button" aria-pressed={app.scope === 'mine'} onclick={() => app.setScope('mine')}>
+				<span class="avatar xs" style:background={profile.color}>{profile.name.charAt(0).toUpperCase()}</span>Mes activités
+			</button>
+			{#each others as p (p.id)}
+				<button class="fchip who" type="button" aria-pressed={app.scope === String(p.id)} onclick={() => app.setScope(String(p.id))}>
+					<span class="avatar xs" style:background={p.color}>{p.name.charAt(0).toUpperCase()}</span>{p.name}
+				</button>
+			{/each}
+		</div>
+	{/if}
 
 	{#if error}
 		<div class="note warn"><Icon name="x" /><span>{error}</span></div>
@@ -109,9 +143,20 @@
 	{#if !loading && items.length === 0 && !filtered && !error}
 		<div class="emptybox">
 			<div class="big"><Icon name="route" size={30} /></div>
-			<h2>Aucune sortie pour {profile.name}</h2>
-			<p class="muted">Importez un fichier .gpx ou .fit, ou copiez une sortie depuis un autre profil du foyer.</p>
-			<a class="btn primary" href="/import"><Icon name="upload" />Importer des fichiers</a>
+			{#if who === null}
+				<h2>Aucune sortie dans le foyer</h2>
+				<p class="muted">Importez un fichier .gpx ou .fit pour commencer.</p>
+				<a class="btn primary" href="/import"><Icon name="upload" />Importer des fichiers</a>
+			{:else}
+				<h2>Aucune sortie pour {person?.name}</h2>
+				{#if who === profile.id}
+					<p class="muted">Importez un fichier .gpx ou .fit, ou copiez une sortie depuis un autre profil du foyer.</p>
+					<a class="btn primary" href="/import"><Icon name="upload" />Importer des fichiers</a>
+				{/if}
+				{#if app.profiles.length > 1}
+					<button class="btn" type="button" onclick={() => app.setScope('all')}>Voir tout le foyer</button>
+				{/if}
+			{/if}
 		</div>
 	{:else}
 		<div class="tiles">
@@ -163,10 +208,17 @@
 			<div class="acts">
 				{#each g.items as a (a.id)}
 					{@const c = f.activityColor(a)}
+					{@const people = owners(a)}
 					<a class="act" href="/activities/{a.id}">
 						<div class="thumb" style:background="var(--p-{c})">
 							<Trace points={a.preview} color={c} />
 							<div class="km" style:color="var(--i-{c})">{f.distance(a.distance, units)}<small>{f.distanceUnit(units)}</small></div>
+							{#if app.profiles.length > 1 && people.length}
+								<div class="owners">
+									{#each people as p (p.id)}<span class="avatar xs" style:background={p.color}>{p.name.charAt(0).toUpperCase()}</span>{/each}
+									<span>{people.map((p) => p.name).join(' et ')}</span>
+								</div>
+							{/if}
 							{#if a.copied_from}
 								<div class="cp" data-tip="Copiée depuis un autre profil" data-tip-pos="end"><Icon name="copy" size={13} />Copie</div>
 							{/if}
@@ -181,9 +233,10 @@
 								<span data-tip="Allure moyenne"><Icon name="gauge" size={15} /><b>{f.pace(a.speed, units)}</b>{f.paceUnit(units)}</span>
 								<span data-tip="Fréquence cardiaque moyenne"><Icon name="heart" size={15} /><b>{f.whole(a.avg_hr)}</b>{a.avg_hr ? 'bpm' : ''}</span>
 							</div>
-							{#if a.tags.length}
+							{#if a.tags.length || people.length > 1}
 								<div class="row" style="gap:6px">
 									{#each a.tags as t (t)}<span class="tag {f.tagColor(t)}">{t}</span>{/each}
+									{#if people.length > 1}<span class="tag mint">Course à {people.length === 2 ? 'deux' : 'plusieurs'}</span>{/if}
 								</div>
 							{/if}
 						</div>
@@ -225,6 +278,51 @@
 	.fchip[aria-pressed='true'] {
 		background: var(--ink);
 		color: var(--bg);
+	}
+	.fchip.who {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		padding: 6px 14px 6px 7px;
+		min-height: 36px;
+	}
+	.fchip .all {
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		display: grid;
+		place-items: center;
+		background: var(--surface-2);
+		color: var(--ink-2);
+	}
+	.avatar.xs {
+		width: 22px;
+		height: 22px;
+		font-size: 11px;
+	}
+	.owners {
+		position: absolute;
+		left: 10px;
+		top: 10px;
+		background: var(--surface);
+		color: var(--ink);
+		border-radius: 999px;
+		padding: 3px 10px 3px 3px;
+		font-size: 12px;
+		font-weight: 600;
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		max-width: calc(100% - 90px);
+	}
+	.owners > span:last-child {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.owners .avatar + .avatar {
+		margin-left: -11px;
+		box-shadow: 0 0 0 2px var(--surface);
 	}
 	.month {
 		display: flex;

@@ -56,6 +56,85 @@ export interface ActivitySummary {
 	copied_from: number | null;
 	tags: string[];
 	preview: [number, number][];
+	/** Training load; null until the background computation has processed the run. */
+	load: number | null;
+	load_estimated: boolean;
+	/** Household list only: the copies of this run in other profiles. */
+	shared_with?: { profile_id: number; activity_id: number }[];
+}
+
+/** The fastest stretch of a standard distance inside one run, on moving time. */
+export interface Effort {
+	moving_time: number;
+	speed: number;
+	activity_id: number;
+	title: string;
+	start_time: number;
+	start_offset: number;
+}
+
+export interface RecordDistance {
+	distance: number;
+	record: Effort | null;
+	next: Effort[];
+	history: Effort[];
+}
+
+export interface Prediction {
+	distance: number;
+	time: number;
+	speed: number;
+	indicative: boolean;
+	basis: { distance: number; moving_time: number; activity_id: number; title: string; start_time: number };
+}
+
+export interface CalendarDay {
+	date: string;
+	distance: number;
+	moving_time: number;
+	load: number;
+	activities: { id: number; title: string; distance: number }[];
+}
+
+export interface Calendar {
+	year: number;
+	days: CalendarDay[];
+	totals: { runs: number; active_days: number; distance: number; moving_time: number; gain: number };
+}
+
+export interface VolumePeriod {
+	start: string;
+	runs: number;
+	distance: number;
+	moving_time: number;
+	gain: number;
+	current: boolean;
+}
+
+export interface ProgressMonth {
+	month: string;
+	runs: number;
+	avg_speed: number | null;
+	longest: number | null;
+	avg_hr: number | null;
+}
+
+export type LoadStatus = 'not_enough_data' | 'resuming' | 'light' | 'steady' | 'building' | 'too_much';
+
+export interface Load {
+	days: { date: string; load: number; estimated: boolean; short: number; long: number }[];
+	weeks: { start: string; load: number; current: boolean }[];
+	status: { code: LoadStatus; ratio: number | null; short: number | null; long: number | null; history_days: number };
+	recovery: {
+		activity_id: number;
+		load: number;
+		estimated: boolean;
+		hours_advised: number;
+		hours_remaining: number;
+		recovered_at: number;
+	} | null;
+	typical_load: number | null;
+	processing: boolean;
 }
 
 export interface Activity extends ActivitySummary {
@@ -125,6 +204,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 }
 
 export interface ListParams {
+	/** Household list only: restrict to one profile. */
+	profile_id?: number | null;
 	cursor?: string | null;
 	limit?: number;
 	tag?: string | null;
@@ -137,6 +218,36 @@ export interface ClientConfig {
 	map_style_url: string;
 	map_style_url_dark: string;
 	max_upload_bytes: number;
+}
+
+const query = (p: object) => {
+	const q = new URLSearchParams();
+	for (const [k, v] of Object.entries(p)) if (v !== undefined && v !== null && v !== '') q.set(k, String(v));
+	const qs = q.toString();
+	return qs ? '?' + qs : '';
+};
+
+/** Minutes east of UTC in a time zone right now; the browser's zone when none is given or it is unknown. */
+export function tzOffsetMinutes(timezone?: string | null): number {
+	const local = -new Date().getTimezoneOffset();
+	if (!timezone) return local;
+	try {
+		const now = new Date();
+		const parts = new Intl.DateTimeFormat('en-US', {
+			timeZone: timezone,
+			hourCycle: 'h23',
+			year: 'numeric',
+			month: 'numeric',
+			day: 'numeric',
+			hour: 'numeric',
+			minute: 'numeric'
+		}).formatToParts(now);
+		const n = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+		const there = Date.UTC(n('year'), n('month') - 1, n('day'), n('hour'), n('minute'));
+		return Math.round((there - now.getTime()) / 60000);
+	} catch {
+		return local;
+	}
 }
 
 export const api = {
@@ -153,6 +264,25 @@ export const api = {
 		const qs = q.toString();
 		return request<{ items: ActivitySummary[]; next_cursor: string | null }>('GET', `/profiles/${profileId}/activities${qs ? '?' + qs : ''}`);
 	},
+	/** The whole household, or one profile of it; without a profile, a shared run comes once. */
+	household: (p: ListParams = {}) => request<{ items: ActivitySummary[]; next_cursor: string | null }>('GET', `/activities${query(p)}`),
+	calendar: (profileId: number, year: number, tz: number) =>
+		request<Calendar>('GET', `/profiles/${profileId}/stats/calendar${query({ year, tz_offset_minutes: tz })}`),
+	volume: (profileId: number, unit: 'week' | 'month', count: number, tz: number) =>
+		request<{ unit: string; periods: VolumePeriod[] }>('GET', `/profiles/${profileId}/stats/volume${query({ unit, count, tz_offset_minutes: tz })}`).then(
+			(r) => r.periods
+		),
+	progress: (profileId: number, months: number, tag: string | null, tz: number) =>
+		request<{ months: ProgressMonth[] }>('GET', `/profiles/${profileId}/stats/progress${query({ months, tag, tz_offset_minutes: tz })}`).then(
+			(r) => r.months
+		),
+	records: (profileId: number) => request<{ distances: RecordDistance[]; processing: boolean }>('GET', `/profiles/${profileId}/records`),
+	predictions: (profileId: number) =>
+		request<{ window_weeks: number; longest_recent_run: number | null; predictions: Prediction[]; processing: boolean }>(
+			'GET',
+			`/profiles/${profileId}/predictions`
+		),
+	load: (profileId: number, days: number, tz: number) => request<Load>('GET', `/profiles/${profileId}/load${query({ days, tz_offset_minutes: tz })}`),
 	activity: (id: number) => request<Activity>('GET', `/activities/${id}`),
 	streams: (id: number, resolution: 'low' | 'full' = 'low') => request<Streams>('GET', `/activities/${id}/streams?resolution=${resolution}`),
 	updateJournal: (id: number, j: { title?: string; description?: string; rpe?: number | null; tags?: string[] }) =>

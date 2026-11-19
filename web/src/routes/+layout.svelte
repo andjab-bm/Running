@@ -13,7 +13,7 @@
 
 	const NAV: { href: string; label: string; icon: IconName }[] = [
 		{ href: '/', label: 'Activités', icon: 'list' },
-		{ href: '/import', label: 'Importer', icon: 'upload' },
+		{ href: '/progress', label: 'Progression', icon: 'trend' },
 		{ href: '/settings', label: 'Réglages', icon: 'sliders' }
 	];
 	const THEMES: { value: Theme; label: string; icon: IconName }[] = [
@@ -39,8 +39,12 @@
 		return () => clearTimeout(timer);
 	});
 
-	// The activity page belongs to the "Activités" section.
-	const current = $derived(page.url.pathname.startsWith('/activities') ? '/' : page.url.pathname);
+	// An activity page and the import screen belong to the "Activités" section; other sections own their sub-pages.
+	const current = $derived.by(() => {
+		const path = page.url.pathname;
+		if (path.startsWith('/activities') || path.startsWith('/import')) return '/';
+		return NAV.find((n) => n.href !== '/' && path.startsWith(n.href))?.href ?? path;
+	});
 
 	async function createFirst(e: SubmitEvent) {
 		e.preventDefault();
