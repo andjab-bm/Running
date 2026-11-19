@@ -15,6 +15,7 @@ import dev.wellbeing.phone.data.Settings
 import dev.wellbeing.phone.data.SettingsStore
 import dev.wellbeing.phone.data.SyncState
 import dev.wellbeing.phone.data.TimerEntity
+import dev.wellbeing.phone.data.coach
 import dev.wellbeing.phone.data.path
 import dev.wellbeing.phone.sync.InUse
 import dev.wellbeing.running.Coach
@@ -51,7 +52,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.io.File
-import kotlin.math.roundToInt
 
 enum class Command { START, PAUSE, RESUME, LAP, STOP }
 
@@ -99,7 +99,9 @@ object RunController {
 
     private lateinit var app: Context
     private lateinit var dao: RunDao
-    private var settings = Settings()
+    /** The phone's settings as last read; the cue player reads its channels from here. */
+    var settings = Settings()
+        private set
 
     private var coach: Coach? = null
     private val engine: SessionEngine? get() = coach?.engine
@@ -142,7 +144,13 @@ object RunController {
         if (::app.isInitialized) return
         app = context.applicationContext
         dao = AppDb.get(app).runs()
-        main.launch { SettingsStore(app).flow.collect { settings = it } }
+        main.launch {
+            SettingsStore(app).flow.collect {
+                settings = it
+                // Alerts, announcement and auto-pause changed before the start apply to this run.
+                rearm()
+            }
+        }
         io.launch {
             findInterrupted()
             // Pending runs get another chance, and sessions marked on the web come in, while the phone is home.
@@ -152,10 +160,7 @@ object RunController {
 
     private fun now() = System.currentTimeMillis()
 
-    private fun coachSettings(cfg: SessionEngine.Config) = Coach.Settings(
-        engine = cfg,
-        zoneBounds = settings.zones.bounds.map { it.roundToInt() },
-    )
+    private fun coachSettings(cfg: SessionEngine.Config) = settings.coach(cfg)
 
     /** Opens a session on the ready screen: the service starts and looks for the position. */
     fun prepare(context: Context) {
@@ -175,8 +180,14 @@ object RunController {
     fun choose(p: Plan) {
         plan = if (p.workout != null) p.copy(pacer = null) else p
         _plan.value = plan
+        rearm()
+    }
+
+    /** Rebuilds the coach of a run not started yet, with the current plan and settings. */
+    private fun rearm() {
         val c = coach ?: return
         if (c.engine.phase != Phase.READY) return
+        config = SessionEngine.Config(autoPause = settings.autoPause, splitMeters = settings.splitMeters)
         coach = Coach.of(planEvent(0), plan.route, coachSettings(config)).also { n -> lastFix?.let { n.on(it) } }
         tick()
     }

@@ -110,8 +110,13 @@ object Speech {
 
     private fun split(cue: Cue.Split, units: Units): String {
         val unit = if (units == Units.IMPERIAL) "mile" else "kilomètre"
+        val one = if (units == Units.IMPERIAL) M_PER_MILE else 1000.0
         val sb = StringBuilder("${distance(cue.distance, units)}, en ${duration(cue.movingMs / 1000.0)}.")
-        cue.splitPace?.let { sb.append(" Dernier $unit en ${pace(it, units)}.") }
+        cue.splitPace?.let {
+            val i = cue.interval
+            if (i == null || abs(i - one) < 1) sb.append(" Dernier $unit en ${pace(it, units)}.")
+            else sb.append(" ${if (i > one) "Derniers" else "Dernière portion de"} ${distance(i, units)} en ${pace(it, units)}.")
+        }
         cue.avgPace?.let { sb.append(" Allure moyenne ${pace(it, units)}.") }
         cue.heartRate?.let { sb.append(" Fréquence cardiaque $it.") }
         return sb.toString()

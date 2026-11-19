@@ -27,8 +27,6 @@
     <string name="watch_on">Montre connectée</string>
     <string name="watch_on_waiting">En attente de la fréquence cardiaque…</string>
     <string name="watch_on_detail">%1$d bpm · fréquence cardiaque active</string>
-    <string name="autopause_on">Pause automatique activée</string>
-    <string name="autopause_off">Pause automatique désactivée</string>
     <string name="start">Démarrer</string>
     <string name="start_hint_ready">Tu peux aussi démarrer depuis la montre.</string>
     <string name="start_hint_wait">Tu peux démarrer maintenant : la distance sera comptée dès que la position sera trouvée.</string>
@@ -73,7 +71,6 @@
     <string name="laps_hint">Appuie sur Tour pour découper ta sortie.</string>
     <string name="laps">Tours</string>
 
-    <string name="summary_eyebrow">Course terminée</string>
     <string name="summary_short">Sortie très courte : elle sera sans doute à supprimer.</string>
     <string name="title">Titre</string>
     <string name="title_default">Sortie</string>
@@ -159,4 +156,6 @@
     <string name="summary_route">Parcours suivi pendant la course</string>
     <string name="resume_run">Reprendre la course</string>
     <string name="resume_run_hint">Arrêtée par erreur ? Le temps passé ici comptera comme une pause.</string>
+    <string name="settings_general">Général</string>
+    <string name="settings_coaching">Coaching</string>
 </resources>

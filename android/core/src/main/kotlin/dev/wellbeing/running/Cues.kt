@@ -76,7 +76,7 @@ sealed interface Cue {
         override val kind get() = CueKind.ARRIVAL
     }
 
-    /** A distance mark: [distance] covered, in [movingMs], the last interval at [splitPace] s/km. */
+    /** A distance mark: [distance] covered, in [movingMs], the last [interval] metres at [splitPace] s/km. */
     data class Split(
         override val t: Long,
         val distance: Double,
@@ -84,6 +84,8 @@ sealed interface Cue {
         val splitPace: Double?,
         val avgPace: Double? = null,
         val heartRate: Int? = null,
+        /** Length of the stretch [splitPace] covers; one unit of distance unless chosen otherwise. */
+        val interval: Double? = null,
     ) : Cue {
         override val kind get() = CueKind.SPLIT
     }
@@ -115,4 +117,39 @@ object VibrationPatterns {
         CueKind.SPLIT -> longArrayOf(0, 220)
         CueKind.PAUSE -> longArrayOf(0, 160, 160, 160)
     }
+}
+
+/** One note of a tone pattern: [hz] for [ms], or silence when [hz] is 0. */
+data class Tone(val hz: Int, val ms: Int)
+
+/**
+ * The sound channel: a short tone pattern per kind, synthesised on the phone. Like the vibrations,
+ * the patterns differ in rhythm and pitch — rising for a start or a return, falling for an end or
+ * a warning — and every note lasts at least [MIN_NOTE_MS] so Bluetooth headphones do not swallow it.
+ */
+object TonePatterns {
+    const val MIN_NOTE_MS = 150
+
+    private const val C5 = 523
+    private const val E5 = 659
+    private const val G5 = 784
+    private const val C6 = 1047
+    private const val A4 = 440
+
+    private fun gap(ms: Int = 80) = Tone(0, ms)
+
+    fun of(kind: CueKind): List<Tone> = when (kind) {
+        CueKind.STEP -> listOf(Tone(G5, 180), gap(), Tone(C6, 260))
+        CueKind.COUNTDOWN -> listOf(Tone(E5, 150))
+        CueKind.COMPLETE -> listOf(Tone(C5, 170), gap(60), Tone(E5, 170), gap(60), Tone(G5, 170), gap(60), Tone(C6, 360))
+        CueKind.TARGET -> listOf(Tone(G5, 150), gap(), Tone(G5, 150), gap(), Tone(G5, 150))
+        CueKind.PACER -> listOf(Tone(E5, 260), gap(), Tone(C5, 150))
+        CueKind.OFF_ROUTE -> listOf(Tone(C5, 400), gap(120), Tone(A4, 400))
+        CueKind.BACK_ON_ROUTE -> listOf(Tone(C5, 150), gap(), Tone(G5, 220))
+        CueKind.ARRIVAL -> listOf(Tone(G5, 170), gap(60), Tone(C6, 170), gap(60), Tone(G5, 170), gap(60), Tone(C6, 360))
+        CueKind.SPLIT -> listOf(Tone(C6, 160))
+        CueKind.PAUSE -> listOf(Tone(E5, 200), gap(), Tone(E5, 200))
+    }
+
+    fun lengthMs(kind: CueKind) = of(kind).sumOf { it.ms }
 }

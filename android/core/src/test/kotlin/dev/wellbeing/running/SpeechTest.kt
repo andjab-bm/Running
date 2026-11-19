@@ -3,6 +3,7 @@ package dev.wellbeing.running
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class SpeechTest {
     private val t = 1_794_760_000_000L
@@ -88,5 +89,17 @@ class SpeechTest {
     fun `each kind of cue vibrates its own way`() {
         val patterns = CueKind.entries.map { VibrationPatterns.of(it).toList() }
         assertEquals(patterns.size, patterns.toSet().size)
+    }
+
+    @Test
+    fun `each kind of cue sounds its own way, with notes long enough for headphones`() {
+        val patterns = CueKind.entries.map { TonePatterns.of(it) }
+        assertEquals(patterns.size, patterns.toSet().size)
+        for (p in patterns) {
+            assertTrue(p.filter { it.hz > 0 }.all { it.ms >= TonePatterns.MIN_NOTE_MS }, p.toString())
+            assertTrue(p.first().hz > 0 && p.last().hz > 0, p.toString())
+        }
+        // A step change, a target alert and a split stay short enough not to hide the next cue.
+        assertTrue(listOf(CueKind.STEP, CueKind.TARGET, CueKind.SPLIT).all { TonePatterns.lengthMs(it) < 1_000 })
     }
 }

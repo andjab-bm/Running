@@ -134,10 +134,19 @@ fun SettingsScreen(settings: Settings, store: SettingsStore) {
     val scope = rememberCoroutineScope()
     fun change(f: (Settings) -> Settings) { scope.launch { store.update(f) } }
     var picking by remember { mutableStateOf<Int?>(null) }
+    var coaching by rememberSaveable { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(stringResource(R.string.tab_settings), style = Type.h1, color = c.ink)
+            Segmented(
+                listOf(stringResource(R.string.settings_general) to !coaching, stringResource(R.string.settings_coaching) to coaching),
+                { i -> coaching = i == 1 },
+            )
+            if (coaching) {
+                CoachingSettings(settings, ::change)
+                return@Column
+            }
             ServerSettings(settings, store)
             Card {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

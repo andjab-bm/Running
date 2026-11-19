@@ -47,6 +47,8 @@ class RecordingService : LifecycleService(), SensorEventListener {
     private lateinit var sensors: SensorManager
     private var wakeLock: PowerManager.WakeLock? = null
     private var ticker: Job? = null
+    /** Plays the run's cues: inside the service, which holds the wake lock, so they come with the screen off. */
+    private var cues: Job? = null
     private var started = false
 
     private var stepsSinceTick = 0
@@ -90,6 +92,16 @@ class RecordingService : LifecycleService(), SensorEventListener {
     private fun begin() {
         started = true
         startTracking()
+        if (cues?.isActive != true) {
+            val player = Cues.acquire(this)
+            cues = lifecycleScope.launch {
+                try {
+                    RunController.cues.collect { player.add(it) }
+                } finally {
+                    Cues.release()
+                }
+            }
+        }
 
         ticker = lifecycleScope.launch {
             var n = 0
@@ -211,6 +223,7 @@ class RecordingService : LifecycleService(), SensorEventListener {
 
     override fun onDestroy() {
         ticker?.cancel()
+        cues?.cancel()
         stopTracking()
         RunController.flush()
         super.onDestroy()

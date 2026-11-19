@@ -21,11 +21,13 @@ class Coach(
     trackerConfig: RouteTracker.Config = RouteTracker.Config(),
     val pacerTarget: PacerTarget? = null,
     pacerConfig: Pacer.Config = Pacer.Config(),
+    announcerConfig: Announcer.Config = Announcer.Config(),
 ) {
     val engine = SessionEngine(engineConfig)
     val runner: WorkoutRunner? = workout?.let { WorkoutRunner(it, zoneBounds, runnerConfig) }
     val tracker: RouteTracker? = route?.let { RouteTracker(it, trackerConfig) }
     val pacer: Pacer? = pacerTarget?.let { Pacer(it, PacePlan.of(it, route), pacerConfig) }
+    val announcer = Announcer(announcerConfig)
 
     /** What one event or tick produced. */
     data class Output(
@@ -46,6 +48,8 @@ class Coach(
         if (e is Event.Location && engine.lastFixAccepted) tracker?.let { cues += it.onFix(e.t, e.lat, e.lon) }
         if (live) evaluate(e.t, cues, issued) else runner?.update(engine.snapshot(e.t), e.t)
         pacer?.update(e.t, engine.snapshot(e.t), tracker?.state)?.let { if (live) cues += it }
+        // Replayed too, so a run rebuilt after a kill does not announce the marks already passed.
+        if (e is Event.Location) announcer.update(engine.snapshot(e.t), e.t)?.let { if (live) cues += it }
         engine.suppressAutoPause = runner?.suppressAutoPause ?: false
         return Output(signal, issued, if (live) cues else emptyList())
     }
@@ -93,12 +97,13 @@ class Coach(
         val runner: WorkoutRunner.Config = WorkoutRunner.Config(),
         val tracker: RouteTracker.Config = RouteTracker.Config(),
         val pacer: Pacer.Config = Pacer.Config(),
+        val announcer: Announcer.Config = Announcer.Config(),
     )
 
     companion object {
         fun of(plan: Event.Plan?, route: RoutePath?, settings: Settings) = Coach(
             settings.engine, plan?.workout, settings.zoneBounds, settings.runner,
-            route, settings.tracker, plan?.pacer, settings.pacer,
+            route, settings.tracker, plan?.pacer, settings.pacer, settings.announcer,
         )
 
         /**

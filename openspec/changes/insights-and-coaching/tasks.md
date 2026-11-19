@@ -106,8 +106,8 @@ Phases: groups 2–7 (server) and 11 (`core`) can start at once; groups 9–10 w
 
 ## 13. Phone: voice, sound and vibration
 
-- [ ] 13.1 Implement `CuePlayer` in the recording service: text-to-speech in French, transient ducking audio focus, tones, vibration waveforms, call-state check, routing to headphones; verify instrumented or Robolectric tests that each cue kind calls the enabled channels only, and nothing but vibration during a call
-- [ ] 13.2 Implement the per-kilometre announcement with its interval and optional contents, off by default; verify unit tests for the third-kilometre, disabled, imperial and every-two-kilometres scenarios of `run-announcements`
+- [x] 13.1 Implement `CuePlayer` in the recording service: text-to-speech in French, transient ducking audio focus, tones, vibration waveforms, call-state check, routing to headphones; verify instrumented or Robolectric tests that each cue kind calls the enabled channels only, and nothing but vibration during a call
+- [x] 13.2 Implement the per-kilometre announcement with its interval and optional contents, off by default; verify unit tests for the third-kilometre, disabled, imperial and every-two-kilometres scenarios of `run-announcements`
 - [ ] 13.3 Build the coaching settings (three channels, test buttons, announcement options, target, pacer and off-route alert switches, French-voice availability notice); verify on the phone the vibration-only, try-the-cues and no-French-voice scenarios
 - [ ] 13.4 **(device)** Check cues with the screen off and music playing through the owner's headphones; verify the podcast-lowered, screen-off and distinct-patterns scenarios, tune tone lengths, and record the outcome and the voice-installation steps in `docs/android.md`
 
