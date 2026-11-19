@@ -185,6 +185,11 @@ object RunController {
         rearm()
     }
 
+    /** Settings read by a caller that could not wait for the store's first reading (a start from the watch). */
+    fun useSettings(s: Settings) {
+        settings = s
+    }
+
     /** Rebuilds the coach of a run not started yet, with the current plan and settings. */
     private fun rearm() {
         val c = coach ?: return

@@ -125,6 +125,8 @@ private fun fieldLabel(f: Field) = when (f) {
     Field.DISTANCE -> R.string.f_distance
     Field.GAIN -> R.string.f_gain
     Field.CLOCK -> R.string.f_clock
+    Field.PACER_GAP -> R.string.f_pacer_gap
+    Field.TARGET_PACE -> R.string.f_target_pace
     Field.COMBINED -> R.string.f_combined
 }
 

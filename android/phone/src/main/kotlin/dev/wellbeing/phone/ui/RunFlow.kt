@@ -28,6 +28,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -149,6 +150,7 @@ fun ReadyScreen(s: Snapshot?, settings: Settings) {
             },
             if (joined) c.mint else null,
         )
+        if (!joined) OpenOnWatch()
         Attachments(settings)
       }
         if (!granted) return@Column
@@ -315,5 +317,26 @@ fun SummaryScreen(f: Finished, settings: Settings, onSaved: () -> Unit) {
             onConfirm = { confirmDiscard = false; scope.launch { RunController.discard() } },
             onDismiss = { confirmDiscard = false },
         )
+    }
+}
+
+/** "Ouvrir sur la montre": shown while a watch is within reach and its app has not joined. */
+@Composable
+private fun OpenOnWatch() {
+    val c = LocalColors.current
+    val scope = rememberCoroutineScope()
+    var reachable by remember { mutableStateOf(false) }
+    var outcome by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { reachable = WatchLink.watchReachable() }
+    if (!reachable && outcome == null) return
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (reachable) AppButton("Ouvrir sur la montre", {
+            outcome = "Ouverture sur la montre…"
+            scope.launch {
+                outcome = if (WatchLink.openOnWatch()) "Demandé à la montre : l'application s'y ouvre et rejoint la course."
+                else "La montre n'a pas pu être jointe : ouvre l'application sur la montre à la main."
+            }
+        }, icon = Icon.WATCH, modifier = Modifier.fillMaxWidth())
+        outcome?.let { Text(it, style = Type.small, color = c.ink2) }
     }
 }

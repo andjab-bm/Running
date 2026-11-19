@@ -23,6 +23,8 @@ import kotlin.math.roundToInt
 /** A figure that can be placed in a field of the main live screen. */
 enum class Field {
     AVG_PACE, PACE, LAP_PACE, HEART_RATE, CADENCE, TIME, ELAPSED, DISTANCE, GAIN, CLOCK,
+    /** Time ahead of or behind the pace target, and the target pace at this point; placeholders without a pacer. */
+    PACER_GAP, TARGET_PACE,
     /** Total time, distance and the mini-map area; bottom field only. */
     COMBINED;
 
@@ -67,6 +69,10 @@ data class Settings(
     val alertOffRoute: Boolean = true,
     /** Load the basemap of the server's map style during the run; on by default, by the owner's decision. */
     val basemap: Boolean = true,
+    /** Vibrate the watch at step changes and alerts; on by default. */
+    val watchVibrations: Boolean = true,
+    /** Start a free run when the watch asks, app closed; off until the runner grants what it needs. */
+    val startFromWatch: Boolean = false,
 ) {
     val splitMeters get() = if (units == Units.IMPERIAL) 1609.344 else 1000.0
 }
@@ -113,6 +119,8 @@ class SettingsStore(private val context: Context) {
         val pacerMargin = longPreferencesKey("pacer_margin")
         val alertOffRoute = booleanPreferencesKey("alert_off_route")
         val basemap = booleanPreferencesKey("basemap")
+        val watchVibrations = booleanPreferencesKey("watch_vibrations")
+        val startFromWatch = booleanPreferencesKey("start_from_watch")
     }
 
     val flow: Flow<Settings> = context.store.data.map(::read)
@@ -145,6 +153,8 @@ class SettingsStore(private val context: Context) {
             pacerMargin = p[K.pacerMargin]?.toInt()?.takeIf { it in PACER_MARGINS } ?: d.pacerMargin,
             alertOffRoute = p[K.alertOffRoute] ?: d.alertOffRoute,
             basemap = p[K.basemap] ?: d.basemap,
+            watchVibrations = p[K.watchVibrations] ?: d.watchVibrations,
+            startFromWatch = p[K.startFromWatch] ?: d.startFromWatch,
         )
     }
 
@@ -176,6 +186,8 @@ class SettingsStore(private val context: Context) {
             p[K.pacerMargin] = s.pacerMargin.toLong()
             p[K.alertOffRoute] = s.alertOffRoute
             p[K.basemap] = s.basemap
+            p[K.watchVibrations] = s.watchVibrations
+            p[K.startFromWatch] = s.startFromWatch
         }
     }
 }

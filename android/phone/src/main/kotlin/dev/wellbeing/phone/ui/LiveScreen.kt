@@ -82,6 +82,16 @@ object FieldTime {
     }
 }
 
+/** The pacer's figures as fields: a placeholder when the run has no pace target. */
+object FieldPacer {
+    /** `+0:12` ahead, `−0:30` behind. */
+    fun gap(state: dev.wellbeing.running.Pacer.State?): String =
+        state?.gapS?.let { (if (it >= 0) "+" else "−") + Format.duration(kotlin.math.abs(it)) } ?: Format.PLACEHOLDER
+
+    fun target(state: dev.wellbeing.running.Pacer.State?, u: dev.wellbeing.running.Units): String =
+        state?.let { Format.pace(it.targetPace, u) } ?: Format.PLACEHOLDER
+}
+
 /** What a field shows: its label, icon, colour family, value and unit. */
 private class FieldView(val label: Int, val icon: Icon, val pastel: Pastel, val value: String, val unit: String = "")
 
@@ -89,6 +99,7 @@ private class FieldView(val label: Int, val icon: Icon, val pastel: Pastel, val 
 private fun fieldView(f: Field, s: Snapshot, settings: Settings): FieldView {
     val c = LocalColors.current
     val u = settings.units
+    val pacer = RunController.coaching.collectAsState().value?.pacer
     return when (f) {
         Field.TIME -> FieldView(FieldTime.label(f)!!, Icon.CLOCK, c.mint, FieldTime.value(f, s)!!)
         Field.ELAPSED -> FieldView(FieldTime.label(f)!!, Icon.CLOCK, c.mint, FieldTime.value(f, s)!!)
@@ -102,6 +113,8 @@ private fun fieldView(f: Field, s: Snapshot, settings: Settings): FieldView {
         Field.CADENCE -> FieldView(R.string.f_cadence, Icon.STEPS, c.mint, s.cadence?.toString() ?: Format.PLACEHOLDER, stringResource(R.string.unit_spm))
         Field.GAIN -> FieldView(R.string.f_gain, Icon.MOUNTAIN, c.sky, Format.elevation(s.gain, u), Format.elevationUnit(u))
         Field.CLOCK -> FieldView(R.string.f_clock, Icon.CLOCK, c.butter, LocalTime.now().let { "%d:%02d".format(it.hour, it.minute) })
+        Field.PACER_GAP -> FieldView(R.string.f_pacer_gap, Icon.TARGET, c.peach, FieldPacer.gap(pacer))
+        Field.TARGET_PACE -> FieldView(R.string.f_target_pace, Icon.TARGET, c.peach, FieldPacer.target(pacer, u), Format.paceUnit(u))
     }
 }
 

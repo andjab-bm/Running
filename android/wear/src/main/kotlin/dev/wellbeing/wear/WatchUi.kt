@@ -56,6 +56,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.wellbeing.running.Format
 import dev.wellbeing.running.Phase
+import dev.wellbeing.running.StepKind
+import dev.wellbeing.running.StepTarget
+import dev.wellbeing.running.TargetState
 import dev.wellbeing.running.Tokens
 import dev.wellbeing.running.Units
 import dev.wellbeing.running.WatchProtocol
@@ -109,6 +112,7 @@ fun WatchApp(ambient: Boolean, permitted: Boolean, onGrant: () -> Unit) {
     val state by WatchSession.state.collectAsState()
     val stateAt by WatchSession.stateAt.collectAsState()
     val hr by WatchSession.heartRate.collectAsState()
+    val starting by WatchSession.starting.collectAsState()
     var now by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { delay(1000); now = System.currentTimeMillis() } }
 
@@ -127,7 +131,43 @@ fun WatchApp(ambient: Boolean, permitted: Boolean, onGrant: () -> Unit) {
 
         when {
             lost -> Message(PHONE, Warning, stringResource(R.string.unreachable_title), stringResource(if (active) R.string.unreachable_run else R.string.unreachable_idle), w, ::style)
-            s == null || s.phase == null -> Message(PHONE, Primary, stringResource(R.string.none_title), stringResource(R.string.none_body), w, ::style)
+            starting is WatchSession.Starting.Refused -> Column(Modifier.padding(horizontal = w * 0.12f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(w * 0.02f)) {
+                Glyph(PHONE, Warning, w * 0.14f)
+                BasicText(stringResource(R.string.start_refused_title), style = style(0.075f, Color.White, 600))
+                BasicText(refusal((starting as WatchSession.Starting.Refused).reason) + " " + stringResource(R.string.start_refused_body), style = style(0.05f, Muted, 500))
+                Pill(stringResource(R.string.ok), w, ::style) { WatchSession.dismissStart() }
+            }
+            starting == WatchSession.Starting.Waiting && (s?.phase == null || s.phase == Phase.READY) -> Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(w * 0.04f)) {
+                Spinner(w * 0.22f)
+                BasicText(stringResource(R.string.starting), style = style(0.055f, Muted, 600))
+            }
+            // Nothing prepared on the phone: start from the wrist when the phone offers it, else open the phone app.
+            s == null || s.phase == null -> if (s?.coaching?.canStartFromWatch == true && permitted) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(w * 0.03f)) {
+                    BasicText(stringResource(R.string.start_offer_title), style = style(0.05f, Muted, 600))
+                    RoundButton(PLAY, stringResource(R.string.start_new), w * 0.32f, Primary, OnPrimary) { WatchSession.startNew() }
+                    BasicText(stringResource(R.string.start_new), style = style(0.05f, Color.White, 600))
+                }
+            } else {
+                Column(Modifier.padding(horizontal = w * 0.12f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(w * 0.02f)) {
+                    Glyph(PHONE, Primary, w * 0.14f)
+                    BasicText(stringResource(R.string.none_title), style = style(0.075f, Color.White, 600))
+                    BasicText(stringResource(R.string.none_body), style = style(0.05f, Muted, 500))
+                    OpenOnPhone(w, ::style)
+                }
+            }
+            // Stopped on the phone but not saved yet: it may be resumed, so heart rate goes on for a while.
+            s.phase == Phase.STOPPED && s.coaching?.ended == false -> {
+                val left = WatchSession.stoppedMinutesLeft(now)
+                val measuring by WatchSession.measuring.collectAsState()
+                val more = if (measuring && left != null && left > 0) " " + stringResource(R.string.stopped_measuring, left) else ""
+                Message(
+                    PAUSE, PausedInk, stringResource(R.string.stopped_title),
+                    "${Format.distance(s.distance, units(s))} ${Format.distanceUnit(units(s))} · ${Format.duration(s.movingMs / 1000.0)}. " +
+                        stringResource(R.string.stopped_body) + more,
+                    w, ::style,
+                )
+            }
             s.phase == Phase.STOPPED -> Message(
                 CHECK, Good, stringResource(R.string.finished_title),
                 "${Format.distance(s.distance, units(s))} ${Format.distanceUnit(units(s))} · ${Format.duration(s.movingMs / 1000.0)}", w, ::style,
@@ -146,14 +186,21 @@ fun WatchApp(ambient: Boolean, permitted: Boolean, onGrant: () -> Unit) {
             }
             ambient -> Metrics(s, hr, w, ambient = true, ::style)
             else -> {
-                val pager = rememberPagerState { 2 }
+                // A run with a session, a pace target or a route has a coaching page left of the metrics.
+                val coached = s.coaching?.let { it.step != null || it.pacerActive || it.routeActive } == true
+                val pages = if (coached) 3 else 2
+                val pager = rememberPagerState(initialPage = if (coached) 1 else 0) { pages }
                 HorizontalPager(pager, Modifier.fillMaxSize()) { page ->
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        if (page == 0) Metrics(s, hr, w, ambient = false, ::style) else Controls(s, w, ::style)
+                        when (if (coached) page else page + 1) {
+                            0 -> CoachingPage(s, w, ::style)
+                            1 -> Metrics(s, hr, w, ambient = false, ::style)
+                            else -> Controls(s, w, ::style)
+                        }
                     }
                 }
                 Row(Modifier.align(Alignment.BottomCenter).padding(bottom = w * 0.05f), horizontalArrangement = Arrangement.spacedBy(w * 0.02f)) {
-                    for (i in 0..1) Box(Modifier.size(w * 0.02f).clip(CircleShape).background(if (pager.currentPage == i) Color.White else Color(0xFF44424F)))
+                    for (i in 0 until pages) Box(Modifier.size(w * 0.02f).clip(CircleShape).background(if (pager.currentPage == i) Color.White else Color(0xFF44424F)))
                 }
             }
         }
@@ -191,9 +238,16 @@ private fun Metrics(s: WatchProtocol.State, hr: Int?, w: Dp, ambient: Boolean, s
             )
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            val offRoute = s.coaching?.offRoute == true && s.phase == Phase.RUNNING
             BasicText(
-                when (s.phase) { Phase.PAUSED -> stringResource(R.string.paused); Phase.AUTO_PAUSED -> stringResource(R.string.auto_paused); else -> "" },
-                style = style(0.044f, ink(PausedInk), 700),
+                when {
+                    s.phase == Phase.PAUSED -> stringResource(R.string.paused)
+                    s.phase == Phase.AUTO_PAUSED -> stringResource(R.string.auto_paused)
+                    s.coaching?.searchingPosition == true -> stringResource(R.string.searching)
+                    offRoute -> stringResource(R.string.off_route)
+                    else -> ""
+                },
+                style = style(0.044f, ink(if (offRoute) Warning else PausedInk), 700),
             )
             BasicText(Format.duration(s.movingMs / 1000.0), style = style(0.10f, ink(TimeInk), 600))
             BasicText(Format.pace(s.pace, u), style = style(0.27f, ink(PaceInk), if (ambient) 500 else 600))
@@ -283,5 +337,111 @@ private fun androidx.compose.foundation.layout.BoxScope.Feedback(w: Dp, style: (
             style = style(0.046f, if (it) Good else Warning, 700),
             modifier = Modifier.align(Alignment.TopCenter).padding(top = w * 0.13f),
         )
+    }
+}
+
+private fun kindInk(k: StepKind) = rgb(
+    Tokens.dark.getValue(
+        when (k) {
+            StepKind.WARMUP -> "i-mint"
+            StepKind.EFFORT -> "i-lav"
+            StepKind.RECOVERY -> "i-sky"
+            StepKind.COOLDOWN -> "i-peach"
+        },
+    ),
+)
+
+private fun kindName(k: StepKind) = when (k) {
+    StepKind.WARMUP -> "ÉCHAUFFEMENT"
+    StepKind.EFFORT -> "EFFORT"
+    StepKind.RECOVERY -> "RÉCUPÉRATION"
+    StepKind.COOLDOWN -> "RETOUR AU CALME"
+}
+
+/** What remains of a step: metres under a kilometre, otherwise the profile's distance, or a time. */
+private fun stepFigure(step: WatchProtocol.StepInfo, u: Units): String = when {
+    step.unit != WatchProtocol.Remaining.METERS -> Format.duration(step.remaining)
+    u == Units.METRIC && step.remaining < 1000 -> "${step.remaining.toInt()} m"
+    else -> "${Format.distance(step.remaining, u)} ${Format.distanceUnit(u)}"
+}
+
+/**
+ * The coaching page: the current step with what remains of it, its target and where the runner
+ * stands; or, without a session, the time ahead of or behind the pace target; and the route's
+ * off-route warning under either.
+ */
+@Composable
+private fun CoachingPage(s: WatchProtocol.State, w: Dp, style: (Float, Color, Int) -> TextStyle) {
+    val c = s.coaching ?: return
+    val u = units(s)
+    Column(Modifier.padding(horizontal = w * 0.12f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(w * 0.01f)) {
+        val step = c.step
+        if (step != null) {
+            val ink = kindInk(step.kind)
+            BasicText("${kindName(step.kind)} · ${step.index + 1}/${step.count}", style = style(0.05f, ink, 700))
+            BasicText(stepFigure(step, u), style = style(0.2f, ink, 600))
+            val target = when (val t = step.target) {
+                is StepTarget.Pace -> "${Format.pace(t.fast, u)}–${Format.pace(t.slow, u)}"
+                is StepTarget.HrZone -> "Zone ${t.zone}"
+                else -> ""
+            }
+            val head = stringResource(if (step.unit == WatchProtocol.Remaining.ELAPSED_SECONDS) R.string.tap_lap else R.string.remaining)
+            BasicText(listOf(head, target).filter { it.isNotEmpty() }.joinToString(" · "), style = style(0.05f, Muted, 600))
+            verdict(step.targetState)?.let { (text, color) -> BasicText(stringResource(text), style = style(0.06f, color, 700)) }
+        } else if (c.pacerActive) {
+            val gap = c.pacerGapS
+            BasicText(stringResource(R.string.pacer), style = style(0.05f, PaceInk, 700))
+            BasicText(
+                gap?.let { (if (it >= 0) "+" else "−") + Format.duration(kotlin.math.abs(it)) } ?: Format.PLACEHOLDER,
+                style = style(0.2f, if (gap == null) Muted else if (gap >= 0) Good else Warning, 600),
+            )
+            if (gap != null) BasicText(stringResource(if (gap >= 0) R.string.ahead else R.string.behind), style = style(0.055f, Muted, 600))
+        }
+        if (c.routeActive && c.offRoute) BasicText(stringResource(R.string.off_route), style = style(0.05f, Warning, 700))
+    }
+}
+
+private fun verdict(t: TargetState): Pair<Int, Color>? = when (t) {
+    TargetState.IN -> R.string.on_target to Good
+    TargetState.TOO_FAST -> R.string.too_fast to Warning
+    TargetState.TOO_SLOW -> R.string.too_slow to Warning
+    TargetState.BELOW -> R.string.too_low to Warning
+    TargetState.ABOVE -> R.string.too_high to Warning
+    else -> null
+}
+
+private fun refusal(r: WatchProtocol.Refusal) = when (r) {
+    WatchProtocol.Refusal.PERMISSION -> "La localisation « tout le temps » n'est plus autorisée sur le téléphone."
+    WatchProtocol.Refusal.BATTERY_OPTIMISATION -> "L'optimisation de la batterie est revenue sur le téléphone."
+    WatchProtocol.Refusal.LOCATION_OFF -> "La localisation du téléphone est désactivée."
+    WatchProtocol.Refusal.BUSY -> "Une course est déjà en cours sur le téléphone."
+    else -> "Le téléphone n'a pas répondu ou n'a pas pu démarrer."
+}
+
+@Composable
+private fun Pill(label: String, w: Dp, style: (Float, Color, Int) -> TextStyle, onClick: () -> Unit) {
+    Box(Modifier.clip(CircleShape).background(Primary).clickable(role = Role.Button, onClick = onClick).padding(horizontal = w * 0.08f, vertical = w * 0.03f)) {
+        BasicText(label, style = style(0.052f, OnPrimary, 600))
+    }
+}
+
+/** "Ouvrir sur le téléphone", with what happened. */
+@Composable
+private fun OpenOnPhone(w: Dp, style: (Float, Color, Int) -> TextStyle) {
+    val scope = rememberCoroutineScope()
+    var outcome by remember { mutableStateOf<Int?>(null) }
+    if (outcome == null) Pill(stringResource(R.string.open_phone), w, style) {
+        outcome = R.string.open_phone_sent
+        scope.launch { if (!WatchSession.openOnPhone()) outcome = R.string.open_phone_failed }
+    } else BasicText(stringResource(outcome!!), style = style(0.048f, if (outcome == R.string.open_phone_failed) Warning else Muted, 600))
+}
+
+/** A turning arc while the phone starts the run. */
+@Composable
+private fun Spinner(size: Dp) {
+    val angle = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { while (true) { angle.snapTo(0f); angle.animateTo(360f, tween(1000, easing = LinearEasing)) } }
+    Canvas(Modifier.size(size)) {
+        drawArc(Primary, angle.value - 90f, 100f, false, style = Stroke(this.size.width * 0.08f, cap = StrokeCap.Round))
     }
 }

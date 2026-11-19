@@ -2,6 +2,7 @@ package dev.wellbeing.phone
 
 import androidx.test.core.app.ApplicationProvider
 import dev.wellbeing.phone.data.Field
+import dev.wellbeing.phone.ui.FieldPacer
 import dev.wellbeing.phone.ui.FieldTime
 import dev.wellbeing.phone.ui.WorkoutText
 import dev.wellbeing.running.Event
@@ -57,5 +58,17 @@ class FieldsTest {
         assertEquals("Zone 2 · 114–133 bpm", WorkoutText.target(StepTarget.HrZone(2), Units.METRIC, listOf(95, 114, 133, 152, 171, 190)))
         assertEquals("5:00–5:15 /km", WorkoutText.target(StepTarget.Pace(300.0, 315.0), Units.METRIC, emptyList()))
         assertEquals("0,25 mi", WorkoutText.end(StepEnd.Distance(402.336), Units.IMPERIAL))
+    }
+
+    @Test
+    fun `without a pacer the pacer fields show a placeholder, with one the gap and the target pace`() {
+        assertEquals(dev.wellbeing.running.Format.PLACEHOLDER, FieldPacer.gap(null))
+        assertEquals(dev.wellbeing.running.Format.PLACEHOLDER, FieldPacer.target(null, Units.METRIC))
+        val ahead = dev.wellbeing.running.Pacer.State(gapS = 12.0, targetPace = 360.0, approximate = false, finished = false)
+        assertEquals("+0:12", FieldPacer.gap(ahead))
+        assertEquals("−0:30", FieldPacer.gap(ahead.copy(gapS = -30.0)))
+        assertEquals("6:00", FieldPacer.target(ahead, Units.METRIC))
+        assertEquals("Avance / retard", context.getString(R.string.f_pacer_gap))
+        assertEquals("Allure cible", context.getString(R.string.f_target_pace))
     }
 }

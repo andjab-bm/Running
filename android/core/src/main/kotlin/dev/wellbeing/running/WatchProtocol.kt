@@ -233,6 +233,19 @@ object WatchProtocol {
     const val GIVE_UP_MS = 10 * 60_000L
     /** A command not acknowledged within this delay was not applied. */
     const val ACK_TIMEOUT_MS = 2_000L
+    /** A stopped run not saved yet keeps the watch measuring this long, so a resumed run keeps its heart rate. */
+    const val STOPPED_KEEP_MS = 5 * 60_000L
+
+    /**
+     * Whether the watch measures heart rate for [state]: a prepared or running session, or a run
+     * stopped [stoppedForMs] ago and still waiting on the phone's summary. A version-1 phone sends
+     * no extension, and its `STOPPED` means the run is over.
+     */
+    fun measuring(state: State?, stoppedForMs: Long): Boolean = when (state?.phase) {
+        Phase.READY, Phase.RUNNING, Phase.PAUSED, Phase.AUTO_PAUSED -> true
+        Phase.STOPPED -> state.coaching?.let { !it.ended } == true && stoppedForMs < STOPPED_KEEP_MS
+        null -> false
+    }
 }
 
 /**

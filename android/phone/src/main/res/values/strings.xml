@@ -59,6 +59,8 @@
     <string name="f_cadence">Cadence</string>
     <string name="f_gain">Dénivelé +</string>
     <string name="f_clock">Heure</string>
+    <string name="f_pacer_gap">Avance / retard</string>
+    <string name="f_target_pace">Allure cible</string>
     <string name="f_combined">Temps, distance et mini-carte</string>
     <string name="unit_bpm">bpm</string>
     <string name="unit_spm">ppm</string>
@@ -159,4 +161,6 @@
     <string name="settings_general">Général</string>
     <string name="settings_coaching">Coaching</string>
     <string name="page_map">Carte</string>
+    <string name="notif_watch_channel">Départ depuis la montre</string>
+    <string name="notif_watch_title">La course n\'a pas démarré depuis la montre</string>
 </resources>

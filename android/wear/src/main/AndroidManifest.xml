@@ -32,12 +32,33 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Opened from the phone's ready screen ("Ouvrir sur la montre"). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="wellbeing" android:host="run" />
+            </intent-filter>
         </activity>
 
         <service
             android:name=".HrService"
             android:exported="false"
             android:foregroundServiceType="health" />
+
+        <!-- The tile: shows the run the watch has joined, or offers to start one. It measures nothing. -->
+        <service
+            android:name=".RunTile"
+            android:exported="true"
+            android:label="@string/tile_label"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.wear.tiles.PREVIEW"
+                android:resource="@drawable/ic_launcher" />
+        </service>
     </application>
 
 </manifest>

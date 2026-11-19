@@ -65,7 +65,7 @@ Phases: groups 2–7 (server) and 11 (`core`) can start at once; groups 9–10 w
 ## 9. Web: progress section
 
 - [x] 9.1 Restructure the navigation as approved (new sections, import reachable from the activity list) and add the API client functions for groups 3–5; verify the existing Playwright suite passes after updating its navigation steps
-- [ ] 9.2 Build the statistics tab (heatmap with year and measure switch and day detail, volume bars with week/month switch, progress curves with tag filter and gaps); verify in the browser against a seeded server the scenarios of `training-statistics`, in both unit systems
+- [x] 9.2 Build the statistics tab (heatmap with year and measure switch and day detail, volume bars with week/month switch, progress curves with tag filter and gaps); verify in the browser against a seeded server the scenarios of `training-statistics`, in both unit systems
 - [x] 9.3 Build the records tab (records with next two, history chart, predictions with basis, indicative mark and empty state, processing notice from the derive status); verify in the browser the records-page, never-run and no-recent-effort scenarios
 - [x] 9.4 Build the load tab (daily and weekly load, short/long curves, status, recovery remaining, estimated marks, explanation panel); verify in the browser the status and recovery scenarios against seeded data
 - [ ] 9.5 Add Playwright coverage for the three tabs and extend `e2e/design.spec.ts` contrast checks to them in both themes at 360 px and 1440 px; verify the suite passes in CI

@@ -4,7 +4,9 @@ import java.nio.ByteBuffer
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class WatchProtocolV2Test {
     private val zones = listOf(95, 114, 133, 152, 171, 190)
@@ -69,5 +71,21 @@ class WatchProtocolV2Test {
     fun `a truncated extension is refused, not misread`() {
         val bytes = base.copy(coaching = WatchProtocol.Coaching(true, step = effort)).encode()
         assertNull(WatchProtocol.State.decode(bytes.copyOf(bytes.size - 3)))
+    }
+
+    @Test
+    fun `the watch measures through a session and a stopped run for five minutes, not after it ends`() {
+        val pending = WatchProtocol.Coaching(canStartFromWatch = false, ended = false)
+        for (p in listOf(Phase.READY, Phase.RUNNING, Phase.PAUSED, Phase.AUTO_PAUSED)) assertTrue(WatchProtocol.measuring(base.copy(phase = p), 0))
+        val stopped = base.copy(phase = Phase.STOPPED, coaching = pending)
+        assertTrue(WatchProtocol.measuring(stopped, 60_000))
+        assertTrue(WatchProtocol.measuring(stopped, WatchProtocol.STOPPED_KEEP_MS - 1))
+        assertFalse(WatchProtocol.measuring(stopped, WatchProtocol.STOPPED_KEEP_MS))
+        // Saved or discarded on the phone.
+        assertFalse(WatchProtocol.measuring(base.copy(phase = Phase.STOPPED, coaching = pending.copy(ended = true)), 0))
+        // A version-1 phone: stopped means over.
+        assertFalse(WatchProtocol.measuring(base.copy(phase = Phase.STOPPED), 0))
+        assertFalse(WatchProtocol.measuring(base.copy(phase = null), 0))
+        assertFalse(WatchProtocol.measuring(null, 0))
     }
 }

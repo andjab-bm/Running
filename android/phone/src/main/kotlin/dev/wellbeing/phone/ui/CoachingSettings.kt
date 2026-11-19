@@ -1,6 +1,15 @@
 package dev.wellbeing.phone.ui
 
+import android.Manifest
 import android.content.ActivityNotFoundException
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import dev.wellbeing.phone.record.WatchStart
 import android.content.Intent
 import android.speech.tts.TextToSpeech
 import androidx.compose.foundation.background
@@ -151,6 +160,14 @@ fun CoachingSettings(settings: Settings, change: ((Settings) -> Settings) -> Uni
 
     Card {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Montre", style = Type.h3, color = c.ink)
+            Toggle("Vibrations sur la montre", "Étapes, alertes et hors parcours, même écran éteint", settings.watchVibrations) { v -> change { it.copy(watchVibrations = v) } }
+            StartFromWatch(settings, change)
+        }
+    }
+
+    Card {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Carte", style = Type.h3, color = c.ink)
             val styled = settings.mapStyleUrl.isNotEmpty()
             Column(Modifier.alpha(if (styled) 1f else 0.45f)) {
@@ -162,6 +179,84 @@ fun CoachingSettings(settings: Settings, change: ((Settings) -> Settings) -> Uni
                 else "Le serveur n'a pas de fond de carte configuré : la carte s'affiche toujours sur un fond uni.",
                 style = Type.small, color = c.ink3,
             )
+        }
+    }
+}
+
+/**
+ * The "start from the watch" option: off by default; turning it on explains and asks for the two
+ * grants it needs, and it stays off when either is refused or later withdrawn.
+ */
+@Composable
+private fun StartFromWatch(settings: Settings, change: ((Settings) -> Settings) -> Unit) {
+    val c = LocalColors.current
+    val context = LocalContext.current
+    var grants by remember { mutableStateOf(WatchStart.grants(context)) }
+    var asking by remember { mutableStateOf(false) }
+    var refused by remember { mutableStateOf(false) }
+    fun settle() {
+        grants = WatchStart.grants(context)
+        if (grants.all) {
+            change { it.copy(startFromWatch = true) }
+            asking = false
+            refused = false
+        } else if (asking) {
+            refused = true
+        }
+    }
+    val battery = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { settle() }
+    val askBattery = {
+        try {
+            battery.launch(Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}")))
+        } catch (_: ActivityNotFoundException) {
+            settle()
+        }
+    }
+    val background = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        grants = WatchStart.grants(context)
+        if (ok && !grants.batteryExempt) askBattery() else settle()
+    }
+    // A grant withdrawn in the phone's settings turns the option off.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        grants = WatchStart.grants(context)
+        if (settings.startFromWatch && !grants.all) change { it.copy(startFromWatch = false) }
+    }
+    val on = settings.startFromWatch && grants.all
+    Toggle(
+        "Démarrer depuis la montre",
+        if (on) "Activé : la montre propose de démarrer quand rien n'est préparé" else "Le téléphone démarre une course libre à la demande de la montre, application fermée",
+        on,
+    ) { v ->
+        if (!v) { change { it.copy(startFromWatch = false) }; asking = false } else if (grants.all) change { it.copy(startFromWatch = true) } else { asking = true; refused = false }
+    }
+    if (asking) {
+        Column(
+            Modifier.fillMaxWidth().clip(Radius.row).background(c.surface2).padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text("Deux autorisations sont nécessaires", style = Type.strong, color = c.ink)
+            Text(
+                "1. La localisation « Toujours autoriser » : Android ne laisse démarrer le GPS d'une course qu'avec elle quand l'application est fermée. " +
+                    "Elle ne sert qu'aux courses ; rien n'est suivi en dehors.",
+                style = Type.small, color = c.ink2,
+            )
+            Text(
+                "2. Ne pas optimiser la batterie pour l'application : c'est ce qui lui permet de démarrer à la demande de la montre. " +
+                    "Hors course, elle ne fait rien de plus.",
+                style = Type.small, color = c.ink2,
+            )
+            if (refused) Text("Une autorisation a été refusée : l'option reste désactivée.", style = Type.small.copy(fontWeight = FontWeight.SemiBold), color = c.rose.ink)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                AppButton("Continuer", {
+                    when {
+                        !grants.fineLocation -> refused = true
+                        !grants.backgroundLocation -> background.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                        !grants.batteryExempt -> askBattery()
+                        else -> settle()
+                    }
+                }, kind = ButtonKind.PRIMARY)
+                AppButton("Annuler", { asking = false; refused = false })
+            }
         }
     }
 }

@@ -6,12 +6,14 @@ How the watch, the phone and the home server fit together, and what this reposit
 
 ```
 Galaxy Watch 4 — Wear OS app (Kotlin)                 built (android/wear)
-  heart rate, start/pause/lap/stop, vibration cues
+  heart rate, start/pause/lap/stop, start from the wrist,
+  coaching page and vibrations, tile
         │  Wearable Data Layer over Bluetooth
         ▼
 Pixel 8 — native Android app (Kotlin, Compose)        built (android/phone)
-  records GPS, stores runs locally,
-  writes one .fit file per run
+  records GPS, stores runs locally, writes one .fit per run;
+  guided sessions, routes and map, pace target,
+  voice, sound and vibration cues
         │  plain HTTP upload on the home Wi-Fi,
         │  naming the target profile
         ▼
@@ -41,7 +43,18 @@ docs/        this file, design direction, API, Android and deployment guides
 testdata/    real FIT exports (private, not committed)
 ```
 
-The phone and watch apps are described in [android.md](android.md); installing the server at home is described in [deployment.md](deployment.md). The live coaching mentioned in the original brief (voice and vibration cues) is not built yet.
+The phone and watch apps are described in [android.md](android.md); installing the server at home is described in [deployment.md](deployment.md).
+
+## Coaching on the phone and the watch
+
+The reasoning is in [`insights-and-coaching/design.md`](../openspec/changes/insights-and-coaching/design.md); the details, and the checks still to make on the devices, in [android.md](android.md).
+
+- **Prepared at home, used anywhere.** Sessions and routes are written on the web and marked "on the phone"; the phone fetches them when it syncs at home and keeps them, so a run needs no network. The session, route and pace target chosen on the ready screen are written first in the run's log.
+- **Coaching is computed in `android/core`**, beside the session engine, from the same events: the steps of a session (each step a lap, so the file and the server follow it), route following with off-route and arrival, the pacer (even, or weighted by the grade with the server's formula), and the cues, ordered by importance and dropped when stale. A run killed mid-session is rebuilt from its log in the same step. All of it is tested on the JVM by replaying scripted runs.
+- **The phone renders the cues** inside its recording service, so they come with the screen off: a vibration, a short tone, and a French sentence from the phone's own offline voice, lowering music meanwhile and giving only vibration during a call. A per-kilometre announcement is optional.
+- **The map** (MapLibre Native) exists only while it is the page shown with the screen on. Its basemap comes only from the style configured on the server, behind a setting on the phone; without it, the route and trace are drawn on a plain background with no request. The mini-map of the main screen is a still image of the same basemap, taken again only when the trace grows out of it.
+- **The watch** shows a coaching page (the step and its target, or the gap to the pace target) and vibrates at step changes and alerts through a message the phone sends; it keeps measuring heart rate up to five minutes after a stop so a resumed run keeps it. It can ask the phone to start a free run, when the runner enabled that on the phone and granted what Android requires, and each app can open the other. Its tile shows the run it has joined, or offers to start one. Version 2 of the watch protocol adds all this while a watch or phone still on version 1 keeps working.
+- **Privacy.** The server still makes no outbound request. The only new connection is the phone's map tiles, from the provider configured on the server, while the map or mini-map is shown with the setting on; the provider sees the area displayed, not the run.
 
 ## The server
 

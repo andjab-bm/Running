@@ -25,6 +25,7 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import androidx.wear.ongoing.OngoingActivity
 import androidx.wear.ongoing.Status
+import androidx.wear.tiles.TileService
 import dev.wellbeing.running.HrSample
 import dev.wellbeing.running.WatchProtocol
 import kotlinx.coroutines.delay
@@ -103,19 +104,36 @@ class HrService : LifecycleService() {
         }.isSuccess
 
         if (started) {
+            var tiledAt = 0L
+            var tiledPhase = WatchSession.state.value?.phase
             while (true) {
                 delay(FLUSH_MS)
                 WatchSession.flushHeartRate()
+                // The tile shows what is measured here: refreshed at most every 30 s, and when the phase changes.
+                val now = SystemClock.elapsedRealtime()
+                val phase = WatchSession.state.value?.phase
+                if (now - tiledAt >= RunTile.REFRESH_MS || phase != tiledPhase) {
+                    tiledAt = now
+                    tiledPhase = phase
+                    refreshTile()
+                }
                 val silentFor = System.currentTimeMillis() - WatchSession.stateAt.value
-                // The run ended on the phone, or the phone has been gone for ten minutes.
-                if (!WatchSession.sessionActive || silentFor > WatchProtocol.GIVE_UP_MS) break
+                // The run ended on the phone (or has waited stopped for five minutes), or the phone
+                // has been gone for ten minutes.
+                if (!WatchSession.keepMeasuring() || silentFor > WatchProtocol.GIVE_UP_MS) break
             }
             runCatching { exercise.endExercise() }
         }
         WatchSession.setMeasuring(false)
+        refreshTile()
         running = false
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    /** Asks the system to redraw the tile; nothing happens when it has not been added. */
+    private fun refreshTile() {
+        runCatching { TileService.getUpdater(applicationContext).requestUpdate(RunTile::class.java) }
     }
 
     private fun notification(): Notification {
