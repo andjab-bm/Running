@@ -7,11 +7,11 @@
 # The web app and the API answer on http://<address-of-the-pi>:8080 on the home network.
 # There is no sign-in: never forward this port from the router or publish it on the internet.
 #
-# The data (database and original files) lives in /srv/running on the Pi. Create it once:
+# The data (database and original files) lives in ./data, next to this file. Create it once:
 #
-#   sudo mkdir -p /srv/running && sudo chown 65532:65532 /srv/running
+#   mkdir -p data && sudo chown 65532:65532 data
 #
-# Upgrade: back up /srv/running, then `docker compose pull && docker compose up -d` again.
+# Upgrade: back up ./data, then `docker compose pull && docker compose up -d` again.
 services:
   running:
     image: ghcr.io/andjab-bm/running:latest
@@ -28,7 +28,7 @@ services:
       # MAP_STYLE_URL: ""
       # MAP_STYLE_URL_DARK: ""
     volumes:
-      - /srv/running:/data
+      - ./data:/data
     # The image checks itself every 30 s (`running-server healthcheck`); `docker compose ps` shows "healthy".
     # Small logs: an SD card wears with every write.
     logging:

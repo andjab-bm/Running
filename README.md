@@ -59,10 +59,10 @@ curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER
 ```
 
-Log out and in again, then create the data directory and a directory for the configuration:
+Log out and in again, then create a directory for the install. The data stays next to the compose file, in a `data` subdirectory, so one folder holds everything:
 
 ```bash
-sudo mkdir -p /srv/running && sudo chown 65532:65532 /srv/running
+mkdir -p ~/running/data && sudo chown 65532:65532 ~/running/data
 ```
 
 ```bash
@@ -87,7 +87,7 @@ services:
       # MAP_STYLE_URL: ""
       # MAP_STYLE_URL_DARK: ""
     volumes:
-      - /srv/running:/data
+      - ./data:/data
     logging:
       driver: json-file
       options:
@@ -105,12 +105,12 @@ Open `http://<address-of-the-pi>:8080` from a computer or phone on the home netw
 
 The image is built for ARM64 and AMD64 by GitHub on every change to `main`. If the repository is private, the image is too: sign in once on the Pi with a GitHub token that has the `read:packages` scope (`docker login ghcr.io -u <github-user>`), or make the package public in its settings on GitHub.
 
-**Upgrading**: back up `/srv/running`, then run `docker compose pull && docker compose up -d` again. The database is migrated at start-up.
+**Upgrading**: back up `~/running/data`, then run `docker compose pull && docker compose up -d` again. The database is migrated at start-up.
 
-**Backing up**: everything is in `/srv/running`. Stop the container, copy the directory off the Pi (an SD card is not a backup), start it again:
+**Backing up**: everything is in `~/running/data`. Stop the container, copy the directory off the Pi (an SD card is not a backup), start it again:
 
 ```bash
-docker compose stop && sudo tar czf running-backup.tar.gz -C /srv/running . && docker compose start
+docker compose stop && sudo tar czf running-backup.tar.gz -C data . && docker compose start
 ```
 
 > **There is no sign-in.** Anyone who can reach the port can read and change every run, including where you live and when you are out. Keep it on the home network: **never forward port 8080 from your router.** To use it away from home, go through a VPN (WireGuard, Tailscale). See [docs/deployment.md](docs/deployment.md) for remote access, other settings, restoring a backup and building the image yourself.
