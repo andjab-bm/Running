@@ -95,7 +95,7 @@ Recreating the container never touches the volume: profiles, runs, notes and ori
 
 ## Using the image built by GitHub
 
-The quickest install on a Raspberry Pi needs no clone of the repository: [`deploy/pi/compose.yaml`](../deploy/pi/compose.yaml), also attached to every release, runs `ghcr.io/andjab-bm/running:latest` with the data in `/srv/running`. The README walks through it. The steps below do the same with the compose file of `deploy/`.
+The quickest install on a Raspberry Pi needs no clone of the repository: [`deploy/pi/compose.yaml`](../deploy/pi/compose.yaml), also attached to every release, runs `ghcr.io/andjab-bm/running:latest` with the data in a `data` directory next to the compose file (`./data`). The README walks through it. The steps below do the same with the compose file of `deploy/`.
 
 The repository's CI builds the image for ARM64 and AMD64 on every pull request, and publishes it to the GitHub Container Registry on every push to `main` (and when the workflow is started by hand from the Actions tab): `ghcr.io/andjab-bm/running:latest`, plus one `sha-<commit>` tag per build. Nothing then has to be compiled on the Pi.
 
